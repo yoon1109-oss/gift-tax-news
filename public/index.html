@@ -224,12 +224,7 @@
       overflow: hidden;
     }
 
-    .card-footer {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 4px;
-    }
+    .card-footer { display: none; }
 
     .keyword-tag { font-size: 11px; padding: 2px 8px; border-radius: 2px; font-weight: 500; }
     .tag-gift { background: rgba(201,168,76,0.1); color: var(--accent); }
@@ -291,7 +286,7 @@
   <span class="filter-label">필터</span>
   <button class="filter-btn active" onclick="setFilter('all', this)">전체</button>
   <button class="filter-btn" onclick="setFilter('증여', this)">증여</button>
-  <button class="filter-btn" onclick="setFilter('증여세신고', this)">증여세신고</button>
+  <button class="filter-btn" onclick="setFilter('한화생명', this)">한화생명 파이</button>
 </div>
 
 <div class="stats-bar">
@@ -323,7 +318,7 @@
     btn.classList.add('loading');
 
     try {
-      const keywords = ['증여', '증여세신고'];
+      const keywords = ['증여', '한화생명 파이'];
       let results = [];
 
       for (const kw of keywords) {
@@ -355,6 +350,11 @@
         seen.add(n.link);
         return true;
       });
+
+      // 최근 3개월 필터
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      results = results.filter(n => n.pubDate >= threeMonthsAgo);
 
       // 최신순 정렬
       results.sort((a, b) => b.pubDate - a.pubDate);
