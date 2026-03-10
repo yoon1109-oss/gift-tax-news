@@ -27,12 +27,3 @@ git remote add origin https://github.com/본인계정/gift-tax-news.git
 git push -u origin main
 ```
 
-### 2단계 - Vercel 배포
-1. [vercel.com](https://vercel.com) 접속 → GitHub 로그인
-2. **Add New Project** → GitHub 저장소 선택
-3. **Environment Variables** 탭에서 환경변수 추가:
-   - `NAVER_CLIENT_ID` = `EK9MtqXnCXeNQLW3tYsJ`
-   - `NAVER_CLIENT_SECRET` = `WLQ7E3FudD`
-4. **Deploy** 클릭!
-
-배포 완료되면 `https://프로젝트명.vercel.app` 주소가 생깁니다.
