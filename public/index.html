@@ -169,34 +169,17 @@
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 8px;
-      padding: 18px 24px;
+      padding: 20px 24px;
       cursor: pointer;
       transition: all 0.25s;
       display: flex;
-      flex-direction: row;
-      align-items: center;
-      gap: 20px;
+      flex-direction: column;
+      gap: 8px;
       text-decoration: none;
       color: inherit;
       opacity: 0;
       transform: translateY(12px);
       animation: fadeUp 0.4s forwards;
-    }
-
-    .card-left {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      flex: 1;
-      min-width: 0;
-    }
-
-    .card-right {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 8px;
-      flex-shrink: 0;
     }
 
     @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
@@ -361,6 +344,9 @@
           });
         });
       }
+
+      // 제목에 '증여' 포함된 기사만
+      results = results.filter(n => n.title.includes('증여'));
 
       // 중복 제거
       const seen = new Set();
