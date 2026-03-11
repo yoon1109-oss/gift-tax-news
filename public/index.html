@@ -418,13 +418,12 @@
       filtered = allNews;
     } else if (currentFilter === '증여') {
       filtered = allNews.filter(n => {
-        const total = countKeyword(n.title, '증여') + countKeyword(n.desc, '증여');
-        return total >= 3;
+        const text = (n.title || '') + (n.desc || '');
+        return text.includes('증여') && text.includes('절세');
       });
     } else if (currentFilter === '한화생명') {
       filtered = allNews.filter(n =>
-        n.title.includes('한화생명') || n.desc.includes('한화생명') ||
-        n.title.includes('파이') || n.desc.includes('파이')
+        (n.title + (n.desc || '')).includes('한화생명 파이')
       );
     } else {
       filtered = allNews.filter(n => n.title.includes(currentFilter) || n.desc.includes(currentFilter));
