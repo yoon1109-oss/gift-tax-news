@@ -7,21 +7,15 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --bg: #0d0d0d;
-      --surface: #161616;
-      --card: #1c1c1c;
-      --border: #2a2a2a;
-      --accent: #c9a84c;
-      --text: #e8e4dc;
-      --muted: #7a7570;
-      --tag-bg: #1e1a12;
+      --bg: #0d0d0d; --surface: #161616; --card: #1c1c1c;
+      --border: #2a2a2a; --accent: #c9a84c; --text: #e8e4dc;
+      --muted: #7a7570; --tag-bg: #1e1a12;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; }
 
     header {
-      border-bottom: 1px solid var(--border);
-      padding: 0 40px;
+      border-bottom: 1px solid var(--border); padding: 0 40px;
       display: flex; align-items: center; justify-content: space-between;
       height: 64px; position: sticky; top: 0;
       background: rgba(13,13,13,0.95); backdrop-filter: blur(10px); z-index: 100;
@@ -48,17 +42,10 @@
     .hero-desc { font-size: 14px; color: var(--muted); line-height: 1.7; }
 
     .filters {
-      padding: 16px 40px; display: flex; align-items: center; gap: 10px;
+      padding: 14px 40px; display: flex; align-items: center; gap: 10px;
       border-bottom: 1px solid var(--border); flex-wrap: wrap;
     }
     .filter-label { font-size: 12px; color: var(--muted); margin-right: 4px; }
-    .filter-btn {
-      background: transparent; border: 1px solid var(--border); color: var(--muted);
-      padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer;
-      font-family: 'Noto Sans KR', sans-serif; transition: all 0.2s;
-    }
-    .filter-btn:hover, .filter-btn.active { background: var(--tag-bg); border-color: var(--accent); color: var(--accent); }
-    .divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
     .checkbox-wrap {
       display: flex; align-items: center; gap: 7px; cursor: pointer;
       font-size: 13px; color: var(--muted); border: 1px solid var(--border);
@@ -94,11 +81,9 @@
     .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px; gap: 20px; }
     .loading-spinner { width: 36px; height: 36px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     .loading-text { color: var(--muted); font-size: 14px; }
-
     .scroll-loader { display: flex; justify-content: center; padding: 32px; }
     .scroll-loader .loading-spinner { width: 28px; height: 28px; }
-
-    .empty-state { text-align: center; padding: 80px; color: var(--muted); font-size: 14px; }
+    .empty-state { text-align: center; padding: 60px; color: var(--muted); font-size: 14px; }
     .end-msg { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); margin-top: 8px; }
 
     @media (max-width: 640px) {
@@ -126,14 +111,11 @@
 <div class="hero">
   <div class="hero-label">실시간 뉴스 모니터링</div>
   <h1 class="hero-title">증여 <span>최신 뉴스</span></h1>
-  <p class="hero-desc">증여 관련 최신 뉴스를 실시간으로 수집하여 제공합니다.</p>
+  <p class="hero-desc">본문에 '증여' 키워드가 3회 이상 언급된 최신 뉴스를 제공합니다.</p>
 </div>
 
 <div class="filters">
-  <span class="filter-label">필터</span>
-  <button class="filter-btn active" onclick="setFilter('all', this)">전체</button>
-  <button class="filter-btn" onclick="setFilter('증여3', this)">증여 3회↑</button>
-  <div class="divider"></div>
+  <span class="filter-label">추가 필터</span>
   <label class="checkbox-wrap" id="chk1wrap">
     <input type="checkbox" id="chk1" onchange="onCheckChange()">
     <span>제목에 증여 포함</span>
@@ -157,68 +139,61 @@
 </div>
 
 <script>
-  // --- 상태 ---
-  let allNews = [];          // API에서 받아온 전체 기사
-  let filteredNews = [];     // 필터/체크박스 적용된 기사
-  let renderedCount = 0;     // 현재 화면에 렌더된 수
-  const PAGE_SIZE = 20;      // 한 번에 렌더할 카드 수
+  const PAGE_SIZE = 30;
 
-  let currentFilter = 'all';
-  let apiPage = 1;           // 네이버 API 페이지 (start값)
-  let apiDone = false;       // API 더 가져올 게 없으면 true
+  let allNews = [];       // API에서 받아온 전체 (증여 3회↑ 필터 적용)
+  let filteredNews = [];  // 체크박스 적용 후
+  let renderedCount = 0;
+
+  let apiStart = 1;
+  let apiDone = false;
   let isFetching = false;
 
-  // --- API 호출 ---
   async function fetchPage() {
     if (isFetching || apiDone) return;
     isFetching = true;
     document.getElementById('scrollLoader').style.display = 'flex';
 
     try {
-      const start = (apiPage - 1) * 100 + 1;
-      const keywords = ['증여', '한화생명 파이'];
-      let newItems = [];
+      const res = await fetch(`/api/news?keyword=${encodeURIComponent('증여')}&display=100&start=${apiStart}`);
+      if (!res.ok) throw new Error('API error');
+      const data = await res.json();
+      const items = data.items || [];
 
-      for (const kw of keywords) {
-        const res = await fetch(`/api/news?keyword=${encodeURIComponent(kw)}&display=100&start=${start}`);
-        if (!res.ok) continue;
-        const data = await res.json();
-        const items = data.items || [];
+      if (items.length < 100) apiDone = true;
 
-        items.forEach(item => {
-          const title = item.title.replace(/<[^>]*>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#\d+;/g,'');
-          const desc = item.description.replace(/<[^>]*>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#\d+;/g,'');
-          newItems.push({
-            title, desc,
-            link: item.originallink || item.link,
-            pubDate: new Date(item.pubDate),
-            source: extractSource(item.originallink || item.link),
-          });
-        });
-
-        if (items.length < 100) apiDone = true;
-      }
-
-      // 중복 제거
-      const existingLinks = new Set(allNews.map(n => n.link));
-      newItems = newItems.filter(n => !existingLinks.has(n.link));
-
-      // 최신순
-      newItems.sort((a, b) => b.pubDate - a.pubDate);
-      allNews = [...allNews, ...newItems];
-      allNews.sort((a, b) => b.pubDate - a.pubDate);
-
-      apiPage++;
-
-      // 3개월 이전 기사 포함 시 종료
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-      if (newItems.length > 0 && newItems[newItems.length-1].pubDate < threeMonthsAgo) {
-        apiDone = true;
-        allNews = allNews.filter(n => n.pubDate >= threeMonthsAgo);
-      }
 
-      applyFilters();
+      const existingLinks = new Set(allNews.map(n => n.link));
+      let hasOldArticle = false;
+
+      items.forEach(item => {
+        const title = item.title.replace(/<[^>]*>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#\d+;/g,'');
+        const desc = item.description.replace(/<[^>]*>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#\d+;/g,'');
+        const pubDate = new Date(item.pubDate);
+
+        if (pubDate < threeMonthsAgo) { hasOldArticle = true; return; }
+        if (existingLinks.has(item.originallink || item.link)) return;
+
+        // 디폴트 조건: 본문+제목에 '증여' 3회 이상
+        const cnt = countKeyword(title, '증여') + countKeyword(desc, '증여');
+        if (cnt < 3) return;
+
+        allNews.push({
+          title, desc,
+          link: item.originallink || item.link,
+          pubDate,
+          source: extractSource(item.originallink || item.link),
+        });
+      });
+
+      if (hasOldArticle) apiDone = true;
+
+      apiStart += 100;
+      allNews.sort((a, b) => b.pubDate - a.pubDate);
+
+      applyCheckboxes();
       updateStats();
 
       const now = new Date();
@@ -232,28 +207,17 @@
     isFetching = false;
     document.getElementById('scrollLoader').style.display = 'none';
     document.getElementById('initLoader').style.display = 'none';
-
-    if (apiDone) {
+    if (apiDone && renderedCount >= filteredNews.length) {
       document.getElementById('endMsg').style.display = 'block';
     }
   }
 
-  // --- 필터/체크박스 적용 ---
-  function applyFilters() {
+  function applyCheckboxes() {
     const chk1 = document.getElementById('chk1').checked;
     const chk2 = document.getElementById('chk2').checked;
 
     let result = [...allNews];
-
-    // 필터 버튼
-    if (currentFilter === '증여3') {
-      result = result.filter(n => countKeyword(n.title, '증여') + countKeyword(n.desc, '증여') >= 3);
-    }
-
-    // 체크박스 1: 제목에 증여 포함
     if (chk1) result = result.filter(n => n.title.includes('증여'));
-
-    // 체크박스 2: 한화생명 파이 포함 (제목 또는 본문)
     if (chk2) result = result.filter(n => (n.title + n.desc).includes('한화생명 파이'));
 
     filteredNews = result;
@@ -264,7 +228,6 @@
     updateStats();
   }
 
-  // --- 카드 렌더 (페이지 단위) ---
   function renderNextPage() {
     const slice = filteredNews.slice(renderedCount, renderedCount + PAGE_SIZE);
     if (slice.length === 0) {
@@ -292,37 +255,26 @@
     renderedCount += slice.length;
   }
 
-  // --- 무한 스크롤 ---
+  // 무한 스크롤
   const observer = new IntersectionObserver(entries => {
-    if (entries[0].isIntersecting) {
-      if (renderedCount < filteredNews.length) {
-        renderNextPage();
-      } else if (!apiDone) {
-        fetchPage();
-      }
+    if (!entries[0].isIntersecting) return;
+    if (renderedCount < filteredNews.length) {
+      renderNextPage();
+    } else if (!apiDone) {
+      fetchPage();
     }
-  }, { rootMargin: '200px' });
+  }, { rootMargin: '300px' });
   observer.observe(document.getElementById('scrollLoader'));
 
-  // --- 필터 버튼 ---
-  function setFilter(filter, el) {
-    currentFilter = filter;
-    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-    el.classList.add('active');
-    applyFilters();
-  }
-
-  // --- 체크박스 ---
   function onCheckChange() {
     document.getElementById('chk1wrap').classList.toggle('checked', document.getElementById('chk1').checked);
     document.getElementById('chk2wrap').classList.toggle('checked', document.getElementById('chk2').checked);
-    applyFilters();
+    applyCheckboxes();
   }
 
-  // --- 새로고침 ---
   function resetAndFetch() {
     allNews = []; filteredNews = []; renderedCount = 0;
-    apiPage = 1; apiDone = false;
+    apiStart = 1; apiDone = false;
     document.getElementById('newsGrid').innerHTML = '';
     document.getElementById('endMsg').style.display = 'none';
     document.getElementById('initLoader').style.display = 'flex';
@@ -330,14 +282,12 @@
     fetchPage().then(() => document.getElementById('refreshBtn').classList.remove('loading'));
   }
 
-  // --- 통계 ---
   function updateStats() {
     document.getElementById('totalCount').textContent = filteredNews.length;
     const sources = new Set(filteredNews.map(n => n.source));
     document.getElementById('sourceCount').textContent = sources.size;
   }
 
-  // --- 유틸 ---
   function countKeyword(text, kw) {
     if (!text) return 0;
     return (text.match(new RegExp(kw, 'g')) || []).length;
@@ -380,7 +330,6 @@
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
-  // --- 초기 로딩 ---
   fetchPage();
   setInterval(resetAndFetch, 10 * 60 * 1000);
 </script>
