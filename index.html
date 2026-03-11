@@ -152,7 +152,7 @@
   let bgDone = false;
 
   function getKeyword() {
-    return currentMode === 'hanwha' ? '한화생명 파이' : '증여';
+    return currentMode === 'hanwha' ? '"한화생명 파이"' : '증여';
   }
 
   function cleanItem(item) {
@@ -209,7 +209,7 @@
     document.getElementById('loadingBadge').classList.add('active');
     const existingLinks = new Set(allNews.map(n => n.link));
 
-    for (let start = 101; start <= 901; start += 100) {
+    for (let start = 101; start <= 201; start += 100) {
       if (currentMode !== (document.querySelector('input[name="newsFilter"]:checked')?.value || 'all')) break;
       try {
         const items = await fetchBatch(keyword, start);
