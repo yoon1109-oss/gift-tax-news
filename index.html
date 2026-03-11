@@ -167,7 +167,8 @@
   }
 
   async function fetchBatch(keyword, start) {
-    const res = await fetch(`/api/news?keyword=${encodeURIComponent(keyword)}&display=100&start=${start}`);
+    const sort = currentMode === 'hanwha' ? 'sim' : 'date';
+    const res = await fetch(`/api/news?keyword=${encodeURIComponent(keyword)}&display=100&start=${start}&sort=${sort}`);
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
     return data.items || [];
@@ -183,7 +184,12 @@
       const links = new Set();
       items.forEach(item => {
         const n = cleanItem(item);
-        if (!links.has(n.link)) { links.add(n.link); allNews.push(n); }
+        if (!links.has(n.link)) {
+          // 한화생명 파이 모드: 제목 또는 본문에 '한화생명' 실제 포함된 기사만
+          if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
+          links.add(n.link);
+          allNews.push(n);
+        }
       });
       allNews.sort((a, b) => b.pubDate - a.pubDate);
 
@@ -215,7 +221,12 @@
         const items = await fetchBatch(keyword, start);
         items.forEach(item => {
           const n = cleanItem(item);
-          if (!existingLinks.has(n.link)) { existingLinks.add(n.link); allNews.push(n); }
+          if (!existingLinks.has(n.link)) {
+            // 한화생명 파이 모드: 제목 또는 본문에 '한화생명' 실제 포함된 기사만
+            if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
+            existingLinks.add(n.link);
+            allNews.push(n);
+          }
         });
         allNews.sort((a, b) => b.pubDate - a.pubDate);
         updateStats();
