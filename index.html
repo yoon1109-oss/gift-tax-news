@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -144,39 +143,6 @@
       color: var(--accent);
     }
 
-    .checkbox-label {
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      cursor: pointer;
-      font-size: 13px;
-      color: var(--muted);
-      border: 1px solid var(--border);
-      padding: 6px 14px;
-      border-radius: 20px;
-      transition: all 0.2s;
-      user-select: none;
-    }
-
-    .checkbox-label:hover {
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--tag-bg);
-    }
-
-    .checkbox-label input[type="checkbox"] {
-      accent-color: var(--accent);
-      width: 14px;
-      height: 14px;
-      cursor: pointer;
-    }
-
-    .checkbox-label:has(input:checked) {
-      border-color: var(--accent);
-      color: var(--accent);
-      background: var(--tag-bg);
-    }
-
     .stats-bar {
       padding: 14px 40px;
       display: flex;
@@ -319,11 +285,8 @@
 <div class="filters">
   <span class="filter-label">필터</span>
   <button class="filter-btn active" onclick="setFilter('all', this)">전체</button>
-  <button class="filter-btn" onclick="setFilter('증여', this)">증여 3회↑</button>
-  <label class="checkbox-label">
-    <input type="checkbox" id="hanwhaCheck" onchange="renderNews()">
-    <span>한화생명 파이</span>
-  </label>
+  <button class="filter-btn" onclick="setFilter('증여', this)">증여</button>
+  <button class="filter-btn" onclick="setFilter('한화생명', this)">한화생명 파이</button>
 </div>
 
 <div class="stats-bar">
@@ -413,9 +376,12 @@
   }
 
   function cleanDesc(desc) {
-    let d = desc.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-    d = d.replace(/^[\u0022\u0027\u2018\u2019\u201c\u201d\s]+/, '').trim();
-    return d.slice(0, 200);
+    const parts = desc.split(/(?<=[.!?])\s+/);
+    for (const s of parts) {
+      const t = s.replace(/^[\u0022\u2018\u2019\u201c\u201d\s]+/, '').trim();
+      if (t.length > 15 && !t.startsWith('&quot')) return t.slice(0, 150);
+    }
+    return desc.replace(/^[\u0022\u2018\u2019\u201c\u201d\s]+/, '').trim().slice(0, 150);
   }
 
   function extractSource(url) {
@@ -443,32 +409,10 @@
     renderNews();
   }
 
-  function countKeyword(text, keyword) {
-    if (!text) return 0;
-    return (text.match(new RegExp(keyword, 'g')) || []).length;
-  }
-
   function renderNews() {
-    const hanwhaChecked = document.getElementById('hanwhaCheck')?.checked;
-    let filtered;
-
-    if (currentFilter === 'all') {
-      filtered = allNews;
-    } else if (currentFilter === '증여') {
-      filtered = allNews.filter(n => {
-        const total = countKeyword(n.title, '증여') + countKeyword(n.desc, '증여');
-        return total >= 3;
-      });
-    } else {
-      filtered = allNews.filter(n => n.title.includes(currentFilter) || (n.desc || '').includes(currentFilter));
-    }
-
-    // 한화생명 파이 체크박스 추가 필터
-    if (hanwhaChecked) {
-      filtered = filtered.filter(n =>
-        (n.title + (n.desc || '')).includes('한화생명 파이')
-      );
-    }
+    const filtered = currentFilter === 'all'
+      ? allNews
+      : allNews.filter(n => n.keyword === currentFilter || n.title.includes(currentFilter));
 
     if (filtered.length === 0) {
       document.getElementById('newsContent').innerHTML =
