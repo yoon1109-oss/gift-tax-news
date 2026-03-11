@@ -12,7 +12,6 @@
       --card: #1c1c1c;
       --border: #2a2a2a;
       --accent: #c9a84c;
-      --accent2: #e8c97a;
       --text: #e8e4dc;
       --muted: #7a7570;
       --tag-bg: #1e1a12;
@@ -64,7 +63,6 @@
     }
 
     .header-right { display: flex; align-items: center; gap: 16px; }
-
     .last-updated { font-size: 12px; color: var(--muted); }
 
     .refresh-btn {
@@ -84,11 +82,10 @@
 
     .refresh-btn:hover { background: var(--tag-bg); border-color: var(--accent); }
     .refresh-btn.loading svg { animation: spin 1s linear infinite; }
-
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
     .hero {
-      padding: 60px 40px 40px;
+      padding: 48px 40px 36px;
       border-bottom: 1px solid var(--border);
       background: linear-gradient(180deg, #111008 0%, var(--bg) 100%);
     }
@@ -98,27 +95,26 @@
       letter-spacing: 3px;
       text-transform: uppercase;
       color: var(--accent);
-      margin-bottom: 16px;
+      margin-bottom: 12px;
       font-weight: 500;
     }
 
     .hero-title {
       font-family: 'Noto Serif KR', serif;
-      font-size: clamp(32px, 5vw, 52px);
+      font-size: clamp(28px, 4vw, 44px);
       font-weight: 700;
       line-height: 1.2;
-      margin-bottom: 16px;
+      margin-bottom: 10px;
     }
 
     .hero-title span { color: var(--accent); }
-
-    .hero-desc { font-size: 15px; color: var(--muted); line-height: 1.7; max-width: 500px; }
+    .hero-desc { font-size: 14px; color: var(--muted); line-height: 1.7; }
 
     .filters {
-      padding: 20px 40px;
+      padding: 16px 40px;
       display: flex;
-      gap: 10px;
       align-items: center;
+      gap: 10px;
       border-bottom: 1px solid var(--border);
       flex-wrap: wrap;
     }
@@ -129,7 +125,7 @@
       background: transparent;
       border: 1px solid var(--border);
       color: var(--muted);
-      padding: 6px 14px;
+      padding: 6px 16px;
       border-radius: 20px;
       font-size: 13px;
       cursor: pointer;
@@ -143,27 +139,48 @@
       color: var(--accent);
     }
 
-    .stats-bar {
-      padding: 14px 40px;
+    .checkbox-wrap {
       display: flex;
-      gap: 32px;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      padding: 6px 16px;
+      border-radius: 20px;
+      transition: all 0.2s;
+      user-select: none;
+      margin-left: 8px;
+      border-left: 1px solid var(--border);
+    }
+
+    .checkbox-wrap:hover { border-color: var(--accent); color: var(--accent); background: var(--tag-bg); }
+    .checkbox-wrap.checked { border-color: var(--accent); color: var(--accent); background: var(--tag-bg); }
+
+    .checkbox-wrap input[type="checkbox"] {
+      accent-color: var(--accent);
+      width: 14px; height: 14px;
+      cursor: pointer;
+    }
+
+    .divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+
+    .stats-bar {
+      padding: 12px 40px;
+      display: flex;
+      gap: 28px;
       border-bottom: 1px solid var(--border);
       background: var(--surface);
     }
 
     .stat { display: flex; align-items: baseline; gap: 6px; }
-    .stat-num { font-size: 20px; font-weight: 600; color: var(--accent); }
+    .stat-num { font-size: 18px; font-weight: 600; color: var(--accent); }
     .stat-label { font-size: 12px; color: var(--muted); }
 
-    .news-container { padding: 32px 40px; max-width: 1400px; margin: 0 auto; }
+    .news-container { padding: 28px 40px; max-width: 860px; margin: 0 auto; }
 
-    .news-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      max-width: 800px;
-      margin: 0 auto;
-      gap: 16px;
-    }
+    .news-grid { display: flex; flex-direction: column; gap: 14px; }
 
     .news-card {
       background: var(--card);
@@ -171,40 +188,43 @@
       border-radius: 8px;
       padding: 20px 24px;
       cursor: pointer;
-      transition: all 0.25s;
+      transition: all 0.22s;
       display: flex;
       flex-direction: column;
       gap: 8px;
       text-decoration: none;
       color: inherit;
       opacity: 0;
-      transform: translateY(12px);
-      animation: fadeUp 0.4s forwards;
+      transform: translateY(10px);
+      animation: fadeUp 0.35s forwards;
     }
 
     @keyframes fadeUp { to { opacity: 1; transform: translateY(0); } }
 
     .news-card:hover {
       border-color: var(--accent);
-      background: #1f1f1f;
+      background: #202020;
       transform: translateY(-2px);
-      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.4);
     }
 
-    .card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 2px; }
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
     .card-source {
       font-size: 11px;
       color: var(--accent);
       font-weight: 500;
       background: var(--tag-bg);
-      padding: 3px 8px;
+      padding: 2px 8px;
       border-radius: 3px;
       border: 1px solid rgba(201,168,76,0.2);
-      white-space: nowrap;
     }
 
-    .card-date { font-size: 11px; color: var(--muted); white-space: nowrap; }
+    .card-date { font-size: 11px; color: var(--muted); }
 
     .card-title {
       font-family: 'Noto Serif KR', serif;
@@ -212,31 +232,27 @@
       font-weight: 600;
       line-height: 1.55;
       word-break: keep-all;
+      color: var(--text);
     }
 
     .card-desc {
       font-size: 13px;
       color: var(--muted);
-      line-height: 1.7;
+      line-height: 1.75;
       display: -webkit-box;
       -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
     }
 
-    .card-footer { display: none; }
-
-    .keyword-tag { font-size: 11px; padding: 2px 8px; border-radius: 2px; font-weight: 500; }
-    .tag-gift { background: rgba(201,168,76,0.1); color: var(--accent); }
-    .tag-tax { background: rgba(100,160,255,0.1); color: #7ab3f5; }
-
     .loading-state {
-      display: flex; flex-direction: column; align-items: center;
-      justify-content: center; padding: 80px 40px; gap: 20px;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      padding: 80px; gap: 20px;
     }
 
     .loading-spinner {
-      width: 40px; height: 40px;
+      width: 36px; height: 36px;
       border: 2px solid var(--border);
       border-top-color: var(--accent);
       border-radius: 50%;
@@ -244,15 +260,11 @@
     }
 
     .loading-text { color: var(--muted); font-size: 14px; }
-
-    .empty-state { text-align: center; padding: 80px 40px; color: var(--muted); }
+    .empty-state { text-align: center; padding: 80px; color: var(--muted); font-size: 14px; }
 
     @media (max-width: 640px) {
-      header { padding: 0 20px; }
-      .hero { padding: 40px 20px 30px; }
-      .filters, .stats-bar { padding: 14px 20px; }
+      header, .hero, .filters, .stats-bar { padding-left: 20px; padding-right: 20px; }
       .news-container { padding: 20px; }
-      .news-grid { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -261,7 +273,7 @@
 <header>
   <div class="logo">
     <div class="logo-dot"></div>
-    증여세 뉴스
+    증여 최신 뉴스
   </div>
   <div class="header-right">
     <span class="last-updated" id="lastUpdated">—</span>
@@ -279,14 +291,18 @@
 <div class="hero">
   <div class="hero-label">실시간 뉴스 모니터링</div>
   <h1 class="hero-title">증여 <span>최신 뉴스</span></h1>
-  <p class="hero-desc">증여 및 증여세 관련 최신 뉴스를 실시간으로 수집하여 제공합니다.</p>
+  <p class="hero-desc">증여 관련 최신 뉴스를 실시간으로 수집하여 제공합니다.</p>
 </div>
 
 <div class="filters">
   <span class="filter-label">필터</span>
   <button class="filter-btn active" onclick="setFilter('all', this)">전체</button>
-  <button class="filter-btn" onclick="setFilter('증여', this)">증여</button>
-  <button class="filter-btn" onclick="setFilter('한화생명', this)">한화생명 파이</button>
+  <button class="filter-btn" onclick="setFilter('증여', this)">증여 3회↑</button>
+  <div class="divider"></div>
+  <label class="checkbox-wrap" id="hanwhaWrap">
+    <input type="checkbox" id="hanwhaCheck" onchange="toggleHanwha()">
+    <span>한화생명 파이</span>
+  </label>
 </div>
 
 <div class="stats-bar">
@@ -312,6 +328,7 @@
 <script>
   let allNews = [];
   let currentFilter = 'all';
+  let hanwhaOnly = false;
 
   async function fetchNews() {
     const btn = document.getElementById('refreshBtn');
@@ -322,26 +339,33 @@
       let results = [];
 
       for (const kw of keywords) {
-        const res = await fetch(`/api/news?keyword=${encodeURIComponent(kw)}&display=50`);
-        if (!res.ok) continue;
-        const data = await res.json();
+        // 페이지네이션으로 최대 300건 (100건 x 3페이지)
+        for (let start = 1; start <= 201; start += 100) {
+          const res = await fetch(`/api/news?keyword=${encodeURIComponent(kw)}&display=100&start=${start}`);
+          if (!res.ok) break;
+          const data = await res.json();
+          const items = data.items || [];
+          if (items.length === 0) break;
 
-        (data.items || []).forEach(item => {
-          const title = item.title.replace(/<[^>]*>/g, '').replace(/&quot;/g,'"').replace(/&amp;/g,'&');
-          const desc = item.description.replace(/<[^>]*>/g, '').replace(/&quot;/g,'"').replace(/&amp;/g,'&');
-          results.push({
-            title,
-            link: item.originallink || item.link,
-            pubDate: new Date(item.pubDate),
-            desc,
-            source: extractSource(item.originallink || item.link),
-            keyword: kw
+          items.forEach(item => {
+            const title = item.title.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+            const desc = item.description.replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+            results.push({
+              title,
+              link: item.originallink || item.link,
+              pubDate: new Date(item.pubDate),
+              desc,
+              source: extractSource(item.originallink || item.link),
+            });
           });
-        });
-      }
 
-      // 제목에 '증여' 포함된 기사만
-      results = results.filter(n => n.title.includes('증여'));
+          // 마지막 아이템이 3개월 이전이면 중단
+          const lastDate = new Date(items[items.length - 1].pubDate);
+          const threeMonthsAgo = new Date();
+          threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+          if (lastDate < threeMonthsAgo) break;
+        }
+      }
 
       // 중복 제거
       const seen = new Set();
@@ -351,12 +375,12 @@
         return true;
       });
 
-      // 최근 3개월 필터
+      // 최근 3개월
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
       results = results.filter(n => n.pubDate >= threeMonthsAgo);
 
-      // 최신순 정렬
+      // 최신순
       results.sort((a, b) => b.pubDate - a.pubDate);
 
       allNews = results;
@@ -365,41 +389,14 @@
 
       const now = new Date();
       document.getElementById('lastUpdated').textContent =
-        `업데이트 ${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')}`;
+        `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} 업데이트`;
 
     } catch(e) {
       document.getElementById('newsContent').innerHTML =
-        `<div class="empty-state"><p>뉴스를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</p></div>`;
+        `<div class="empty-state">뉴스를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.</div>`;
     }
 
     btn.classList.remove('loading');
-  }
-
-  function cleanDesc(desc) {
-    const parts = desc.split(/(?<=[.!?])\s+/);
-    for (const s of parts) {
-      const t = s.replace(/^[\u0022\u2018\u2019\u201c\u201d\s]+/, '').trim();
-      if (t.length > 15 && !t.startsWith('&quot')) return t.slice(0, 150);
-    }
-    return desc.replace(/^[\u0022\u2018\u2019\u201c\u201d\s]+/, '').trim().slice(0, 150);
-  }
-
-  function extractSource(url) {
-    try {
-      const host = new URL(url).hostname.replace('www.', '');
-      const map = {
-        'chosun.com':'조선일보','joongang.co.kr':'중앙일보','donga.com':'동아일보',
-        'hani.co.kr':'한겨레','hankookilbo.com':'한국일보','khan.co.kr':'경향신문',
-        'mt.co.kr':'머니투데이','sedaily.com':'서울경제','hankyung.com':'한국경제',
-        'mk.co.kr':'매일경제','yna.co.kr':'연합뉴스','newsis.com':'뉴시스',
-        'news1.kr':'뉴스1','ohmynews.com':'오마이뉴스','edaily.co.kr':'이데일리',
-        'etnews.com':'전자신문','fnnews.com':'파이낸셜뉴스','inews24.com':'아이뉴스24',
-      };
-      for (const [k, v] of Object.entries(map)) {
-        if (host.includes(k)) return v;
-      }
-      return host.split('.')[0];
-    } catch { return '언론사'; }
   }
 
   function setFilter(filter, el) {
@@ -409,34 +406,56 @@
     renderNews();
   }
 
+  function toggleHanwha() {
+    hanwhaOnly = document.getElementById('hanwhaCheck').checked;
+    document.getElementById('hanwhaWrap').classList.toggle('checked', hanwhaOnly);
+    renderNews();
+  }
+
+  function countKeyword(text, kw) {
+    if (!text) return 0;
+    return (text.match(new RegExp(kw, 'g')) || []).length;
+  }
+
   function renderNews() {
-    const filtered = currentFilter === 'all'
-      ? allNews
-      : allNews.filter(n => n.keyword === currentFilter || n.title.includes(currentFilter));
+    let filtered = [...allNews];
+
+    // 필터 적용
+    if (currentFilter === '증여') {
+      filtered = filtered.filter(n => {
+        const cnt = countKeyword(n.title, '증여') + countKeyword(n.desc, '증여');
+        return cnt >= 3;
+      });
+    }
+
+    // 한화생명 파이 체크박스 (독립적으로 추가 필터)
+    if (hanwhaOnly) {
+      filtered = filtered.filter(n =>
+        (n.title + n.desc).includes('한화생명 파이')
+      );
+    }
+
+    document.getElementById('totalCount').textContent = filtered.length;
 
     if (filtered.length === 0) {
       document.getElementById('newsContent').innerHTML =
-        `<div class="empty-state"><p>해당 키워드의 뉴스가 없습니다.</p></div>`;
+        `<div class="empty-state">해당 조건의 뉴스가 없습니다.</div>`;
       return;
     }
 
     const grid = filtered.map((n, i) => {
       const date = n.pubDate instanceof Date && !isNaN(n.pubDate) ? formatDate(n.pubDate) : '';
-      const hasTax = n.title.includes('증여세');
-      const tags = hasTax
-        ? `<span class="keyword-tag tag-tax">증여세</span>`
-        : `<span class="keyword-tag tag-gift">증여</span>`;
+      const desc = cleanDesc(n.desc);
 
       return `
         <a class="news-card" href="${n.link}" target="_blank" rel="noopener"
-           style="animation-delay:${i * 0.03}s">
-          <div class="card-top">
+           style="animation-delay:${Math.min(i * 0.03, 0.5)}s">
+          <div class="card-meta">
             <span class="card-source">${esc(n.source)}</span>
             <span class="card-date">${date}</span>
           </div>
           <div class="card-title">${esc(n.title)}</div>
-          ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0,120))}...</div>` : ''}
-          <div class="card-footer">${tags}</div>
+          ${desc ? `<div class="card-desc">${esc(desc)}</div>` : ''}
         </a>`;
     }).join('');
 
@@ -449,6 +468,31 @@
     document.getElementById('sourceCount').textContent = sources.size;
   }
 
+  function cleanDesc(desc) {
+    if (!desc) return '';
+    let d = desc.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    d = d.replace(/^[\s"""''\u2018\u2019\u201c\u201d]+/, '').trim();
+    return d.slice(0, 200);
+  }
+
+  function extractSource(url) {
+    try {
+      const host = new URL(url).hostname.replace('www.', '');
+      const map = {
+        'chosun.com':'조선일보','joongang.co.kr':'중앙일보','donga.com':'동아일보',
+        'hani.co.kr':'한겨레','hankookilbo.com':'한국일보','khan.co.kr':'경향신문',
+        'mt.co.kr':'머니투데이','sedaily.com':'서울경제','hankyung.com':'한국경제',
+        'mk.co.kr':'매일경제','yna.co.kr':'연합뉴스','newsis.com':'뉴시스',
+        'news1.kr':'뉴스1','ohmynews.com':'오마이뉴스','edaily.co.kr':'이데일리',
+        'etnews.com':'전자신문','fnnews.com':'파이낸셜뉴스',
+      };
+      for (const [k, v] of Object.entries(map)) {
+        if (host.includes(k)) return v;
+      }
+      return host.split('.')[0];
+    } catch { return '언론사'; }
+  }
+
   function formatDate(d) {
     const now = new Date();
     const diff = Math.floor((now - d) / 60000);
@@ -458,6 +502,7 @@
   }
 
   function esc(str) {
+    if (!str) return '';
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
