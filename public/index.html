@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
@@ -375,6 +376,12 @@
     btn.classList.remove('loading');
   }
 
+  function cleanDesc(desc) {
+    let d = desc.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+    d = d.replace(/^[\u0022\u0027\u2018\u2019\u201c\u201d\s]+/, '').trim();
+    return d.slice(0, 200);
+  }
+
   function extractSource(url) {
     try {
       const host = new URL(url).hostname.replace('www.', '');
@@ -400,10 +407,28 @@
     renderNews();
   }
 
+  function countKeyword(text, keyword) {
+    if (!text) return 0;
+    return (text.match(new RegExp(keyword, 'g')) || []).length;
+  }
+
   function renderNews() {
-    const filtered = currentFilter === 'all'
-      ? allNews
-      : allNews.filter(n => n.keyword === currentFilter || n.title.includes(currentFilter));
+    let filtered;
+    if (currentFilter === 'all') {
+      filtered = allNews;
+    } else if (currentFilter === '증여') {
+      filtered = allNews.filter(n => {
+        const total = countKeyword(n.title, '증여') + countKeyword(n.desc, '증여');
+        return total >= 3;
+      });
+    } else if (currentFilter === '한화생명') {
+      filtered = allNews.filter(n =>
+        n.title.includes('한화생명') || n.desc.includes('한화생명') ||
+        n.title.includes('파이') || n.desc.includes('파이')
+      );
+    } else {
+      filtered = allNews.filter(n => n.title.includes(currentFilter) || n.desc.includes(currentFilter));
+    }
 
     if (filtered.length === 0) {
       document.getElementById('newsContent').innerHTML =
