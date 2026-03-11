@@ -155,8 +155,7 @@
   let currentMode = 'all'; // 'all' | 'title' | 'hanwha'
 
   function getCurrentKeyword() {
-    if (currentMode === 'hanwha') return '한화생명';
-    if (currentMode === 'title') return '증여';
+    if (currentMode === 'hanwha') return '한화생명 파이';
     return '증여';
   }
 
@@ -183,14 +182,8 @@
 
         if (existingLinks.has(item.originallink || item.link)) return;
 
-        // 제목에 증여: 타이틀에 '증여가' 포함된 기사만
-        if (currentMode === 'title' && !title.includes('증여가')) return;
-
-        // 한화생명 파이: '한화생명' AND '파이' 둘 다 포함된 기사만
-        if (currentMode === 'hanwha') {
-          const text = title + desc;
-          if (!text.includes('한화생명') || !text.includes('파이')) return;
-        }
+        // 제목에 증여 단독: 띄어쓰기로 구분된 단어 '증여' 포함
+        if (currentMode === 'title' && !/(?:^|[\s,\.\(\[\!])증여(?:$|[\s,\.\)\]\!])/.test(title)) return;
 
         allNews.push({
           title, desc,
