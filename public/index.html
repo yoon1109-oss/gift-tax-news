@@ -260,7 +260,7 @@
           <span class="card-source">${esc(n.source)}</span>
           <span class="card-date">${formatDate(n.pubDate)}</span>
         </div>
-        <div class="card-title">${esc(n.title)}</div>
+        <div class="card-title">${highlightKeyword(esc(n.title), '증여')}</div>
         ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0, 200))}</div>` : ''}
       `;
       grid.appendChild(el);
@@ -346,6 +346,11 @@
     if (diff < 60) return `${diff}분 전`;
     if (diff < 1440) return `${Math.floor(diff/60)}시간 전`;
     return `${d.getMonth()+1}/${d.getDate()}`;
+  }
+
+  function highlightKeyword(str, kw) {
+    if (!str) return '';
+    return str.replace(new RegExp(kw, 'g'), `<span style="color:#f97316;font-weight:700;">${kw}</span>`);
   }
 
   function esc(str) {
