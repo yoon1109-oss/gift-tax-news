@@ -117,7 +117,7 @@
 <div class="filters">
   <span class="filter-label">추가 필터</span>
   <label class="checkbox-wrap" id="chk0wrap">
-    <input type="radio" name="newsFilter" id="chk0" value="none" checked onchange="onCheckChange()">
+    <input type="radio" name="newsFilter" id="chk0" value="all" checked onchange="onCheckChange()">
     <span>전체</span>
   </label>
   <label class="checkbox-wrap" id="chk1wrap">
@@ -145,13 +145,19 @@
 <script>
   const PAGE_SIZE = 30;
 
-  let allNews = [];       // API에서 받아온 전체 (증여 3회↑ 필터 적용)
-  let filteredNews = [];  // 체크박스 적용 후
+  let allNews = [];
+  let filteredNews = [];
   let renderedCount = 0;
 
   let apiStart = 1;
   let apiDone = false;
   let isFetching = false;
+  let currentMode = 'all'; // 'all' | 'title' | 'hanwha'
+
+  function getCurrentKeyword() {
+    if (currentMode === 'hanwha') return '한화생명 파이';
+    return '증여';
+  }
 
   async function fetchPage() {
     if (isFetching || apiDone) return;
@@ -159,7 +165,8 @@
     document.getElementById('scrollLoader').style.display = 'flex';
 
     try {
-      const res = await fetch(`/api/news?keyword=${encodeURIComponent('증여')}&display=100&start=${apiStart}`);
+      const keyword = getCurrentKeyword();
+      const res = await fetch(`/api/news?keyword=${encodeURIComponent(keyword)}&display=100&start=${apiStart}`);
       if (!res.ok) throw new Error('API error');
       const data = await res.json();
       const items = data.items || [];
@@ -168,7 +175,6 @@
 
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
-
       const existingLinks = new Set(allNews.map(n => n.link));
 
       items.forEach(item => {
@@ -176,8 +182,11 @@
         const desc = item.description.replace(/<[^>]*>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#\d+;/g,'');
         const pubDate = new Date(item.pubDate);
 
-        if (pubDate < threeMonthsAgo) return; // 오래된 기사는 건너뜀 (apiDone 안 함)
+        if (pubDate < threeMonthsAgo) return;
         if (existingLinks.has(item.originallink || item.link)) return;
+
+        // 제목에 증여 모드: 제목에 증여 포함된 것만
+        if (currentMode === 'title' && !title.includes('증여')) return;
 
         allNews.push({
           title, desc,
@@ -196,14 +205,17 @@
       apiStart += 100;
       allNews.sort((a, b) => b.pubDate - a.pubDate);
 
-      applyCheckboxes();
+      filteredNews = [...allNews];
+      renderedCount = 0;
+      document.getElementById('newsGrid').innerHTML = '';
+      renderNextPage();
       updateStats();
 
       const now = new Date();
       document.getElementById('lastUpdated').textContent =
         `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} 업데이트`;
 
-      // 필터 후 기사가 PAGE_SIZE보다 적으면 자동으로 다음 페이지 호출
+      // 30개 미만이면 자동으로 다음 페이지
       if (!apiDone && filteredNews.length < PAGE_SIZE) {
         isFetching = false;
         document.getElementById('scrollLoader').style.display = 'none';
@@ -224,18 +236,29 @@
   }
 
   function applyCheckboxes() {
-    const val = document.querySelector('input[name="newsFilter"]:checked')?.value || 'none';
-
-    let result = [...allNews];
-    if (val === 'title') result = result.filter(n => n.title.includes('증여'));
-    if (val === 'hanwha') result = result.filter(n => (n.title + n.desc).includes('한화생명') && (n.title + n.desc).includes('증여'));
-
-    filteredNews = result;
+    filteredNews = [...allNews];
     renderedCount = 0;
     document.getElementById('newsGrid').innerHTML = '';
     document.getElementById('endMsg').style.display = 'none';
     renderNextPage();
     updateStats();
+  }
+
+  function onCheckChange() {
+    const val = document.querySelector('input[name="newsFilter"]:checked')?.value || 'all';
+    currentMode = val;
+    ['chk0wrap','chk1wrap','chk2wrap'].forEach(id => {
+      const wrap = document.getElementById(id);
+      const input = wrap?.querySelector('input');
+      if (wrap && input) wrap.classList.toggle('checked', input.checked);
+    });
+    // 모드 바뀌면 완전히 새로 조회
+    allNews = []; filteredNews = []; renderedCount = 0;
+    apiStart = 1; apiDone = false;
+    document.getElementById('newsGrid').innerHTML = '';
+    document.getElementById('endMsg').style.display = 'none';
+    document.getElementById('initLoader').style.display = 'flex';
+    fetchPage();
   }
 
   function renderNextPage() {
@@ -280,18 +303,10 @@
   }, { rootMargin: '400px' });
   observer.observe(document.getElementById('scrollLoader'));
 
-  function onCheckChange() {
-    ['chk0wrap','chk1wrap','chk2wrap'].forEach(id => {
-      const wrap = document.getElementById(id);
-      const input = wrap?.querySelector('input');
-      if (wrap && input) wrap.classList.toggle('checked', input.checked);
-    });
-    applyCheckboxes();
-  }
-
-  function resetAndFetch() {
+ function resetAndFetch() {
     allNews = []; filteredNews = []; renderedCount = 0;
     apiStart = 1; apiDone = false;
+    currentMode = document.querySelector('input[name="newsFilter"]:checked')?.value || 'all';
     document.getElementById('newsGrid').innerHTML = '';
     document.getElementById('endMsg').style.display = 'none';
     document.getElementById('initLoader').style.display = 'flex';
