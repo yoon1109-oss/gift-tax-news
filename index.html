@@ -53,7 +53,7 @@
     }
     .checkbox-wrap:hover { border-color: var(--accent); color: var(--accent); background: var(--tag-bg); }
     .checkbox-wrap.checked { border-color: var(--accent); color: var(--accent); background: var(--tag-bg); }
-    .checkbox-wrap input[type="checkbox"] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
+    .checkbox-wrap input[type="radio"] { accent-color: var(--accent); width: 14px; height: 14px; cursor: pointer; }
 
     .stats-bar { padding: 12px 40px; display: flex; gap: 28px; border-bottom: 1px solid var(--border); background: var(--surface); }
     .stat { display: flex; align-items: baseline; gap: 6px; }
@@ -116,12 +116,16 @@
 
 <div class="filters">
   <span class="filter-label">추가 필터</span>
+  <label class="checkbox-wrap" id="chk0wrap">
+    <input type="radio" name="newsFilter" id="chk0" value="none" checked onchange="onCheckChange()">
+    <span>전체</span>
+  </label>
   <label class="checkbox-wrap" id="chk1wrap">
-    <input type="checkbox" id="chk1" onchange="onCheckChange()">
+    <input type="radio" name="newsFilter" id="chk1" value="title" onchange="onCheckChange()">
     <span>제목에 증여 포함</span>
   </label>
   <label class="checkbox-wrap" id="chk2wrap">
-    <input type="checkbox" id="chk2" onchange="onCheckChange()">
+    <input type="radio" name="newsFilter" id="chk2" value="hanwha" onchange="onCheckChange()">
     <span>한화생명 파이</span>
   </label>
 </div>
@@ -213,12 +217,11 @@
   }
 
   function applyCheckboxes() {
-    const chk1 = document.getElementById('chk1').checked;
-    const chk2 = document.getElementById('chk2').checked;
+    const val = document.querySelector('input[name="newsFilter"]:checked')?.value || 'none';
 
     let result = [...allNews];
-    if (chk1) result = result.filter(n => n.title.includes('증여'));
-    if (chk2) result = result.filter(n => (n.title + n.desc).includes('한화생명 파이'));
+    if (val === 'title') result = result.filter(n => n.title.includes('증여'));
+    if (val === 'hanwha') result = result.filter(n => (n.title + n.desc).includes('한화생명 파이'));
 
     filteredNews = result;
     renderedCount = 0;
@@ -267,8 +270,11 @@
   observer.observe(document.getElementById('scrollLoader'));
 
   function onCheckChange() {
-    document.getElementById('chk1wrap').classList.toggle('checked', document.getElementById('chk1').checked);
-    document.getElementById('chk2wrap').classList.toggle('checked', document.getElementById('chk2').checked);
+    ['chk0wrap','chk1wrap','chk2wrap'].forEach(id => {
+      const wrap = document.getElementById(id);
+      const input = wrap?.querySelector('input');
+      if (wrap && input) wrap.classList.toggle('checked', input.checked);
+    });
     applyCheckboxes();
   }
 
