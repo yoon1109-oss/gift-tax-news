@@ -167,7 +167,7 @@
   }
 
   async function fetchBatch(keyword, start) {
-    const sort = currentMode === 'hanwha' ? 'sim' : 'date';
+    const sort = 'sim';
     const res = await fetch(`/api/news?keyword=${encodeURIComponent(keyword)}&display=100&start=${start}&sort=${sort}`);
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
