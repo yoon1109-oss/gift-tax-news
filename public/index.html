@@ -126,7 +126,7 @@
   </label>
   <label class="checkbox-wrap" id="chk2wrap">
     <input type="radio" name="newsFilter" id="chk2" value="hanwha" onchange="onCheckChange()">
-    <span>한화생명 파이</span>
+    <span>한화생명 + 증여</span>
   </label>
 </div>
 
@@ -170,17 +170,16 @@
       threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
       const existingLinks = new Set(allNews.map(n => n.link));
-      let hasOldArticle = false;
 
       items.forEach(item => {
         const title = item.title.replace(/<[^>]*>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#\d+;/g,'');
         const desc = item.description.replace(/<[^>]*>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&#\d+;/g,'');
         const pubDate = new Date(item.pubDate);
 
-        if (pubDate < threeMonthsAgo) { hasOldArticle = true; return; }
+        if (pubDate < threeMonthsAgo) { apiDone = true; return; }
         if (existingLinks.has(item.originallink || item.link)) return;
 
-        // 디폴트 조건: 제목+본문에 '증여' 2회 이상 (API description은 짧은 요약이라 3회 충족 어려움)
+        // 디폴트 조건: 제목+본문에 '증여' 2회 이상
         const cnt = countKeyword(title, '증여') + countKeyword(desc, '증여');
         if (cnt < 2) return;
 
@@ -192,8 +191,6 @@
         });
       });
 
-      if (hasOldArticle) apiDone = true;
-
       apiStart += 100;
       allNews.sort((a, b) => b.pubDate - a.pubDate);
 
@@ -203,6 +200,14 @@
       const now = new Date();
       document.getElementById('lastUpdated').textContent =
         `${now.getHours().toString().padStart(2,'0')}:${now.getMinutes().toString().padStart(2,'0')} 업데이트`;
+
+      // 필터 후 기사가 PAGE_SIZE보다 적으면 자동으로 다음 페이지 호출
+      if (!apiDone && filteredNews.length < PAGE_SIZE) {
+        isFetching = false;
+        document.getElementById('scrollLoader').style.display = 'none';
+        await fetchPage();
+        return;
+      }
 
     } catch(e) {
       console.error(e);
@@ -221,7 +226,7 @@
 
     let result = [...allNews];
     if (val === 'title') result = result.filter(n => n.title.includes('증여'));
-    if (val === 'hanwha') result = result.filter(n => (n.title + n.desc).includes('한화생명 파이'));
+    if (val === 'hanwha') result = result.filter(n => (n.title + n.desc).includes('한화생명') && (n.title + n.desc).includes('증여'));
 
     filteredNews = result;
     renderedCount = 0;
@@ -259,14 +264,18 @@
   }
 
   // 무한 스크롤
-  const observer = new IntersectionObserver(entries => {
+  const observer = new IntersectionObserver(async entries => {
     if (!entries[0].isIntersecting) return;
     if (renderedCount < filteredNews.length) {
       renderNextPage();
+      // 렌더 후에도 아직 부족하고 API 더 있으면 추가 호출
+      if (renderedCount < PAGE_SIZE && !apiDone) await fetchPage();
     } else if (!apiDone) {
-      fetchPage();
+      await fetchPage();
+    } else {
+      document.getElementById('endMsg').style.display = 'block';
     }
-  }, { rootMargin: '300px' });
+  }, { rootMargin: '400px' });
   observer.observe(document.getElementById('scrollLoader'));
 
   function onCheckChange() {
