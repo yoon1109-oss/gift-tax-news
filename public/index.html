@@ -268,11 +268,14 @@
 
     bgDone = true;
     document.getElementById('loadingBadge').classList.remove('active');
-    updateStats();
-    checkEnd();
+    if (currentContentType === 'news') {
+      updateStats();
+      checkEnd();
+    }
   }
 
   function renderNextPage() {
+    if (currentContentType !== 'news') return;
     const slice = allNews.slice(renderedCount, renderedCount + PAGE_SIZE);
     if (slice.length === 0) { checkEnd(); return; }
 
@@ -307,6 +310,7 @@
   // 스크롤 감지
   const observer = new IntersectionObserver(entries => {
     if (!entries[0].isIntersecting) return;
+    if (currentContentType !== 'news') return;
     if (renderedCount < allNews.length) {
       renderNextPage();
     }
