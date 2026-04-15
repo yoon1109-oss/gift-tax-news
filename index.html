@@ -89,8 +89,24 @@
     .scroll-loader .loading-spinner { width: 26px; height: 26px; }
     .end-msg { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--border); margin-top: 8px; display: none; }
 
+    .content-tabs {
+      display: none; padding: 10px 40px; gap: 8px;
+      border-bottom: 1px solid var(--border); background: var(--surface);
+      align-items: center; flex-wrap: wrap;
+    }
+    .content-tabs.visible { display: flex; }
+    .content-tab {
+      font-size: 13px; color: var(--muted); border: 1px solid var(--border);
+      padding: 6px 16px; border-radius: 20px; cursor: pointer;
+      transition: all 0.2s; user-select: none;
+    }
+    .content-tab:hover { border-color: var(--accent); color: var(--accent); background: var(--tag-bg); }
+    .content-tab.active { border-color: var(--accent); color: var(--accent); background: var(--tag-bg); }
+    .card-source-blog { font-size: 11px; color: #6ea8fe; font-weight: 500; background: #0d1f3c; padding: 2px 8px; border-radius: 3px; border: 1px solid rgba(110,168,254,.2); }
+    .card-source-cafe { font-size: 11px; color: #a3e635; font-weight: 500; background: #0d1f0d; padding: 2px 8px; border-radius: 3px; border: 1px solid rgba(163,230,53,.2); }
+
     @media (max-width: 640px) {
-      header, .hero, .filters, .stats-bar { padding-left: 20px; padding-right: 20px; }
+      header, .hero, .filters, .stats-bar, .content-tabs { padding-left: 20px; padding-right: 20px; }
       .news-container { padding: 20px; }
     }
   </style>
@@ -129,9 +145,16 @@
   </label>
 </div>
 
+<div class="content-tabs" id="contentTabs">
+  <span class="filter-label">콘텐츠</span>
+  <span class="content-tab active" id="tab-news" onclick="onContentTypeChange('news')">뉴스</span>
+  <span class="content-tab" id="tab-blog" onclick="onContentTypeChange('blog')">블로그</span>
+  <span class="content-tab" id="tab-cafe" onclick="onContentTypeChange('cafe')">카페</span>
+</div>
+
 <div class="stats-bar">
-  <div class="stat"><span class="stat-num" id="totalCount">—</span><span class="stat-label">건의 뉴스</span></div>
-  <div class="stat"><span class="stat-num" id="sourceCount">—</span><span class="stat-label">개 매체</span></div>
+  <div class="stat"><span class="stat-num" id="totalCount">—</span><span class="stat-label" id="totalLabel">건의 뉴스</span></div>
+  <div class="stat"><span class="stat-num" id="sourceCount">—</span><span class="stat-label" id="sourceLabel">개 매체</span></div>
   <div class="loading-badge" id="loadingBadge"><div class="mini-spinner"></div><span>백그라운드 로딩 중...</span></div>
 </div>
 
@@ -150,6 +173,12 @@
   let renderedCount = 0;
   let currentMode = 'all';
   let bgDone = false;
+
+  let currentContentType = 'news'; // 'news' | 'blog' | 'cafe'
+  let blogItems = [];
+  let cafeItems = [];
+  let blogLoaded = false;
+  let cafeLoaded = false;
 
   function getKeyword() {
     return currentMode === 'hanwha' ? '한화생명 파이' : '증여';
@@ -239,11 +268,14 @@
 
     bgDone = true;
     document.getElementById('loadingBadge').classList.remove('active');
-    updateStats();
-    checkEnd();
+    if (currentContentType === 'news') {
+      updateStats();
+      checkEnd();
+    }
   }
 
   function renderNextPage() {
+    if (currentContentType !== 'news') return;
     const slice = allNews.slice(renderedCount, renderedCount + PAGE_SIZE);
     if (slice.length === 0) { checkEnd(); return; }
 
@@ -260,7 +292,7 @@
           <span class="card-source">${esc(n.source)}</span>
           <span class="card-date">${formatDate(n.pubDate)}</span>
         </div>
-        <div class="card-title">${highlightKeyword(esc(n.title), '증여')}</div>
+        <div class="card-title">${highlightKeyword(esc(n.title), currentMode === 'hanwha' ? '한화생명' : '증여')}</div>
         ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0, 200))}</div>` : ''}
       `;
       grid.appendChild(el);
@@ -278,6 +310,7 @@
   // 스크롤 감지
   const observer = new IntersectionObserver(entries => {
     if (!entries[0].isIntersecting) return;
+    if (currentContentType !== 'news') return;
     if (renderedCount < allNews.length) {
       renderNextPage();
     }
@@ -288,18 +321,166 @@
     currentMode = mode;
     document.querySelectorAll('.radio-wrap').forEach(w => w.classList.remove('checked'));
     document.getElementById('wrap-' + mode).classList.add('checked');
-    reset();
+
+    const contentTabs = document.getElementById('contentTabs');
+    if (mode === 'hanwha') {
+      contentTabs.classList.add('visible');
+      // 탭 상태 초기화
+      currentContentType = 'news';
+      document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
+      document.getElementById('tab-news').classList.add('active');
+    } else {
+      contentTabs.classList.remove('visible');
+      currentContentType = 'news';
+    }
+
+    resetNews();
     startLoad();
+  }
+
+  function onContentTypeChange(type) {
+    currentContentType = type;
+    document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + type).classList.add('active');
+
+    if (type === 'news') {
+      resetNews();
+      startLoad();
+    } else if (type === 'blog') {
+      showBlog();
+    } else if (type === 'cafe') {
+      showCafe();
+    }
+  }
+
+  function cleanHtml(s) {
+    return (s || '').replace(/<[^>]*>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#\d+;/g, '').replace(/&apos;/g, "'");
+  }
+
+  async function showBlog() {
+    document.getElementById('newsGrid').innerHTML = '';
+    document.getElementById('endMsg').style.display = 'none';
+    document.getElementById('scrollLoader').style.display = 'none';
+    document.getElementById('initLoader').style.display = 'flex';
+    document.getElementById('initLoader').innerHTML = '<div class="loading-spinner"></div><p class="loading-text">블로그 글을 불러오는 중...</p>';
+
+    if (!blogLoaded) {
+      try {
+        const res = await fetch(`/api/blog?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=date`);
+        const data = await res.json();
+        blogItems = (data.items || []).map(item => ({
+          title: cleanHtml(item.title),
+          desc: cleanHtml(item.description),
+          link: item.link,
+          source: item.bloggername || '블로그',
+          postdate: item.postdate || '',
+        }));
+        blogLoaded = true;
+      } catch (e) {
+        console.error('블로그 로드 실패:', e);
+        document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">블로그를 불러오지 못했습니다. 새로고침해주세요.</p>';
+        return;
+      }
+    }
+
+    document.getElementById('initLoader').style.display = 'none';
+    renderSecondaryItems(blogItems, 'blog');
+    document.getElementById('totalCount').textContent = blogItems.length;
+    document.getElementById('totalLabel').textContent = '건의 블로그';
+    document.getElementById('sourceCount').textContent = new Set(blogItems.map(n => n.source)).size;
+    document.getElementById('sourceLabel').textContent = '개 블로그';
+    document.getElementById('endMsg').style.display = blogItems.length > 0 ? 'block' : 'none';
+  }
+
+  async function showCafe() {
+    document.getElementById('newsGrid').innerHTML = '';
+    document.getElementById('endMsg').style.display = 'none';
+    document.getElementById('scrollLoader').style.display = 'none';
+    document.getElementById('initLoader').style.display = 'flex';
+    document.getElementById('initLoader').innerHTML = '<div class="loading-spinner"></div><p class="loading-text">카페 글을 불러오는 중...</p>';
+
+    if (!cafeLoaded) {
+      try {
+        const res = await fetch(`/api/cafe?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=date`);
+        const data = await res.json();
+        cafeItems = (data.items || []).map(item => ({
+          title: cleanHtml(item.title),
+          desc: cleanHtml(item.description),
+          link: item.link,
+          source: item.cafename || '카페',
+          postdate: '',
+        }));
+        cafeLoaded = true;
+      } catch (e) {
+        console.error('카페 로드 실패:', e);
+        document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">카페를 불러오지 못했습니다. 새로고침해주세요.</p>';
+        return;
+      }
+    }
+
+    document.getElementById('initLoader').style.display = 'none';
+    renderSecondaryItems(cafeItems, 'cafe');
+    document.getElementById('totalCount').textContent = cafeItems.length;
+    document.getElementById('totalLabel').textContent = '건의 카페글';
+    document.getElementById('sourceCount').textContent = new Set(cafeItems.map(n => n.source)).size;
+    document.getElementById('sourceLabel').textContent = '개 카페';
+    document.getElementById('endMsg').style.display = cafeItems.length > 0 ? 'block' : 'none';
+  }
+
+  function renderSecondaryItems(items, type) {
+    const grid = document.getElementById('newsGrid');
+    grid.innerHTML = '';
+
+    if (items.length === 0) {
+      grid.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">검색 결과가 없습니다.</p>';
+      return;
+    }
+
+    const sourceClass = type === 'blog' ? 'card-source-blog' : 'card-source-cafe';
+
+    items.forEach((item, i) => {
+      const el = document.createElement('a');
+      el.className = 'news-card';
+      el.href = item.link;
+      el.target = '_blank';
+      el.rel = 'noopener';
+      el.style.animationDelay = `${Math.min(i * 0.03, 0.5)}s`;
+
+      let dateStr = '';
+      if (item.postdate && item.postdate.length === 8) {
+        dateStr = `${item.postdate.slice(4, 6)}/${item.postdate.slice(6, 8)}`;
+      }
+
+      el.innerHTML = `
+        <div class="card-meta">
+          <span class="${sourceClass}">${esc(item.source)}</span>
+          ${dateStr ? `<span class="card-date">${dateStr}</span>` : ''}
+        </div>
+        <div class="card-title">${highlightKeyword(esc(item.title), '한화생명')}</div>
+        ${item.desc ? `<div class="card-desc">${esc(item.desc.slice(0, 200))}</div>` : ''}
+      `;
+      grid.appendChild(el);
+    });
   }
 
   function resetAndFetch() {
     document.getElementById('refreshBtn').classList.add('loading');
-    reset();
-    startLoad().then(() => {}).catch(() => {});
+    blogLoaded = false;
+    cafeLoaded = false;
+    blogItems = [];
+    cafeItems = [];
+    if (currentContentType === 'blog') {
+      showBlog().then(() => {}).catch(() => {});
+    } else if (currentContentType === 'cafe') {
+      showCafe().then(() => {}).catch(() => {});
+    } else {
+      resetNews();
+      startLoad().then(() => {}).catch(() => {});
+    }
     setTimeout(() => document.getElementById('refreshBtn').classList.remove('loading'), 1500);
   }
 
-  function reset() {
+  function resetNews() {
     allNews = [];
     renderedCount = 0;
     bgDone = false;
@@ -309,8 +490,12 @@
     document.getElementById('loadingBadge').classList.remove('active');
     document.getElementById('initLoader').style.display = 'flex';
     document.getElementById('initLoader').innerHTML = '<div class="loading-spinner"></div><p class="loading-text">뉴스를 불러오는 중...</p>';
+    document.getElementById('totalLabel').textContent = '건의 뉴스';
+    document.getElementById('sourceLabel').textContent = '개 매체';
     updateStats();
   }
+
+  function reset() { resetNews(); }
 
   function updateStats() {
     document.getElementById('totalCount').textContent = allNews.length;
