@@ -373,7 +373,36 @@
   function extractSource(url) {
     try {
       const host = new URL(url).hostname.replace('www.','');
-      const map = {'chosun.com':'조선','joongang.co.kr':'중앙','donga.com':'동아','hani.co.kr':'한겨레','hankookilbo.com':'한국','khan.co.kr':'경향','mt.co.kr':'머니투데이','sedaily.com':'서울경제','hankyung.com':'한국경제','mk.co.kr':'매일경제','yna.co.kr':'연합뉴스','newsis.com':'뉴시스','news1.kr':'뉴스1','ohmynews.com':'오마이','edaily.co.kr':'이데일리','etnews.com':'전자신문','fnnews.com':'파이낸셜'};
+      const map = {
+        'chosun.com':'조선일보','joongang.co.kr':'중앙일보','joins.com':'중앙일보',
+        'donga.com':'동아일보','hani.co.kr':'한겨레','hankookilbo.com':'한국일보',
+        'khan.co.kr':'경향신문','mt.co.kr':'머니투데이','moneys.mt.co.kr':'머니S',
+        'sedaily.com':'서울경제','hankyung.com':'한국경제','mk.co.kr':'매일경제',
+        'yna.co.kr':'연합뉴스','yonhapnews.co.kr':'연합뉴스',
+        'newsis.com':'뉴시스','news1.kr':'뉴스1','ohmynews.com':'오마이뉴스',
+        'edaily.co.kr':'이데일리','etnews.com':'전자신문','fnnews.com':'파이낸셜뉴스',
+        'heraldcorp.com':'헤럴드경제','herald.co.kr':'헤럴드경제',
+        'asiae.co.kr':'아시아경제','ajunews.com':'아주경제',
+        'etoday.co.kr':'이투데이','newspim.com':'뉴스핌',
+        'dailian.co.kr':'데일리안','dt.co.kr':'디지털타임스',
+        'djtimes.co.kr':'디지털저널','ddaily.co.kr':'디지털데일리',
+        'bloter.net':'블로터','zdnet.co.kr':'ZDNet','itchosun.com':'IT조선',
+        'inews24.com':'아이뉴스24','itworld.co.kr':'IT월드',
+        'nocutnews.co.kr':'노컷뉴스','pressian.com':'프레시안',
+        'mediatoday.co.kr':'미디어오늘','munhwa.com':'문화일보',
+        'seoul.co.kr':'서울신문','naeil.com':'내일신문',
+        'segye.com':'세계일보','kmib.co.kr':'국민일보','kukinews.com':'쿠키뉴스',
+        'imaeil.com':'매일신문','kookje.co.kr':'국제신문','busan.com':'부산일보',
+        'knnews.co.kr':'경남신문','jjan.kr':'전남일보','kjdaily.com':'광주일보',
+        'jtbc.co.kr':'JTBC','ytn.co.kr':'YTN','mbn.co.kr':'MBN',
+        'sbs.co.kr':'SBS','kbs.co.kr':'KBS','mbc.co.kr':'MBC',
+        'ichannela.com':'채널A','tvchosun.com':'TV조선',
+        'thebell.co.kr':'더벨','fn.co.kr':'파이낸셜뉴스',
+        'sisajournal.com':'시사저널','weekly.chosun.com':'주간조선',
+        'businesspost.co.kr':'비즈니스포스트','bizwatch.co.kr':'비즈워치',
+        'tfmedia.co.kr':'더팩트','wikitree.co.kr':'위키트리',
+        'topstarnews.net':'탑스타뉴스','stardailynews.co.kr':'스타데일리',
+      };
       for (const [k,v] of Object.entries(map)) { if (host.includes(k)) return v; }
       return host.split('.')[0];
     } catch { return '언론사'; }
