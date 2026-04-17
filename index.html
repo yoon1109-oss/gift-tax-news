@@ -351,7 +351,7 @@
 
     if (!blogLoaded) {
       try {
-        const res = await fetch(`/api/blog?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=date`);
+        const res = await fetch(`/api/blog?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=sim`);
         const data = await res.json();
         blogItems = (data.items || []).map(item => ({
           title: cleanHtml(item.title),
@@ -386,7 +386,7 @@
 
     if (!cafeLoaded) {
       try {
-        const res = await fetch(`/api/cafe?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=date`);
+        const res = await fetch(`/api/cafe?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=sim`);
         const data = await res.json();
         cafeItems = (data.items || []).map(item => ({
           title: cleanHtml(item.title),
