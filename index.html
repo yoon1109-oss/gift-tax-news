@@ -196,7 +196,7 @@
   }
 
   async function fetchBatch(keyword, start) {
-    const sort = 'sim';
+    const sort = 'date';
     const res = await fetch(`/api/news?keyword=${encodeURIComponent(keyword)}&display=100&start=${start}&sort=${sort}`);
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
