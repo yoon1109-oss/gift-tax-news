@@ -137,19 +137,19 @@
   <span class="filter-label">조회</span>
   <label class="radio-wrap checked" id="wrap-all">
     <input type="radio" name="newsFilter" id="radio-all" value="all" checked onchange="onModeChange('all')">
-    <span>전체</span>
+    <span>증여 기사</span>
   </label>
   <label class="radio-wrap" id="wrap-hanwha">
     <input type="radio" name="newsFilter" id="radio-hanwha" value="hanwha" onchange="onModeChange('hanwha')">
-    <span>한화생명 파이</span>
+    <span>파이 기사</span>
   </label>
 </div>
 
 <div class="content-tabs" id="contentTabs">
   <span class="filter-label">콘텐츠</span>
-  <span class="content-tab active" id="tab-news" onclick="onContentTypeChange('news')">뉴스</span>
-  <span class="content-tab" id="tab-blog" onclick="onContentTypeChange('blog')">블로그</span>
-  <span class="content-tab" id="tab-cafe" onclick="onContentTypeChange('cafe')">카페</span>
+  <span class="content-tab active" id="tab-news" onclick="onContentTypeChange('news')">파이 뉴스</span>
+  <span class="content-tab" id="tab-blog" onclick="onContentTypeChange('blog')">파이 블로그</span>
+  <span class="content-tab" id="tab-cafe" onclick="onContentTypeChange('cafe')">파이 카페</span>
 </div>
 
 <div class="stats-bar">
@@ -368,13 +368,15 @@
       try {
         const res = await fetch(`/api/blog?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=date`);
         const data = await res.json();
-        blogItems = (data.items || []).map(item => ({
-          title: cleanHtml(item.title),
-          desc: cleanHtml(item.description),
-          link: item.link,
-          source: item.bloggername || '블로그',
-          postdate: item.postdate || '',
-        }));
+        blogItems = (data.items || [])
+          .map(item => ({
+            title: cleanHtml(item.title),
+            desc: cleanHtml(item.description),
+            link: item.link,
+            source: item.bloggername || '블로그',
+            postdate: item.postdate || '',
+          }))
+          .filter(item => item.title.includes('한화생명') || item.desc.includes('한화생명'));
         blogLoaded = true;
       } catch (e) {
         console.error('블로그 로드 실패:', e);
@@ -403,13 +405,15 @@
       try {
         const res = await fetch(`/api/cafe?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=date`);
         const data = await res.json();
-        cafeItems = (data.items || []).map(item => ({
-          title: cleanHtml(item.title),
-          desc: cleanHtml(item.description),
-          link: item.link,
-          source: item.cafename || '카페',
-          postdate: '',
-        }));
+        cafeItems = (data.items || [])
+          .map(item => ({
+            title: cleanHtml(item.title),
+            desc: cleanHtml(item.description),
+            link: item.link,
+            source: item.cafename || '카페',
+            postdate: '',
+          }))
+          .filter(item => item.title.includes('한화생명') || item.desc.includes('한화생명'));
         cafeLoaded = true;
       } catch (e) {
         console.error('카페 로드 실패:', e);
