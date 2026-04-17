@@ -136,20 +136,25 @@
 <div class="filters">
   <span class="filter-label">조회</span>
   <label class="radio-wrap checked" id="wrap-all">
-    <input type="radio" name="newsFilter" id="radio-all" value="all" checked onchange="onModeChange('all')">
+    <input type="radio" name="newsFilter" value="all" checked onchange="onModeChange('all')">
     <span>증여 기사</span>
   </label>
   <label class="radio-wrap" id="wrap-hanwha">
-    <input type="radio" name="newsFilter" id="radio-hanwha" value="hanwha" onchange="onModeChange('hanwha')">
+    <input type="radio" name="newsFilter" value="hanwha" onchange="onModeChange('hanwha')">
     <span>파이 기사</span>
   </label>
-</div>
-
-<div class="content-tabs" id="contentTabs">
-  <span class="filter-label">콘텐츠</span>
-  <span class="content-tab active" id="tab-news" onclick="onContentTypeChange('news')">파이 뉴스</span>
-  <span class="content-tab" id="tab-blog" onclick="onContentTypeChange('blog')">파이 블로그</span>
-  <span class="content-tab" id="tab-cafe" onclick="onContentTypeChange('cafe')">파이 카페</span>
+  <label class="radio-wrap" id="wrap-pie-news">
+    <input type="radio" name="newsFilter" value="pie-news" onchange="onModeChange('pie-news')">
+    <span>파이 뉴스</span>
+  </label>
+  <label class="radio-wrap" id="wrap-blog">
+    <input type="radio" name="newsFilter" value="blog" onchange="onModeChange('blog')">
+    <span>파이 블로그</span>
+  </label>
+  <label class="radio-wrap" id="wrap-cafe">
+    <input type="radio" name="newsFilter" value="cafe" onchange="onModeChange('cafe')">
+    <span>파이 카페</span>
+  </label>
 </div>
 
 <div class="stats-bar">
@@ -171,17 +176,15 @@
 
   let allNews = [];
   let renderedCount = 0;
-  let currentMode = 'all';
+  let currentMode = 'all'; // 'all' | 'hanwha' | 'pie-news' | 'blog' | 'cafe'
   let bgDone = false;
-
-  let currentContentType = 'news'; // 'news' | 'blog' | 'cafe'
   let blogItems = [];
   let cafeItems = [];
   let blogLoaded = false;
   let cafeLoaded = false;
 
   function getKeyword() {
-    return currentMode === 'hanwha' ? '한화생명 파이' : '증여';
+    return currentMode === 'all' ? '증여' : '한화생명 파이';
   }
 
   function cleanItem(item) {
@@ -268,18 +271,17 @@
 
     bgDone = true;
     document.getElementById('loadingBadge').classList.remove('active');
-    if (currentContentType === 'news') {
-      updateStats();
-      checkEnd();
-    }
+    updateStats();
+    checkEnd();
   }
 
   function renderNextPage() {
-    if (currentContentType !== 'news') return;
+    if (currentMode === 'blog' || currentMode === 'cafe') return;
     const slice = allNews.slice(renderedCount, renderedCount + PAGE_SIZE);
     if (slice.length === 0) { checkEnd(); return; }
 
     const grid = document.getElementById('newsGrid');
+    const kw = currentMode === 'all' ? '증여' : '한화생명';
     slice.forEach((n, i) => {
       const el = document.createElement('a');
       el.className = 'news-card';
@@ -292,7 +294,7 @@
           <span class="card-source">${esc(n.source)}</span>
           <span class="card-date">${formatDate(n.pubDate)}</span>
         </div>
-        <div class="card-title">${highlightKeyword(esc(n.title), currentMode === 'hanwha' ? '한화생명' : '증여')}</div>
+        <div class="card-title">${highlightKeyword(esc(n.title), kw)}</div>
         ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0, 200))}</div>` : ''}
       `;
       grid.appendChild(el);
@@ -310,7 +312,7 @@
   // 스크롤 감지
   const observer = new IntersectionObserver(entries => {
     if (!entries[0].isIntersecting) return;
-    if (currentContentType !== 'news') return;
+    if (currentMode === 'blog' || currentMode === 'cafe') return;
     if (renderedCount < allNews.length) {
       renderNextPage();
     }
@@ -322,34 +324,17 @@
     document.querySelectorAll('.radio-wrap').forEach(w => w.classList.remove('checked'));
     document.getElementById('wrap-' + mode).classList.add('checked');
 
-    const contentTabs = document.getElementById('contentTabs');
-    if (mode === 'hanwha') {
-      contentTabs.classList.add('visible');
-      // 탭 상태 초기화
-      currentContentType = 'news';
-      document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
-      document.getElementById('tab-news').classList.add('active');
+    if (mode === 'blog') {
+      blogLoaded = false;
+      blogItems = [];
+      showBlog();
+    } else if (mode === 'cafe') {
+      cafeLoaded = false;
+      cafeItems = [];
+      showCafe();
     } else {
-      contentTabs.classList.remove('visible');
-      currentContentType = 'news';
-    }
-
-    resetNews();
-    startLoad();
-  }
-
-  function onContentTypeChange(type) {
-    currentContentType = type;
-    document.querySelectorAll('.content-tab').forEach(t => t.classList.remove('active'));
-    document.getElementById('tab-' + type).classList.add('active');
-
-    if (type === 'news') {
       resetNews();
       startLoad();
-    } else if (type === 'blog') {
-      showBlog();
-    } else if (type === 'cafe') {
-      showCafe();
     }
   }
 
@@ -368,15 +353,13 @@
       try {
         const res = await fetch(`/api/blog?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=date`);
         const data = await res.json();
-        blogItems = (data.items || [])
-          .map(item => ({
-            title: cleanHtml(item.title),
-            desc: cleanHtml(item.description),
-            link: item.link,
-            source: item.bloggername || '블로그',
-            postdate: item.postdate || '',
-          }))
-          .filter(item => item.title.includes('한화생명') || item.desc.includes('한화생명'));
+        blogItems = (data.items || []).map(item => ({
+          title: cleanHtml(item.title),
+          desc: cleanHtml(item.description),
+          link: item.link,
+          source: item.bloggername || '블로그',
+          postdate: item.postdate || '',
+        }));
         blogLoaded = true;
       } catch (e) {
         console.error('블로그 로드 실패:', e);
@@ -405,15 +388,13 @@
       try {
         const res = await fetch(`/api/cafe?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=date`);
         const data = await res.json();
-        cafeItems = (data.items || [])
-          .map(item => ({
-            title: cleanHtml(item.title),
-            desc: cleanHtml(item.description),
-            link: item.link,
-            source: item.cafename || '카페',
-            postdate: '',
-          }))
-          .filter(item => item.title.includes('한화생명') || item.desc.includes('한화생명'));
+        cafeItems = (data.items || []).map(item => ({
+          title: cleanHtml(item.title),
+          desc: cleanHtml(item.description),
+          link: item.link,
+          source: item.cafename || '카페',
+          postdate: '',
+        }));
         cafeLoaded = true;
       } catch (e) {
         console.error('카페 로드 실패:', e);
@@ -473,9 +454,9 @@
     cafeLoaded = false;
     blogItems = [];
     cafeItems = [];
-    if (currentContentType === 'blog') {
+    if (currentMode === 'blog') {
       showBlog().then(() => {}).catch(() => {});
-    } else if (currentContentType === 'cafe') {
+    } else if (currentMode === 'cafe') {
       showCafe().then(() => {}).catch(() => {});
     } else {
       resetNews();
