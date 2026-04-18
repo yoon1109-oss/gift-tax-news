@@ -83,7 +83,7 @@
       color: #f9a26c; border: 1px solid rgba(249,162,108,.35);
       padding: 2px 7px; border-radius: 3px;
     }
-    .related-label { font-size: 11px; color: var(--muted); }
+    .related-label { font-size: 11px; color: var(--muted2); }
     .related-card {
       background: rgba(249,162,108,.05); border: 1px solid rgba(249,162,108,.2); border-radius: 6px;
       padding: 14px 20px; display: flex; flex-direction: column; gap: 7px;
@@ -241,7 +241,7 @@
   }
 
   /* 자녀 증여 연관도 스코어링 */
-  const CHILD_KW = ['자녀','아들','딸','자식','직계비속','미성년','청년','결혼자금','혼인','출산','손자','손녀','세대','공제 한도','증여 한도','10년','분산 증여'];
+  const CHILD_KW = ['미성년','자녀','아들','딸','자식','직계비속','손자','손녀','미성년자','아동','청소년','학생','미성년 자녀','자녀 증여','자녀에게','10년','분산 증여'];
   function childScore(n) {
     const text = (n.title + ' ' + n.desc).toLowerCase();
     return CHILD_KW.reduce((s, kw) => s + (text.includes(kw) ? 1 : 0), 0);
@@ -258,7 +258,7 @@
 
     const sec = document.createElement('div');
     sec.className = 'related-section';
-    sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">자녀 증여 관련 기사</span></div>`;
+    sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">미성년 자녀 증여 관련 기사</span></div>`;
 
     candidates.forEach(({n}, i) => {
       const el = document.createElement('a');
