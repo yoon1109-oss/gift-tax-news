@@ -397,7 +397,7 @@
 
   function highlightKeyword(str, kw) {
     if (!str||!kw) return str;
-    return str.replace(new RegExp(kw,'g'), `<span style="color:#4f9ef8;font-weight:700;">${kw}</span>`);
+    return str.replace(new RegExp(kw,'g'), `<span style="color:#f9a26c;font-weight:700;">${kw}</span>`);
   }
 
   function esc(str) { return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
