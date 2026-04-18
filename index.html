@@ -7,106 +7,106 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --bg: #f5f3ef; --surface: #ffffff; --card: #ffffff;
-      --border: #e8e4dc; --accent: #b5831a; --text: #1a1814;
-      --muted: #8a8580; --tag-bg: #fdf6e3; --time-color: #b5831a;
-      --hover-bg: #fdf6e3;
+      --bg: #0f1117;
+      --surface: #161b27;
+      --card: #1c2133;
+      --card-hover: #212840;
+      --border: #2a3148;
+      --accent: #4f9ef8;
+      --accent-dim: rgba(79,158,248,.12);
+      --text: #e8eaf0;
+      --muted: #6b7490;
+      --muted2: #8b93b0;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; }
 
     header {
-      border-bottom: 2px solid var(--text); padding: 0 48px;
+      padding: 0 48px; height: 56px;
       display: flex; align-items: center; justify-content: space-between;
-      height: 58px; position: sticky; top: 0;
-      background: var(--bg); z-index: 100;
+      border-bottom: 1px solid var(--border);
+      background: rgba(15,17,23,0.96); backdrop-filter: blur(12px);
+      position: sticky; top: 0; z-index: 100;
     }
-    .logo { font-family: 'Noto Serif KR', serif; font-size: 18px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 8px; }
-    .logo-dot { width: 7px; height: 7px; background: var(--accent); border-radius: 50%; animation: pulse 2s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
-    .header-right { display: flex; align-items: center; gap: 14px; }
+    .logo { font-family: 'Noto Serif KR', serif; font-size: 17px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 9px; }
+    .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 2.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 8px var(--accent)} 50%{opacity:.5;box-shadow:0 0 3px var(--accent)} }
+    .header-right { display: flex; align-items: center; gap: 12px; }
     .last-updated { font-size: 11px; color: var(--muted); }
     .refresh-btn {
-      background: var(--text); border: none; color: #fff;
-      padding: 6px 14px; border-radius: 3px; font-size: 12px; cursor: pointer;
+      background: var(--accent-dim); border: 1px solid rgba(79,158,248,.3); color: var(--accent);
+      padding: 6px 14px; border-radius: 4px; font-size: 12px; cursor: pointer;
       font-family: 'Noto Sans KR', sans-serif; transition: all 0.2s;
       display: flex; align-items: center; gap: 5px;
     }
-    .refresh-btn:hover { background: var(--accent); }
+    .refresh-btn:hover { background: rgba(79,158,248,.2); }
     .refresh-btn.loading svg { animation: spin 1s linear infinite; }
     @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
-    .hero {
-      padding: 28px 48px 20px; border-bottom: 1px solid var(--border);
-      background: var(--surface);
-    }
-    .hero-title { font-family: 'Noto Serif KR', serif; font-size: clamp(20px,2.5vw,28px); font-weight: 700; line-height: 1.2; color: var(--text); }
-
     .filters {
       padding: 10px 48px; display: flex; align-items: center; gap: 6px;
-      border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap;
+      border-bottom: 1px solid var(--border); flex-wrap: wrap;
     }
-    .filter-label { font-size: 11px; color: var(--muted); margin-right: 4px; font-weight: 600; letter-spacing: 0.5px; }
+    .filter-label { font-size: 11px; color: var(--muted); margin-right: 4px; font-weight: 500; }
     .radio-wrap {
       display: flex; align-items: center; gap: 5px; cursor: pointer;
-      font-size: 12px; font-weight: 500; color: var(--muted);
-      border: 1px solid var(--border); padding: 5px 12px; border-radius: 2px;
-      transition: all 0.15s; user-select: none; background: var(--bg);
+      font-size: 12px; font-weight: 500; color: var(--muted2);
+      border: 1px solid var(--border); padding: 5px 13px; border-radius: 4px;
+      transition: all 0.15s; user-select: none;
     }
-    .radio-wrap:hover { border-color: var(--accent); color: var(--accent); }
-    .radio-wrap.checked { border-color: var(--text); background: var(--text); color: #fff; }
-    .radio-wrap input[type="radio"] { accent-color: var(--accent); width: 12px; height: 12px; cursor: pointer; }
+    .radio-wrap:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .radio-wrap.checked { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .radio-wrap input[type="radio"] { display: none; }
 
     .stats-bar {
       padding: 8px 48px; display: flex; gap: 20px; align-items: center;
-      border-bottom: 1px solid var(--border); background: var(--bg);
+      border-bottom: 1px solid var(--border); background: var(--surface);
     }
     .stat { display: flex; align-items: baseline; gap: 4px; }
-    .stat-num { font-size: 15px; font-weight: 700; color: var(--accent); }
+    .stat-num { font-size: 14px; font-weight: 700; color: var(--accent); }
     .stat-label { font-size: 11px; color: var(--muted); }
     .loading-badge { font-size: 11px; color: var(--muted); display: none; align-items: center; gap: 5px; margin-left: auto; }
     .loading-badge.active { display: flex; }
     .mini-spinner { width: 11px; height: 11px; border: 1.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 
-    .news-container { padding: 0 48px 48px; max-width: 920px; margin: 0 auto; }
-    .news-grid { display: flex; flex-direction: column; }
+    .news-container { padding: 20px 48px 60px; max-width: 900px; margin: 0 auto; }
+    .news-grid { display: flex; flex-direction: column; gap: 8px; }
 
     .news-card {
-      display: flex; flex-direction: column; gap: 7px;
-      padding: 18px 0;
-      border-bottom: 1px solid var(--border);
+      background: var(--card); border: 1px solid var(--border); border-radius: 6px;
+      padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;
       text-decoration: none; color: inherit;
-      opacity: 0; transform: translateY(4px); animation: fadeUp 0.3s forwards;
-      transition: background 0.15s;
+      opacity: 0; transform: translateY(6px); animation: fadeUp 0.3s forwards;
+      transition: all 0.18s;
     }
     @keyframes fadeUp { to{opacity:1;transform:translateY(0)} }
-    .news-card:hover { background: var(--hover-bg); padding-left: 10px; padding-right: 10px; margin-left: -10px; margin-right: -10px; }
+    .news-card:hover { background: var(--card-hover); border-color: rgba(79,158,248,.35); transform: translateY(-1px); box-shadow: 0 4px 20px rgba(0,0,0,.4); }
     .news-card:hover .card-title { color: var(--accent); }
 
     .card-meta { display: flex; align-items: center; gap: 8px; }
     .card-source {
       font-size: 10px; font-weight: 600; color: var(--accent);
-      background: var(--tag-bg); padding: 2px 6px;
-      border: 1px solid rgba(181,131,26,.2); border-radius: 2px;
+      background: var(--accent-dim); padding: 2px 7px; border-radius: 3px;
+      border: 1px solid rgba(79,158,248,.25);
     }
-    .card-source-blog { font-size: 10px; font-weight: 600; color: #1d6bbf; background: #e8f0fd; padding: 2px 6px; border-radius: 2px; border: 1px solid rgba(29,107,191,.2); }
-    .card-source-cafe { font-size: 10px; font-weight: 600; color: #2d7a3a; background: #e8f5ea; padding: 2px 6px; border-radius: 2px; border: 1px solid rgba(45,122,58,.2); }
+    .card-source-blog { font-size: 10px; font-weight: 600; color: #7dd3a8; background: rgba(125,211,168,.1); padding: 2px 7px; border-radius: 3px; border: 1px solid rgba(125,211,168,.25); }
+    .card-source-cafe { font-size: 10px; font-weight: 600; color: #f9a26c; background: rgba(249,162,108,.1); padding: 2px 7px; border-radius: 3px; border: 1px solid rgba(249,162,108,.25); }
     .card-date { font-size: 11px; color: var(--muted); }
     .card-title {
       font-family: 'Noto Serif KR', serif; font-size: 15px; font-weight: 600;
-      line-height: 1.55; word-break: keep-all; transition: color 0.15s; color: var(--text);
+      line-height: 1.6; word-break: keep-all; transition: color 0.15s;
     }
-    .card-desc { font-size: 12px; color: var(--muted); line-height: 1.75; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .card-desc { font-size: 12px; color: var(--muted2); line-height: 1.8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
     .init-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px; gap: 16px; }
     .loading-spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     .loading-text { color: var(--muted); font-size: 13px; }
     .scroll-sentinel { height: 1px; }
-    .end-msg { text-align: center; padding: 28px; color: var(--muted); font-size: 12px; margin-top: 8px; display: none; }
+    .end-msg { text-align: center; padding: 28px; color: var(--muted); font-size: 12px; display: none; }
 
     @media (max-width: 640px) {
-      header, .hero, .filters, .stats-bar { padding-left: 20px; padding-right: 20px; }
-      .news-container { padding: 0 20px 40px; }
+      header, .filters, .stats-bar { padding-left: 20px; padding-right: 20px; }
+      .news-container { padding: 16px 20px 40px; }
     }
   </style>
 </head>
@@ -125,10 +125,6 @@
     </button>
   </div>
 </header>
-
-<div class="hero">
-  <h1 class="hero-title">증여 모니터링</h1>
-</div>
 
 <div class="filters">
   <span class="filter-label">조회</span>
@@ -376,32 +372,23 @@
       const map = {
         'chosun.com':'조선일보','joongang.co.kr':'중앙일보','joins.com':'중앙일보',
         'donga.com':'동아일보','hani.co.kr':'한겨레','hankookilbo.com':'한국일보',
-        'khan.co.kr':'경향신문','mt.co.kr':'머니투데이','moneys.mt.co.kr':'머니S',
-        'sedaily.com':'서울경제','hankyung.com':'한국경제','mk.co.kr':'매일경제',
-        'yna.co.kr':'연합뉴스','yonhapnews.co.kr':'연합뉴스',
-        'newsis.com':'뉴시스','news1.kr':'뉴스1','ohmynews.com':'오마이뉴스',
-        'edaily.co.kr':'이데일리','etnews.com':'전자신문','fnnews.com':'파이낸셜뉴스',
-        'heraldcorp.com':'헤럴드경제','herald.co.kr':'헤럴드경제',
-        'asiae.co.kr':'아시아경제','ajunews.com':'아주경제',
-        'etoday.co.kr':'이투데이','newspim.com':'뉴스핌',
-        'dailian.co.kr':'데일리안','dt.co.kr':'디지털타임스',
-        'djtimes.co.kr':'디지털저널','ddaily.co.kr':'디지털데일리',
-        'bloter.net':'블로터','zdnet.co.kr':'ZDNet','itchosun.com':'IT조선',
-        'inews24.com':'아이뉴스24','itworld.co.kr':'IT월드',
-        'nocutnews.co.kr':'노컷뉴스','pressian.com':'프레시안',
-        'mediatoday.co.kr':'미디어오늘','munhwa.com':'문화일보',
-        'seoul.co.kr':'서울신문','naeil.com':'내일신문',
+        'khan.co.kr':'경향신문','mt.co.kr':'머니투데이','sedaily.com':'서울경제',
+        'hankyung.com':'한국경제','mk.co.kr':'매일경제','yna.co.kr':'연합뉴스',
+        'yonhapnews.co.kr':'연합뉴스','newsis.com':'뉴시스','news1.kr':'뉴스1',
+        'ohmynews.com':'오마이뉴스','edaily.co.kr':'이데일리','etnews.com':'전자신문',
+        'fnnews.com':'파이낸셜뉴스','heraldcorp.com':'헤럴드경제','asiae.co.kr':'아시아경제',
+        'ajunews.com':'아주경제','etoday.co.kr':'이투데이','newspim.com':'뉴스핌',
+        'dailian.co.kr':'데일리안','dt.co.kr':'디지털타임스','djtimes.co.kr':'디지털저널',
+        'ddaily.co.kr':'디지털데일리','bloter.net':'블로터','zdnet.co.kr':'ZDNet',
+        'itchosun.com':'IT조선','inews24.com':'아이뉴스24','nocutnews.co.kr':'노컷뉴스',
+        'pressian.com':'프레시안','munhwa.com':'문화일보','seoul.co.kr':'서울신문',
         'segye.com':'세계일보','kmib.co.kr':'국민일보','kukinews.com':'쿠키뉴스',
         'imaeil.com':'매일신문','kookje.co.kr':'국제신문','busan.com':'부산일보',
-        'knnews.co.kr':'경남신문','jjan.kr':'전남일보','kjdaily.com':'광주일보',
         'jtbc.co.kr':'JTBC','ytn.co.kr':'YTN','mbn.co.kr':'MBN',
         'sbs.co.kr':'SBS','kbs.co.kr':'KBS','mbc.co.kr':'MBC',
-        'ichannela.com':'채널A','tvchosun.com':'TV조선',
-        'thebell.co.kr':'더벨','fn.co.kr':'파이낸셜뉴스',
-        'sisajournal.com':'시사저널','weekly.chosun.com':'주간조선',
+        'ichannela.com':'채널A','tvchosun.com':'TV조선','thebell.co.kr':'더벨',
         'businesspost.co.kr':'비즈니스포스트','bizwatch.co.kr':'비즈워치',
-        'tfmedia.co.kr':'더팩트','wikitree.co.kr':'위키트리',
-        'topstarnews.net':'탑스타뉴스','stardailynews.co.kr':'스타데일리',
+        'tfmedia.co.kr':'더팩트','naeil.com':'내일신문','mediatoday.co.kr':'미디어오늘',
       };
       for (const [k,v] of Object.entries(map)) { if (host.includes(k)) return v; }
       return host.split('.')[0];
@@ -410,7 +397,7 @@
 
   function highlightKeyword(str, kw) {
     if (!str||!kw) return str;
-    return str.replace(new RegExp(kw,'g'), `<span style="color:#b5831a;font-weight:700;">${kw}</span>`);
+    return str.replace(new RegExp(kw,'g'), `<span style="color:#4f9ef8;font-weight:700;">${kw}</span>`);
   }
 
   function esc(str) { return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
