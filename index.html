@@ -72,6 +72,31 @@
     .news-container { padding: 20px 48px 60px; max-width: 900px; margin: 0 auto; }
     .news-grid { display: flex; flex-direction: column; gap: 8px; }
 
+    /* 연관도 높음 섹션 */
+    .related-section { margin-bottom: 16px; }
+    .related-header {
+      display: flex; align-items: center; gap: 8px;
+      padding: 0 0 8px 0; border-bottom: 1px solid var(--border); margin-bottom: 8px;
+    }
+    .related-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
+      color: #f9a26c; border: 1px solid rgba(249,162,108,.35);
+      padding: 2px 7px; border-radius: 3px;
+    }
+    .related-label { font-size: 11px; color: var(--muted); }
+    .related-card {
+      background: rgba(249,162,108,.05); border: 1px solid rgba(249,162,108,.2); border-radius: 6px;
+      padding: 14px 20px; display: flex; flex-direction: column; gap: 7px;
+      text-decoration: none; color: inherit; margin-bottom: 7px;
+      opacity: 0; animation: fadeUp 0.3s forwards; transition: all 0.18s;
+    }
+    .related-card:hover { background: rgba(249,162,108,.1); border-color: rgba(249,162,108,.4); }
+    .divider-label {
+      font-size: 11px; color: var(--muted); padding: 8px 0 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .divider-label::after { content:''; flex: 1; height: 1px; background: var(--border); }
+
     .news-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 6px;
       padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;
@@ -215,12 +240,59 @@
     updateStats(); checkEnd();
   }
 
+  /* 자녀 증여 연관도 스코어링 */
+  const CHILD_KW = ['자녀','아들','딸','자식','직계비속','미성년','청년','결혼자금','혼인','출산','손자','손녀','세대','공제 한도','증여 한도','10년','분산 증여'];
+  function childScore(n) {
+    const text = (n.title + ' ' + n.desc).toLowerCase();
+    return CHILD_KW.reduce((s, kw) => s + (text.includes(kw) ? 1 : 0), 0);
+  }
+
+  function renderRelated(grid, items, kw) {
+    // 첫 페이지(최신 30개) 중 스코어 2 이상인 기사 최대 3개
+    const candidates = items.slice(0, PAGE_SIZE)
+      .map(n => ({ n, score: childScore(n) }))
+      .filter(x => x.score >= 2)
+      .sort((a,b) => b.score - a.score)
+      .slice(0, 3);
+    if (!candidates.length) return;
+
+    const sec = document.createElement('div');
+    sec.className = 'related-section';
+    sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">자녀 증여 관련 기사</span></div>`;
+
+    candidates.forEach(({n}, i) => {
+      const el = document.createElement('a');
+      el.className = 'related-card'; el.href = n.link; el.target = '_blank'; el.rel = 'noopener';
+      el.style.animationDelay = `${i*0.08}s`;
+      el.innerHTML = `
+        <div class="card-meta">
+          <span class="card-source">[${esc(n.source)}]</span>
+          <span class="card-date">${formatDate(n.pubDate)}</span>
+        </div>
+        <div class="card-title">${highlightKeyword(esc(n.title), kw)}</div>
+        ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0,200))}</div>` : ''}`;
+      sec.appendChild(el);
+    });
+    grid.appendChild(sec);
+
+    const divider = document.createElement('div');
+    divider.className = 'divider-label';
+    divider.textContent = '최신 기사';
+    grid.appendChild(divider);
+  }
+
   function renderNextPage() {
     if (currentMode === 'blog' || currentMode === 'cafe') return;
     const slice = allNews.slice(renderedCount, renderedCount + PAGE_SIZE);
     if (!slice.length) { checkEnd(); return; }
     const grid = document.getElementById('newsGrid');
     const kw = currentMode === 'all' ? '증여' : '한화생명';
+
+    // 첫 렌더시에만 연관 기사 섹션 삽입
+    if (renderedCount === 0 && currentMode === 'all') {
+      renderRelated(grid, allNews, kw);
+    }
+
     slice.forEach((n, i) => {
       const el = document.createElement('a');
       el.className = 'news-card'; el.href = n.link; el.target = '_blank'; el.rel = 'noopener';
