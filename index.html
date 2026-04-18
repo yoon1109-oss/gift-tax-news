@@ -310,7 +310,7 @@
       let dateStr = item.postdate && item.postdate.length===8 ? `${item.postdate.slice(4,6)}/${item.postdate.slice(6,8)}` : '';
       el.innerHTML = `
         <div class="card-meta">
-          <span class="${sourceClass}">${esc(item.source)}</span>
+          ${type !== 'blog' ? `<span class="${sourceClass}">${esc(item.source)}</span>` : ''}
           ${dateStr ? `<span class="card-date">${dateStr}</span>` : ''}
         </div>
         <div class="card-title">${highlightKeyword(esc(item.title),'한화생명')}</div>
