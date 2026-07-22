@@ -182,9 +182,28 @@
 <script>
   const PAGE_SIZE = 30;
   let allNews = [], renderedCount = 0, currentMode = 'all', bgDone = false;
+  let rankCounter = 0, relatedLinks = new Set(), keptSigs = [];
   let blogItems = [], cafeItems = [], blogLoaded = false, cafeLoaded = false;
 
-  function getKeyword() { return currentMode === 'all' ? '증여' : '한화생명 파이'; }
+  /* 신디케이션(동일 보도자료 복제) 근접중복 제거: 제목 문자 bigram Jaccard 유사도 */
+  function titleBigrams(t) {
+    const s = (t||'').replace(/<[^>]*>/g,'').replace(/[^가-힣a-z0-9]/gi,'').toLowerCase();
+    const g = new Set();
+    for (let i = 0; i < s.length - 1; i++) g.add(s.slice(i, i+2));
+    return g;
+  }
+  function isNearDup(title, desc) {
+    const g = titleBigrams(title + ' ' + (desc||'').slice(0, 120));
+    if (g.size < 4) return false;
+    for (const s of keptSigs) {
+      let inter = 0; g.forEach(x => { if (s.has(x)) inter++; });
+      if (inter / (g.size + s.size - inter || 1) >= 0.5) return true;
+    }
+    keptSigs.push(g);
+    return false;
+  }
+
+  function getKeyword() { return currentMode === 'all' ? '자녀 증여' : '한화생명 파이'; }
 
   function cleanItem(item) {
     const clean = s => (s||'').replace(/<[^>]*>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#\d+;/g,'');
@@ -192,7 +211,7 @@
   }
 
   async function fetchBatch(keyword, start) {
-    const res = await fetch(`/api/news?keyword=${encodeURIComponent(keyword)}&display=100&start=${start}&sort=date`);
+    const res = await fetch(`/api/news?keyword=${encodeURIComponent(keyword)}&display=100&start=${start}&sort=sim`);
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
     return data.items || [];
@@ -207,7 +226,8 @@
         const n = cleanItem(item);
         if (!links.has(n.link)) {
           if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
-          links.add(n.link); allNews.push(n);
+          if (isNearDup(n.title, n.desc)) return;
+          links.add(n.link); n._rank = rankCounter++; allNews.push(n);
         }
       });
       allNews.sort((a,b) => b.pubDate - a.pubDate);
@@ -228,7 +248,8 @@
           const n = cleanItem(item);
           if (!existingLinks.has(n.link)) {
             if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
-            existingLinks.add(n.link); allNews.push(n);
+            if (isNearDup(n.title, n.desc)) return;
+            existingLinks.add(n.link); n._rank = rankCounter++; allNews.push(n);
           }
         });
         allNews.sort((a,b) => b.pubDate - a.pubDate); updateStats();
@@ -240,25 +261,18 @@
     updateStats(); checkEnd();
   }
 
-  /* 자녀 증여 연관도 스코어링 */
-  const CHILD_KW = ['미성년','자녀','아들','딸','자식','직계비속','손자','손녀','미성년자','아동','청소년','학생','미성년 자녀','자녀 증여','자녀에게','10년','분산 증여'];
-  function childScore(n) {
-    const text = (n.title + ' ' + n.desc).toLowerCase();
-    return CHILD_KW.reduce((s, kw) => s + (text.includes(kw) ? 1 : 0), 0);
-  }
-
   function renderRelated(grid, items, kw) {
-    // 첫 페이지(최신 30개) 중 스코어 2 이상인 기사 최대 3개
-    const candidates = items.slice(0, PAGE_SIZE)
-      .map(n => ({ n, score: childScore(n) }))
-      .filter(x => x.score >= 2)
-      .sort((a,b) => b.score - a.score)
-      .slice(0, 3);
+    // 네이버 관련도(sim) 상위 기사 최대 3개
+    const candidates = [...items]
+      .sort((a,b) => (a._rank ?? 1e9) - (b._rank ?? 1e9))
+      .slice(0, 3)
+      .map(n => ({ n }));
     if (!candidates.length) return;
+    candidates.forEach(({n}) => relatedLinks.add(n.link));
 
     const sec = document.createElement('div');
     sec.className = 'related-section';
-    sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">미성년 자녀 증여 관련 기사</span></div>`;
+    sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">자녀 증여 관련 기사</span></div>`;
 
     candidates.forEach(({n}, i) => {
       const el = document.createElement('a');
@@ -283,20 +297,22 @@
 
   function renderNextPage() {
     if (currentMode === 'blog' || currentMode === 'cafe') return;
-    const slice = allNews.slice(renderedCount, renderedCount + PAGE_SIZE);
-    if (!slice.length) { checkEnd(); return; }
+    if (renderedCount >= allNews.length) { checkEnd(); return; }
     const grid = document.getElementById('newsGrid');
-    const kw = currentMode === 'all' ? '증여' : '한화생명';
+    const kw = currentMode === 'all' ? ['자녀','증여'] : '한화생명';
 
     // 첫 렌더시에만 연관 기사 섹션 삽입
     if (renderedCount === 0 && currentMode === 'all') {
       renderRelated(grid, allNews, kw);
     }
 
-    slice.forEach((n, i) => {
+    let added = 0;
+    while (renderedCount < allNews.length && added < PAGE_SIZE) {
+      const n = allNews[renderedCount++];
+      if (relatedLinks.has(n.link)) continue; // 연관도 섹션에 이미 노출된 기사는 제외
       const el = document.createElement('a');
       el.className = 'news-card'; el.href = n.link; el.target = '_blank'; el.rel = 'noopener';
-      el.style.animationDelay = `${Math.min(i*0.04,0.5)}s`;
+      el.style.animationDelay = `${Math.min(added*0.04,0.5)}s`;
       el.innerHTML = `
         <div class="card-meta">
           <span class="card-source">[${esc(n.source)}]</span>
@@ -305,8 +321,9 @@
         <div class="card-title">${highlightKeyword(esc(n.title), kw)}</div>
         ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0,200))}</div>` : ''}`;
       grid.appendChild(el);
-    });
-    renderedCount += slice.length; checkEnd();
+      added++;
+    }
+    checkEnd();
   }
 
   function checkEnd() {
@@ -403,7 +420,7 @@
   }
 
   function resetNews() {
-    allNews = []; renderedCount = 0; bgDone = false;
+    allNews = []; renderedCount = 0; bgDone = false; rankCounter = 0; relatedLinks = new Set(); keptSigs = [];
     document.getElementById('newsGrid').innerHTML = '';
     document.getElementById('endMsg').style.display = 'none';
     document.getElementById('loadingBadge').classList.remove('active');
@@ -464,7 +481,11 @@
 
   function highlightKeyword(str, kw) {
     if (!str||!kw) return str;
-    return str.replace(new RegExp(kw,'g'), `<span style="color:#f9a26c;font-weight:700;">${kw}</span>`);
+    const kws = (Array.isArray(kw) ? kw : [kw]).filter(Boolean);
+    return kws.reduce((out, k) => {
+      const safe = k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      return out.replace(new RegExp(safe, 'g'), `<span style="color:#f9a26c;font-weight:700;">${k}</span>`);
+    }, str);
   }
 
   function esc(str) { return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
