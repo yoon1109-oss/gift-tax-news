@@ -112,6 +112,7 @@
     .card-source-blog { font-size: 11px; font-weight: 500; color: var(--muted2); }
     .card-source-cafe { font-size: 11px; font-weight: 500; color: var(--muted2); }
     .card-date { font-size: 11px; color: var(--muted); }
+    .card-like { font-size: 11px; font-weight: 600; color: #f9a26c; display: inline-flex; align-items: center; gap: 3px; }
     .card-title {
       font-family: 'Noto Serif KR', serif; font-size: 15px; font-weight: 600;
       line-height: 1.6; word-break: keep-all; transition: color 0.15s;
@@ -352,7 +353,7 @@
     if (!blogLoaded) {
       try {
         const res = await fetch(`/api/blog?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=sim`);
-        blogItems = ((await res.json()).items||[]).map(item => ({ title: cleanHtml(item.title), desc: cleanHtml(item.description), link: item.link, source: item.bloggername||'블로그', postdate: item.postdate||'' }));
+        blogItems = ((await res.json()).items||[]).map(item => ({ title: cleanHtml(item.title), desc: cleanHtml(item.description), link: item.link, source: item.bloggername||'블로그', postdate: item.postdate||'', likeId: naverBlogId(item.link), likes: null }));
         blogLoaded = true;
       } catch(e) { document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">블로그를 불러오지 못했습니다.</p>'; return; }
     }
@@ -363,6 +364,36 @@
     document.getElementById('sourceCount').textContent = new Set(blogItems.map(n=>n.source)).size;
     document.getElementById('sourceLabel').textContent = '개 블로그';
     document.getElementById('endMsg').style.display = blogItems.length > 0 ? 'block' : 'none';
+    loadBlogLikes(); // 공감수는 렌더를 막지 않고 뒤이어 채운다
+  }
+
+  /* 네이버 블로그 링크에서 공감 조회용 ID(blogId_logNo) 추출 */
+  function naverBlogId(link) {
+    try {
+      const u = new URL(link);
+      if (!u.hostname.includes('blog.naver.com')) return null;
+      const m = u.pathname.match(/^\/([^/]+)\/(\d+)/);
+      if (m) return `${m[1]}_${m[2]}`;
+      const bid = u.searchParams.get('blogId'), log = u.searchParams.get('logNo');
+      if (bid && log) return `${bid}_${log}`;
+    } catch {}
+    return null;
+  }
+
+  /* 공감수 일괄 조회 후 카드에 채움 */
+  async function loadBlogLikes() {
+    const ids = [...new Set(blogItems.map(b => b.likeId).filter(Boolean))].slice(0, 60);
+    if (!ids.length) return;
+    let map = {};
+    try {
+      const r = await fetch(`/api/likes?ids=${encodeURIComponent(ids.join(','))}`);
+      map = await r.json();
+    } catch { return; }
+    blogItems.forEach(b => { if (b.likeId && map[b.likeId] != null) b.likes = map[b.likeId]; });
+    document.querySelectorAll('.card-like[data-lk]').forEach(el => {
+      const c = map[el.getAttribute('data-lk')];
+      el.textContent = (c != null) ? `♥ ${c}` : '';
+    });
   }
 
   async function showCafe() {
@@ -396,6 +427,7 @@
         <div class="card-meta">
           ${type !== 'blog' ? `<span class="${sourceClass}">[${esc(item.source)}]</span>` : ''}
           ${dateStr ? `<span class="card-date">${dateStr}</span>` : ''}
+          ${type === 'blog' && item.likeId ? `<span class="card-like" data-lk="${esc(item.likeId)}">♥ …</span>` : ''}
         </div>
         <div class="card-title">${highlightKeyword(esc(item.title),'한화생명')}</div>
         ${item.desc ? `<div class="card-desc">${esc(item.desc.slice(0,200))}</div>` : ''}`;
