@@ -500,29 +500,6 @@
         <div class="event-link">공식 페이지 바로가기 →</div>`;
       grid.appendChild(el);
     });
-
-    if (pending.length) {
-      const divider = document.createElement('div');
-      divider.className = 'divider-label';
-      divider.textContent = '추가 조사 대상 · 진행 여부 미확정';
-      grid.appendChild(divider);
-
-      const badgeClass = s => s === '확인필요' ? 'badge-check' : (s === '해당없음' ? 'badge-na' : 'badge-none');
-      pending.forEach((p, i) => {
-        const el = document.createElement(p.link ? 'a' : 'div');
-        el.className = 'event-pending';
-        if (p.link) { el.href = p.link; el.target = '_blank'; el.rel = 'noopener'; }
-        el.style.animationDelay = `${Math.min(i*0.03,0.4)}s`;
-        el.innerHTML = `
-          <div class="card-meta">
-            <span class="event-broker-sm">${esc(p.broker)}</span>
-            <span class="event-badge-s ${badgeClass(p.status)}">${esc(p.status)}</span>
-          </div>
-          <div class="event-pending-note">${esc(p.note)}</div>
-          ${p.link ? '<div class="event-link">페이지 확인 →</div>' : ''}`;
-        grid.appendChild(el);
-      });
-    }
   }
 
   function renderSecondaryItems(items, type) {
