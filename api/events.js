@@ -52,14 +52,15 @@ const EVENTS = [
     ],
     domesticFee: '',
     usFee: '',
-    link: 'https://www.truefriend.com/main/customer/notice/Event.jsp?gubun=i',
+    link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i&cmd=TF04gb010002&currentPage=1&num=6518',
   },
   {
     broker: '우리투자증권',
-    title: '온 가족 참여형 투자 이벤트',
+    title: '우리 아이 계좌개설 (온 가족 ETF 이벤트)',
     period: '2026.06.12 ~ 2026.07.31',
     benefits: [
-      '코스닥150 ETF 랜덤 2주 증정 (약 4만원 상당)',
+      '미성년 자녀 생애최초 계좌개설 시 코스닥150 ETF 2주 지급',
+      '부모(위비의 투자 출퇴근길) 동시 참여 시 가족 최대 6만원 상당 ETF 3주',
     ],
     domesticFee: '',
     usFee: '',
