@@ -184,10 +184,6 @@
     <input type="radio" name="newsFilter" value="blog" onchange="onModeChange('blog')">
     <span>블로그 검색</span>
   </label>
-  <label class="radio-wrap" id="wrap-cafe">
-    <input type="radio" name="newsFilter" value="cafe" onchange="onModeChange('cafe')">
-    <span>카페 검색</span>
-  </label>
   <label class="radio-wrap" id="wrap-event">
     <input type="radio" name="newsFilter" value="event" onchange="onModeChange('event')">
     <span>계좌 이벤트</span>
@@ -328,7 +324,7 @@
     if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event') return;
     if (renderedCount >= allNews.length) { checkEnd(); return; }
     const grid = document.getElementById('newsGrid');
-    const kw = currentMode === 'all' ? ['자녀','증여'] : '한화생명';
+    const kw = currentMode === 'all' ? ['자녀','증여'] : '파이';
 
     // 첫 렌더시에만 연관 기사 섹션 삽입
     if (renderedCount === 0 && currentMode === 'all') {
@@ -369,6 +365,7 @@
     currentMode = mode;
     document.querySelectorAll('.radio-wrap').forEach(w => w.classList.remove('checked'));
     document.getElementById('wrap-' + mode).classList.add('checked');
+    document.querySelector('.stats-bar').style.display = (mode === 'event') ? 'none' : 'flex';
     if (mode === 'blog') { blogLoaded = false; blogItems = []; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { showEvents(); }
@@ -517,7 +514,7 @@
           ${dateStr ? `<span class="card-date">${dateStr}</span>` : ''}
           ${type === 'blog' && item.likeId ? `<span class="card-like" data-lk="${esc(item.likeId)}">♥ …</span>` : ''}
         </div>
-        <div class="card-title">${highlightKeyword(esc(item.title),'한화생명')}</div>
+        <div class="card-title">${highlightKeyword(esc(item.title),'파이')}</div>
         ${item.desc ? `<div class="card-desc">${esc(item.desc.slice(0,200))}</div>` : ''}`;
       grid.appendChild(el);
     });
