@@ -126,6 +126,16 @@
     .event-fee { font-size: 12px; color: var(--muted2); line-height: 1.6; margin-top: 4px; }
     .event-fee b { color: var(--muted); font-weight: 500; }
     .event-link { font-size: 11px; color: var(--accent); margin-top: 6px; }
+    .event-title { font-size: 14px; font-weight: 600; color: var(--accent); margin: 3px 0 3px; word-break: keep-all; }
+    .event-note-brokers { display: block; margin-top: 9px; font-size: 11px; color: var(--muted2); line-height: 1.9; }
+    .event-note-brokers b { color: var(--muted); font-weight: 600; }
+    .event-pending { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; margin-bottom: 7px; opacity: .82; transition: all .15s; }
+    a.event-pending:hover { opacity: 1; border-color: rgba(79,158,248,.35); }
+    .event-broker-sm { font-size: 13px; font-weight: 600; color: var(--muted2); }
+    .event-pending-note { font-size: 12px; color: var(--muted); line-height: 1.6; word-break: keep-all; }
+    .event-badge-s { font-size: 10px; font-weight: 700; letter-spacing: .3px; padding: 2px 7px; border-radius: 3px; }
+    .badge-check { color: #f9a26c; border: 1px solid rgba(249,162,108,.35); background: rgba(249,162,108,.08); }
+    .badge-none, .badge-na { color: var(--muted); border: 1px solid var(--border); }
     .card-title {
       font-family: 'Noto Serif KR', serif; font-size: 15px; font-weight: 600;
       line-height: 1.6; word-break: keep-all; transition: color 0.15s;
@@ -445,21 +455,30 @@
     }
     document.getElementById('initLoader').style.display = 'none';
     const events = (eventsData && eventsData.events) || [];
+    const pending = (eventsData && eventsData.pending) || [];
     document.getElementById('totalCount').textContent = events.length;
-    document.getElementById('totalLabel').textContent = '건의 이벤트';
-    document.getElementById('sourceCount').textContent = events.length;
-    document.getElementById('sourceLabel').textContent = '개 증권사';
-    renderEvents(events, (eventsData && eventsData.updatedAt) || '');
+    document.getElementById('totalLabel').textContent = '건 진행중';
+    document.getElementById('sourceCount').textContent = events.length + pending.length;
+    document.getElementById('sourceLabel').textContent = '개사 조사';
+    renderEvents(eventsData || {});
     document.getElementById('endMsg').style.display = 'none';
   }
 
-  function renderEvents(events, updatedAt) {
+  function renderEvents(data) {
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
-    if (!events.length) { grid.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">등록된 이벤트가 없습니다.</p>'; return; }
+    const events = data.events || [], pending = data.pending || [], updatedAt = data.updatedAt || '';
+    const allBrokers = [...events.map(e => e.broker), ...pending.map(p => p.broker)];
+
     const note = document.createElement('div');
     note.className = 'event-note';
-    note.innerHTML = `<b>자녀계좌 개설 이벤트 · 진행중</b>${updatedAt ? ` · 정리 기준 ${esc(updatedAt)}` : ''}<br>수기 정리본이라 변동될 수 있습니다. 참여 전 각 증권사 공식 페이지를 반드시 확인하세요.`;
+    note.innerHTML = `<b>자녀계좌 개설 이벤트</b>${updatedAt ? ` · 정리 기준 ${esc(updatedAt)}` : ''}<br>수기 정리본이라 변동될 수 있습니다. 참여 전 각 증권사 공식 페이지를 반드시 확인하세요.`
+      + (allBrokers.length ? `<span class="event-note-brokers"><b>조사 대상 ${allBrokers.length}개사</b> · ${allBrokers.map(esc).join(' · ')}</span>` : '');
     grid.appendChild(note);
+
+    if (!events.length && !pending.length) {
+      grid.insertAdjacentHTML('beforeend', '<p style="color:var(--muted);text-align:center;padding:40px">등록된 이벤트가 없습니다.</p>');
+      return;
+    }
 
     events.forEach((ev, i) => {
       const el = document.createElement('a');
@@ -475,11 +494,35 @@
           <span class="event-badge">진행중</span>
           <span class="event-period">${esc(ev.period)}</span>
         </div>
+        ${ev.title ? `<div class="event-title">${esc(ev.title)}</div>` : ''}
         <ul class="event-benefits">${benefits}</ul>
         ${fees.length ? `<div class="event-fee">수수료 · ${fees.join(' / ')}</div>` : ''}
         <div class="event-link">공식 페이지 바로가기 →</div>`;
       grid.appendChild(el);
     });
+
+    if (pending.length) {
+      const divider = document.createElement('div');
+      divider.className = 'divider-label';
+      divider.textContent = '추가 조사 대상 · 진행 여부 미확정';
+      grid.appendChild(divider);
+
+      const badgeClass = s => s === '확인필요' ? 'badge-check' : (s === '해당없음' ? 'badge-na' : 'badge-none');
+      pending.forEach((p, i) => {
+        const el = document.createElement(p.link ? 'a' : 'div');
+        el.className = 'event-pending';
+        if (p.link) { el.href = p.link; el.target = '_blank'; el.rel = 'noopener'; }
+        el.style.animationDelay = `${Math.min(i*0.03,0.4)}s`;
+        el.innerHTML = `
+          <div class="card-meta">
+            <span class="event-broker-sm">${esc(p.broker)}</span>
+            <span class="event-badge-s ${badgeClass(p.status)}">${esc(p.status)}</span>
+          </div>
+          <div class="event-pending-note">${esc(p.note)}</div>
+          ${p.link ? '<div class="event-link">페이지 확인 →</div>' : ''}`;
+        grid.appendChild(el);
+      });
+    }
   }
 
   function renderSecondaryItems(items, type) {
