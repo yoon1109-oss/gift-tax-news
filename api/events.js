@@ -1,7 +1,7 @@
 // 증권사 자녀계좌 개설 이벤트 — 수기 큐레이션 데이터.
 // 대부분 증권사 이벤트 페이지가 봇 차단/동적렌더/앱전용이라 자동 수집이 불가하여
 // 여기 배열을 직접 갱신한다. (updatedAt: 마지막 정리일)
-const UPDATED_AT = '2026-06-22';
+const UPDATED_AT = '2026-07-23';
 
 const EVENTS = [
   {
@@ -39,35 +39,11 @@ const EVENTS = [
     link: 'https://toss.im/tossfeed/article/securities-child',
   },
   {
-    broker: 'SK증권',
-    period: '2026.06.01 ~ 2026.06.30',
-    benefits: [
-      '이벤트기간 순입금 1천만원 이상 시 2만원',
-      '순입금 5천만원 이상 시 5만원',
-      '※ 순입금액 = 입금액 − 출금액',
-    ],
-    domesticFee: '',
-    usFee: '',
-    link: 'https://direct-sks.co.kr/account_underage',
-  },
-  {
-    broker: '나무증권 (NH투자증권)',
-    period: '2026.01.01 ~ 2026.06.30',
-    benefits: [
-      '주식모으기(국내주식) 수수료 무료',
-    ],
-    domesticFee: '',
-    usFee: '',
-    link: 'https://www.mynamuhbegin.com/children',
-  },
-  {
     broker: '한국투자증권',
-    period: '2026.06.01 ~ 2026.06.30',
+    period: '2026.07.21 ~ 2026.08.15',
     benefits: [
-      '국내주식 KOSPI200 종목 1+1주 전원 지급',
-      '네이버페이 5천원 전원 지급',
-      '월 19만원 이상 국내주식 순매수 고객 중 19명 추첨 기프티콘',
-      '월 100만원 이상 순매수 시 전원 네이버페이 1만원',
+      '미성년 자녀계좌 개설 + 부모 약정대리인 등록·연동 완료 시 모바일 커피쿠폰 (전원)',
+      '자녀계좌로 국내주식 100만원 이상 순매수 시 30명 추첨 백화점상품권 1만원',
     ],
     domesticFee: '',
     usFee: '',
