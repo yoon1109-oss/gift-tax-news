@@ -217,6 +217,11 @@
     for (let i = 0; i < s.length - 1; i++) g.add(s.slice(i, i+2));
     return g;
   }
+  function bgJaccard(a, b) { let i = 0; a.forEach(x => { if (b.has(x)) i++; }); return i / (a.size + b.size - i || 1); }
+  // 제목 맨 앞 주체(회사/기관명) 추출 — 같은 주체 기사 중복 판별용
+  function leadSubject(t) {
+    return (t||'').replace(/<[^>]*>/g,'').replace(/^\s*\[[^\]]*\]\s*/,'').split(/[,·…“”"'‘’]/)[0].replace(/\s+/g,'').slice(0, 12);
+  }
   function isNearDup(title, desc) {
     const g = titleBigrams(title + ' ' + (desc||'').slice(0, 120));
     if (g.size < 4) return false;
@@ -307,16 +312,17 @@
     const scored = [...items]
       .map(n => ({ n, s: relatedScore(n) }))
       .sort((a, b) => b.s - a.s || (a.n._rank ?? 1e9) - (b.n._rank ?? 1e9));
-    const candidates = [], pickedSigs = [];
+    const candidates = [], pT = [], pTD = [], pSubj = [];
     for (const c of scored) {
       if (candidates.length >= 3) break;
-      const g = titleBigrams(c.n.title);
-      const dup = pickedSigs.some(s => {
-        let i = 0; g.forEach(x => { if (s.has(x)) i++; });
-        return i / (g.size + s.size - i || 1) >= 0.2; // 제목 유사도 낮게 잡아 같은 사건(재작성본) 배제 → 서로 다른 3건
-      });
+      const gt = titleBigrams(c.n.title);
+      const gtd = titleBigrams(c.n.title + ' ' + (c.n.desc || '').slice(0, 120));
+      const subj = leadSubject(c.n.title);
+      // 같은 사건/주체 배제: 제목 유사 or 제목+본문 유사 or 동일 주체(회사명) → 서로 다른 3건 확보
+      const dup = pT.some((s, k) =>
+        bgJaccard(gt, s) >= 0.2 || bgJaccard(gtd, pTD[k]) >= 0.3 || (subj.length >= 2 && subj === pSubj[k]));
       if (dup) continue;
-      pickedSigs.push(g); candidates.push(c);
+      pT.push(gt); pTD.push(gtd); pSubj.push(subj); candidates.push(c);
     }
     if (!candidates.length) return;
     candidates.forEach(({n}) => relatedLinks.add(n.link));
