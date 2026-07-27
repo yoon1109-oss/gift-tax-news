@@ -540,12 +540,12 @@
 
   function renderEvents(data) {
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
-    const events = data.events || [], pending = data.pending || [], updatedAt = data.updatedAt || '';
+    const events = data.events || [], pending = data.pending || [], updatedAt = data.updatedAt || '', checkedAt = data.checkedAt || '';
     const allBrokers = [...events.map(e => e.broker), ...pending.map(p => p.broker)];
 
     const note = document.createElement('div');
     note.className = 'event-note';
-    note.innerHTML = `<b>자녀계좌 개설 이벤트</b>${updatedAt ? ` · 정리 기준 ${esc(updatedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`
+    note.innerHTML = `<b>자녀계좌 개설 이벤트</b>${updatedAt ? ` · 정리 기준 ${esc(updatedAt)}` : ''}${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`
       + (allBrokers.length ? `<span class="event-note-brokers"><b>조사 대상 ${allBrokers.length}개사</b> · ${allBrokers.map(esc).join(' · ')}</span>` : '');
     grid.appendChild(note);
 

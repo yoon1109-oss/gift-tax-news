@@ -1,7 +1,8 @@
 // 증권사 자녀계좌 개설 이벤트 — 수기 큐레이션 데이터.
 // 대부분 증권사 이벤트 페이지가 봇 차단/동적렌더/EUC-KR/앱전용이라 자동 수집이 불가하여
 // 여기 배열을 직접 갱신한다. (매주 월요일 10시 스케줄 갱신 대상)
-const UPDATED_AT = '2026-07-23';
+const UPDATED_AT = '2026-07-23'; // 데이터가 실제 바뀐 날 (정리 기준)
+const CHECKED_AT = '2026-07-27'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
 
 // 진행중 확정 이벤트
 const EVENTS = [
@@ -90,5 +91,5 @@ export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-  res.status(200).json({ updatedAt: UPDATED_AT, events: EVENTS, pending: PENDING });
+  res.status(200).json({ updatedAt: UPDATED_AT, checkedAt: CHECKED_AT, events: EVENTS, pending: PENDING });
 }
