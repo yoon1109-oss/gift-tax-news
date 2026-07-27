@@ -222,6 +222,13 @@
   function leadSubject(t) {
     return (t||'').replace(/<[^>]*>/g,'').replace(/^\s*\[[^\]]*\]\s*/,'').split(/[,·…“”"'‘’]/)[0].replace(/\s+/g,'').slice(0, 12);
   }
+  // 기업 오너·재벌 승계성 증여/재산 뉴스 제외 (세무사회장·협회장 등 정보성은 예외)
+  const OWNER_KW = ['오너','총수','창업주','창업자','일가','블록딜','대주주','최대주주','경영권','지분','株','2세','3세','4세','오너가'];
+  function isOwnerNews(t) {
+    const s = t || '';
+    if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
+    return OWNER_KW.some(k => s.includes(k));
+  }
   function isNearDup(title, desc) {
     const g = titleBigrams(title + ' ' + (desc||'').slice(0, 120));
     if (g.size < 4) return false;
@@ -256,6 +263,7 @@
         const n = cleanItem(item);
         if (!links.has(n.link)) {
           if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
+          if (isOwnerNews(n.title)) return;
           if (isNearDup(n.title, n.desc)) return;
           links.add(n.link); n._rank = rankCounter++; allNews.push(n);
         }
@@ -278,6 +286,7 @@
           const n = cleanItem(item);
           if (!existingLinks.has(n.link)) {
             if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
+            if (isOwnerNews(n.title)) return;
             if (isNearDup(n.title, n.desc)) return;
             existingLinks.add(n.link); n._rank = rankCounter++; allNews.push(n);
           }
