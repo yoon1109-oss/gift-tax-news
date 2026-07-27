@@ -142,6 +142,20 @@
     }
     .card-desc { font-size: 12px; color: var(--muted2); line-height: 1.8; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
+    /* 중복 기사 묶음 (대표 1건 + 하위 제목) */
+    .card-main { display: block; text-decoration: none; color: inherit; }
+    .dup-badge { font-size: 10px; font-weight: 700; color: var(--accent); background: var(--accent-dim); border: 1px solid rgba(79,158,248,.3); border-radius: 3px; padding: 2px 7px; }
+    .dup-toggle { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); font-size: 12px; color: var(--accent); cursor: pointer; display: flex; align-items: center; gap: 6px; user-select: none; }
+    .dup-arrow { font-size: 10px; }
+    .dup-list { display: none; }
+    .dup-list.open { display: block; }
+    .dup-row { display: flex; gap: 7px; padding: 5px 0; font-size: 12px; color: var(--muted2); line-height: 1.5; text-decoration: none; }
+    .dup-row:first-child { padding-top: 11px; }
+    .dup-row:hover .dup-t { color: var(--text); }
+    .dup-src { color: var(--muted); flex: none; }
+    .dup-t { word-break: keep-all; transition: color 0.15s; }
+    .dup-more { font-size: 11px; color: var(--muted); padding: 6px 0 2px; }
+
     .init-loader { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 80px; gap: 16px; }
     .loading-spinner { width: 28px; height: 28px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
     .loading-text { color: var(--muted); font-size: 13px; }
@@ -206,7 +220,7 @@
 <script>
   const PAGE_SIZE = 30;
   let allNews = [], renderedCount = 0, currentMode = 'all', bgDone = false;
-  let rankCounter = 0, relatedLinks = new Set(), keptSigs = [];
+  let rankCounter = 0, relatedLinks = new Set(), groups = [];
   let blogItems = [], cafeItems = [], blogLoaded = false, cafeLoaded = false;
   let eventsLoaded = false, eventsData = null;
 
@@ -229,15 +243,18 @@
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
     return OWNER_KW.some(k => s.includes(k));
   }
-  function isNearDup(title, desc) {
-    const g = titleBigrams(title + ' ' + (desc||'').slice(0, 120));
-    if (g.size < 4) return false;
-    for (const s of keptSigs) {
-      let inter = 0; g.forEach(x => { if (s.has(x)) inter++; });
-      if (inter / (g.size + s.size - inter || 1) >= 0.5) return true;
-    }
-    keptSigs.push(g);
-    return false;
+  // 같은 기사 묶기: 회사명(주체) 동일 또는 본문 근접중복(0.5)이면 기존 대표에 dupe로 붙임.
+  // 새 대표면 true(목록에 추가), 기존 대표에 묶이면 false.
+  function assignGroup(n) {
+    const subj = leadSubject(n.title);
+    const sig = titleBigrams(n.title + ' ' + (n.desc || '').slice(0, 120));
+    let g = null;
+    if (subj.length >= 2) g = groups.find(x => x.subj === subj);
+    if (!g && sig.size >= 4) g = groups.find(x => bgJaccard(sig, x.sig) >= 0.5);
+    if (g) { g.rep.dupes.push(n); return false; }
+    n.dupes = [];
+    groups.push({ subj, sig, rep: n });
+    return true;
   }
 
   function getKeyword() { return currentMode === 'all' ? '자녀 증여' : '한화생명 파이 증여'; }
@@ -264,8 +281,8 @@
         if (!links.has(n.link)) {
           if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
           if (isOwnerNews(n.title)) return;
-          if (isNearDup(n.title, n.desc)) return;
-          links.add(n.link); n._rank = rankCounter++; allNews.push(n);
+          links.add(n.link);
+          if (assignGroup(n)) { n._rank = rankCounter++; allNews.push(n); }
         }
       });
       allNews.sort((a,b) => b.pubDate - a.pubDate);
@@ -287,8 +304,8 @@
           if (!existingLinks.has(n.link)) {
             if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
             if (isOwnerNews(n.title)) return;
-            if (isNearDup(n.title, n.desc)) return;
-            existingLinks.add(n.link); n._rank = rankCounter++; allNews.push(n);
+            existingLinks.add(n.link);
+            if (assignGroup(n)) { n._rank = rankCounter++; allNews.push(n); }
           }
         });
         allNews.sort((a,b) => b.pubDate - a.pubDate); updateStats();
@@ -376,16 +393,27 @@
     while (renderedCount < allNews.length && added < PAGE_SIZE) {
       const n = allNews[renderedCount++];
       if (relatedLinks.has(n.link)) continue; // 연관도 섹션에 이미 노출된 기사는 제외
-      const el = document.createElement('a');
-      el.className = 'news-card'; el.href = n.link; el.target = '_blank'; el.rel = 'noopener';
+      const dupes = n.dupes || [];
+      const el = document.createElement('div');
+      el.className = 'news-card';
       el.style.animationDelay = `${Math.min(added*0.04,0.5)}s`;
+      let dupHtml = '';
+      if (dupes.length) {
+        const shown = dupes.slice(0, 15);
+        const rows = shown.map(d => `<a class="dup-row" href="${esc(d.link)}" target="_blank" rel="noopener"><span class="dup-src">[${esc(d.source)}]</span><span class="dup-t">${esc(d.title)}</span></a>`).join('');
+        const more = dupes.length > shown.length ? `<div class="dup-more">…외 ${dupes.length - shown.length}건</div>` : '';
+        dupHtml = `<div class="dup-toggle" data-total="${dupes.length}" onclick="toggleDupes(this, event)"><span class="dup-arrow">▾</span><span class="dup-label">같은 내용 기사 ${dupes.length}건 더보기</span></div><div class="dup-list">${rows}${more}</div>`;
+      }
       el.innerHTML = `
-        <div class="card-meta">
-          <span class="card-source">[${esc(n.source)}]</span>
-          <span class="card-date">${formatDate(n.pubDate)}</span>
-        </div>
-        <div class="card-title">${highlightKeyword(esc(n.title), kw)}</div>
-        ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0,200))}</div>` : ''}`;
+        <a class="card-main" href="${esc(n.link)}" target="_blank" rel="noopener">
+          <div class="card-meta">
+            <span class="card-source">[${esc(n.source)}]</span>
+            <span class="card-date">${formatDate(n.pubDate)}</span>
+            ${dupes.length ? `<span class="dup-badge">관련 ${dupes.length + 1}건</span>` : ''}
+          </div>
+          <div class="card-title">${highlightKeyword(esc(n.title), kw)}</div>
+          ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0,200))}</div>` : ''}
+        </a>${dupHtml}`;
       grid.appendChild(el);
       added++;
     }
@@ -394,6 +422,14 @@
 
   function checkEnd() {
     document.getElementById('endMsg').style.display = (bgDone && renderedCount >= allNews.length) ? 'block' : 'none';
+  }
+
+  function toggleDupes(el, e) {
+    e.preventDefault(); e.stopPropagation();
+    const list = el.nextElementSibling;
+    const open = list.classList.toggle('open');
+    el.querySelector('.dup-arrow').textContent = open ? '▴' : '▾';
+    el.querySelector('.dup-label').textContent = open ? '접기' : `같은 내용 기사 ${el.dataset.total}건 더보기`;
   }
 
   const observer = new IntersectionObserver(entries => {
@@ -579,7 +615,7 @@
   }
 
   function resetNews() {
-    allNews = []; renderedCount = 0; bgDone = false; rankCounter = 0; relatedLinks = new Set(); keptSigs = [];
+    allNews = []; renderedCount = 0; bgDone = false; rankCounter = 0; relatedLinks = new Set(); groups = [];
     document.getElementById('newsGrid').innerHTML = '';
     document.getElementById('endMsg').style.display = 'none';
     document.getElementById('loadingBadge').classList.remove('active');
