@@ -60,6 +60,19 @@
     .radio-wrap.checked { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
     .radio-wrap input[type="radio"] { display: none; }
 
+    /* 블로그 키워드 칩 (블로그 탭에서만 노출) */
+    .blog-keywords {
+      padding: 9px 48px; display: none; align-items: center; gap: 6px;
+      border-bottom: 1px solid var(--border); background: rgba(79,158,248,.04); flex-wrap: wrap;
+    }
+    .kw-chip {
+      font-size: 12px; font-weight: 500; color: var(--muted2); cursor: pointer;
+      border: 1px solid var(--border); padding: 5px 13px; border-radius: 14px;
+      transition: all 0.15s; user-select: none;
+    }
+    .kw-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+    .kw-chip.active { border-color: var(--accent); color: var(--bg); background: var(--accent); }
+
     .stats-bar {
       padding: 8px 48px; display: flex; gap: 20px; align-items: center;
       border-bottom: 1px solid var(--border); background: var(--surface);
@@ -211,6 +224,13 @@
   </label>
 </div>
 
+<div class="blog-keywords" id="blogKeywords">
+  <span class="filter-label">키워드</span>
+  <span class="kw-chip active" data-kw="한화생명 파이" onclick="selectBlogKeyword('한화생명 파이', this)">한화생명 파이</span>
+  <span class="kw-chip" data-kw="자녀 계좌 개설" onclick="selectBlogKeyword('자녀 계좌 개설', this)">자녀 계좌 개설</span>
+  <span class="kw-chip" data-kw="자녀 증여" onclick="selectBlogKeyword('자녀 증여', this)">자녀 증여</span>
+</div>
+
 <div class="stats-bar">
   <div class="stat"><span class="stat-num" id="totalCount">—</span><span class="stat-label" id="totalLabel">건의 뉴스</span></div>
   <div class="stat"><span class="stat-num" id="sourceCount">—</span><span class="stat-label" id="sourceLabel">개 매체</span></div>
@@ -233,6 +253,7 @@
   // 블로그 탭: 30개씩 페이지네이션 (최초 로딩 축소 + 스크롤 시 추가 로딩)
   const BLOG_PAGE = 30;
   let blogStart = 1, blogEnd = false, blogLoading = false;
+  let blogKeyword = '한화생명 파이'; // 블로그 검색 키워드 (칩으로 전환)
 
   /* 신디케이션(동일 보도자료 복제) 근접중복 제거: 제목 문자 bigram Jaccard 유사도 */
   function titleBigrams(t) {
@@ -454,7 +475,8 @@
     currentMode = mode;
     document.querySelectorAll('.radio-wrap').forEach(w => w.classList.remove('checked'));
     document.getElementById('wrap-' + mode).classList.add('checked');
-    document.querySelector('.stats-bar').style.display = (mode === 'event') ? 'none' : 'flex';
+    document.querySelector('.stats-bar').style.display = (mode === 'event' || mode === 'blog') ? 'none' : 'flex';
+    document.getElementById('blogKeywords').style.display = (mode === 'blog') ? 'flex' : 'none';
     if (mode === 'blog') { blogItems = []; blogStart = 1; blogEnd = false; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { showEvents(); }
@@ -480,7 +502,7 @@
     if (blogEnd || blogLoading) return false;
     blogLoading = true;
     try {
-      const res = await fetch(`/api/blog?keyword=${encodeURIComponent('한화생명 파이')}&display=${BLOG_PAGE}&start=${blogStart}&sort=sim`);
+      const res = await fetch(`/api/blog?keyword=${encodeURIComponent(blogKeyword)}&display=${BLOG_PAGE}&start=${blogStart}&sort=sim`);
       if (!res.ok) throw new Error(`API ${res.status}`);
       const fetched = ((await res.json()).items||[]).map(item => ({ title: cleanHtml(item.title), desc: cleanHtml(item.description), link: item.link, source: item.bloggername||'블로그', postdate: item.postdate||'', likeId: naverBlogId(item.link), likes: null }));
       const seen = new Set(blogItems.map(b => b.link));
@@ -513,10 +535,19 @@
           ${dateStr ? `<span class="card-date">${dateStr}</span>` : ''}
           ${item.likeId ? `<span class="card-like" data-lk="${esc(item.likeId)}">♥ …</span>` : ''}
         </div>
-        <div class="card-title">${highlightKeyword(esc(item.title),'파이')}</div>
+        <div class="card-title">${esc(item.title)}</div>
         ${item.desc ? `<div class="card-desc">${esc(item.desc.slice(0,200))}</div>` : ''}`;
       grid.appendChild(el);
     });
+  }
+
+  function selectBlogKeyword(kw, el) {
+    if (kw === blogKeyword && blogItems.length) return;
+    blogKeyword = kw;
+    document.querySelectorAll('#blogKeywords .kw-chip').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    blogItems = []; blogStart = 1; blogEnd = false; blogLoading = false;
+    showBlog();
   }
 
   function updateBlogStats() {
