@@ -128,6 +128,11 @@
     .event-fee { font-size: 12px; color: var(--muted2); line-height: 1.6; margin-top: 4px; }
     .event-fee b { color: var(--muted); font-weight: 500; }
     .event-link { font-size: 11px; color: var(--accent); margin-top: 6px; }
+    .event-updates { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--border); }
+    .eu-head { font-size: 12px; font-weight: 700; color: var(--muted2); letter-spacing: .3px; margin-bottom: 10px; }
+    .eu-row { display: flex; gap: 10px; padding: 5px 0; font-size: 12.5px; color: var(--muted2); line-height: 1.6; }
+    .eu-date { color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
+    .eu-text { word-break: keep-all; }
     .event-title { font-size: 14px; font-weight: 600; color: var(--accent); margin: 3px 0 3px; word-break: keep-all; }
     .event-note-brokers { display: block; margin-top: 9px; font-size: 11px; color: var(--muted2); line-height: 1.9; }
     .event-note-brokers b { color: var(--muted); font-weight: 600; }
@@ -542,7 +547,7 @@
 
   function renderEvents(data) {
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
-    const events = data.events || [], pending = data.pending || [], updatedAt = data.updatedAt || '', checkedAt = data.checkedAt || '';
+    const events = data.events || [], pending = data.pending || [], updatedAt = data.updatedAt || '', checkedAt = data.checkedAt || '', changes = data.changes || [];
     const allBrokers = [...events.map(e => e.broker), ...pending.map(p => p.broker)];
 
     const note = document.createElement('div');
@@ -576,6 +581,14 @@
         <div class="event-link">공식 페이지 바로가기 →</div>`;
       grid.appendChild(el);
     });
+
+    if (changes.length) {
+      const sec = document.createElement('div');
+      sec.className = 'event-updates';
+      sec.innerHTML = `<div class="eu-head">업데이트 메모</div>` +
+        changes.map(c => `<div class="eu-row"><span class="eu-date">${esc(c.date)}</span><span class="eu-text">${esc(c.text)}</span></div>`).join('');
+      grid.appendChild(sec);
+    }
   }
 
   function renderSecondaryItems(items, type) {

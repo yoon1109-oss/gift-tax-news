@@ -4,6 +4,14 @@
 const UPDATED_AT = '2026-07-27'; // 데이터가 실제 바뀐 날 (정리 기준)
 const CHECKED_AT = '2026-07-27'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
 
+// 업데이트 메모 — 이벤트 '내용이 실제로 바뀐 것'만 최신순으로 기록 (배치가 변경 시 맨 앞에 추가)
+const CHANGES = [
+  { date: '2026-07-27', text: '미래에셋 이벤트 기간이 2026년 12월 31일까지 연장되었어요' },
+  { date: '2026-07-27', text: '미래에셋에 국내주식 수수료 90일 무료 혜택이 추가되었어요' },
+  { date: '2026-07-23', text: 'SK증권·나무증권 이벤트가 종료되어 목록에서 제외했어요' },
+  { date: '2026-07-23', text: '한국투자증권 자녀계좌 이벤트가 새로 시작되었어요' },
+];
+
 // 진행중 확정 이벤트
 const EVENTS = [
   {
@@ -91,5 +99,5 @@ export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-  res.status(200).json({ updatedAt: UPDATED_AT, checkedAt: CHECKED_AT, events: EVENTS, pending: PENDING });
+  res.status(200).json({ updatedAt: UPDATED_AT, checkedAt: CHECKED_AT, events: EVENTS, pending: PENDING, changes: CHANGES });
 }
