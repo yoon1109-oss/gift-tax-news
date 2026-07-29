@@ -230,6 +230,9 @@
   let rankCounter = 0, relatedLinks = new Set(), groups = [];
   let blogItems = [], cafeItems = [], blogLoaded = false, cafeLoaded = false;
   let eventsLoaded = false, eventsData = null;
+  // 블로그 탭: 30개씩 페이지네이션 (최초 로딩 축소 + 스크롤 시 추가 로딩)
+  const BLOG_PAGE = 30;
+  let blogStart = 1, blogEnd = false, blogLoading = false;
 
   /* 신디케이션(동일 보도자료 복제) 근접중복 제거: 제목 문자 bigram Jaccard 유사도 */
   function titleBigrams(t) {
@@ -440,7 +443,9 @@
   }
 
   const observer = new IntersectionObserver(entries => {
-    if (!entries[0].isIntersecting || currentMode==='blog' || currentMode==='cafe' || currentMode==='event') return;
+    if (!entries[0].isIntersecting) return;
+    if (currentMode === 'blog') { if (!blogEnd && !blogLoading) loadBlogPage(); return; }
+    if (currentMode==='cafe' || currentMode==='event') return;
     if (renderedCount < allNews.length) renderNextPage();
   }, { rootMargin: '400px' });
   observer.observe(document.getElementById('sentinel'));
@@ -450,7 +455,7 @@
     document.querySelectorAll('.radio-wrap').forEach(w => w.classList.remove('checked'));
     document.getElementById('wrap-' + mode).classList.add('checked');
     document.querySelector('.stats-bar').style.display = (mode === 'event') ? 'none' : 'flex';
-    if (mode === 'blog') { blogLoaded = false; blogItems = []; showBlog(); }
+    if (mode === 'blog') { blogItems = []; blogStart = 1; blogEnd = false; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { showEvents(); }
     else { resetNews(); startLoad(); }
@@ -460,21 +465,66 @@
 
   async function showBlog() {
     resetGrid('블로그 글을 불러오는 중...');
-    if (!blogLoaded) {
-      try {
-        const res = await fetch(`/api/blog?keyword=${encodeURIComponent('한화생명 파이')}&display=100&sort=sim`);
-        blogItems = ((await res.json()).items||[]).map(item => ({ title: cleanHtml(item.title), desc: cleanHtml(item.description), link: item.link, source: item.bloggername||'블로그', postdate: item.postdate||'', likeId: naverBlogId(item.link), likes: null }));
-        blogLoaded = true;
-      } catch(e) { document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">블로그를 불러오지 못했습니다.</p>'; return; }
-    }
+    const ok = await loadBlogPage();
+    if (currentMode !== 'blog') return;            // 로딩 중 다른 탭으로 전환됨
+    if (!ok) return;                               // 에러 메시지는 loadBlogPage가 표시
     document.getElementById('initLoader').style.display = 'none';
-    renderSecondaryItems(blogItems, 'blog');
+    if (!blogItems.length) {
+      document.getElementById('newsGrid').innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">검색 결과가 없습니다.</p>';
+    }
+    updateBlogStats();
+  }
+
+  // 다음 30개 블로그 글을 start 파라미터로 이어서 불러와 그리드에 추가
+  async function loadBlogPage() {
+    if (blogEnd || blogLoading) return false;
+    blogLoading = true;
+    try {
+      const res = await fetch(`/api/blog?keyword=${encodeURIComponent('한화생명 파이')}&display=${BLOG_PAGE}&start=${blogStart}&sort=sim`);
+      if (!res.ok) throw new Error(`API ${res.status}`);
+      const fetched = ((await res.json()).items||[]).map(item => ({ title: cleanHtml(item.title), desc: cleanHtml(item.description), link: item.link, source: item.bloggername||'블로그', postdate: item.postdate||'', likeId: naverBlogId(item.link), likes: null }));
+      const seen = new Set(blogItems.map(b => b.link));
+      const fresh = [];
+      fetched.forEach(b => { if (b.link && !seen.has(b.link)) { seen.add(b.link); fresh.push(b); blogItems.push(b); } });
+      blogStart += BLOG_PAGE;
+      if (fetched.length < BLOG_PAGE || blogStart > 1000) blogEnd = true;
+      if (currentMode === 'blog') { appendBlogItems(fresh); loadBlogLikes(fresh); }
+      blogLoading = false;
+      updateBlogStats();
+      return true;
+    } catch(e) {
+      blogLoading = false;
+      if (!blogItems.length) document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">블로그를 불러오지 못했습니다.</p>';
+      return false;
+    }
+  }
+
+  function appendBlogItems(items) {
+    if (!items.length) return;
+    const grid = document.getElementById('newsGrid');
+    items.forEach((item, i) => {
+      const el = document.createElement('a');
+      el.className = 'news-card'; el.href = item.link; el.target = '_blank'; el.rel = 'noopener';
+      el.style.animationDelay = `${Math.min(i*0.03,0.5)}s`;
+      let dateStr = item.postdate && item.postdate.length===8 ? `${item.postdate.slice(4,6)}/${item.postdate.slice(6,8)}` : '';
+      el.innerHTML = `
+        <div class="card-meta">
+          ${item.source ? `<span class="card-source-blog">[${esc(item.source)}]</span>` : ''}
+          ${dateStr ? `<span class="card-date">${dateStr}</span>` : ''}
+          ${item.likeId ? `<span class="card-like" data-lk="${esc(item.likeId)}">♥ …</span>` : ''}
+        </div>
+        <div class="card-title">${highlightKeyword(esc(item.title),'파이')}</div>
+        ${item.desc ? `<div class="card-desc">${esc(item.desc.slice(0,200))}</div>` : ''}`;
+      grid.appendChild(el);
+    });
+  }
+
+  function updateBlogStats() {
     document.getElementById('totalCount').textContent = blogItems.length;
     document.getElementById('totalLabel').textContent = '건의 블로그';
     document.getElementById('sourceCount').textContent = new Set(blogItems.map(n=>n.source)).size;
     document.getElementById('sourceLabel').textContent = '개 블로그';
-    document.getElementById('endMsg').style.display = blogItems.length > 0 ? 'block' : 'none';
-    loadBlogLikes(); // 공감수는 렌더를 막지 않고 뒤이어 채운다
+    document.getElementById('endMsg').style.display = (blogEnd && blogItems.length > 0) ? 'block' : 'none';
   }
 
   /* 네이버 블로그 링크에서 공감 조회용 ID(blogId_logNo) 추출 */
@@ -490,18 +540,22 @@
     return null;
   }
 
-  /* 공감수 일괄 조회 후 카드에 채움 */
-  async function loadBlogLikes() {
-    const ids = [...new Set(blogItems.map(b => b.likeId).filter(Boolean))].slice(0, 60);
+  /* 공감수 일괄 조회 후 카드에 채움 (해당 페이지 항목만, 다른 페이지 값은 유지) */
+  async function loadBlogLikes(items) {
+    const src = items || blogItems;
+    const ids = [...new Set(src.map(b => b.likeId).filter(Boolean))].slice(0, 60);
     if (!ids.length) return;
     let map = {};
     try {
       const r = await fetch(`/api/likes?ids=${encodeURIComponent(ids.join(','))}`);
       map = await r.json();
     } catch { return; }
+    const idSet = new Set(ids);
     blogItems.forEach(b => { if (b.likeId && map[b.likeId] != null) b.likes = map[b.likeId]; });
     document.querySelectorAll('.card-like[data-lk]').forEach(el => {
-      const c = map[el.getAttribute('data-lk')];
+      const key = el.getAttribute('data-lk');
+      if (!idSet.has(key)) return;          // 이번 페이지 카드가 아니면 건드리지 않음
+      const c = map[key];
       el.textContent = (c != null) ? `♥ ${c}` : '';
     });
   }
@@ -620,7 +674,7 @@
 
   function resetAndFetch() {
     document.getElementById('refreshBtn').classList.add('loading');
-    blogLoaded = false; cafeLoaded = false; blogItems = []; cafeItems = []; eventsLoaded = false;
+    blogLoaded = false; cafeLoaded = false; blogItems = []; cafeItems = []; eventsLoaded = false; blogStart = 1; blogEnd = false;
     if (currentMode === 'blog') showBlog().catch(()=>{});
     else if (currentMode === 'cafe') showCafe().catch(()=>{});
     else if (currentMode === 'event') showEvents().catch(()=>{});
