@@ -1,7 +1,7 @@
 // 증권사 자녀계좌 개설 이벤트 — 수기 큐레이션 데이터.
 // 대부분 증권사 이벤트 페이지가 봇 차단/동적렌더/EUC-KR/앱전용이라 자동 수집이 불가하여
 // 여기 배열을 직접 갱신한다. (매주 월요일 10시 스케줄 갱신 대상)
-const UPDATED_AT = '2026-07-23'; // 데이터가 실제 바뀐 날 (정리 기준)
+const UPDATED_AT = '2026-07-27'; // 데이터가 실제 바뀐 날 (정리 기준)
 const CHECKED_AT = '2026-07-27'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
 
 // 진행중 확정 이벤트
@@ -9,12 +9,12 @@ const EVENTS = [
   {
     broker: '미래에셋증권',
     title: '우리아이 부자만들기',
-    period: '2026.03.30 ~ 2026.07.31',
+    period: '2026.07.01 ~ 2026.12.31',
     benefits: [
-      '계좌개설 시 용돈 2만원 (사용기간 2주)',
-      '국내주식 90일간 90만원 이상 모으기 챌린지 달성 시 추가 2만원',
+      '자녀 다이렉트 주식계좌 첫 개설 시 용돈 2만원 (개설 후 15일 내 신청)',
+      '90일간 국내주식 90만원 이상 모으기 달성 시 2만원 추가 (챌린지 ~2026.10.31)',
     ],
-    domesticFee: '90일간 0% 면제 → 91일~1년 0.0036396% 우대',
+    domesticFee: '국내주식 온라인 수수료 90일 무료',
     usFee: '',
     link: 'https://digital.securities.miraeasset.com/rich/',
   },
@@ -76,7 +76,7 @@ const PENDING = [
   { broker: '신영증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
   { broker: '메리츠증권', status: '해당없음', note: '슈퍼365는 만 19세 이상. 미성년 특화 이벤트 없음', link: '' },
   { broker: 'DB증권 (구 DB금융투자)', status: '확인필요', note: '‘우리아이 비대면 계좌 만들기’(미국주식 소수점 최대 5만원) — 기간 미확인', link: 'https://www.dbsec.co.kr/custcenter/notices/cu_NoticesEvent_lst.do' },
-  { broker: '하나증권', status: '확인필요', note: '2024 ‘내 자녀 투자 첫걸음’(종료). 현재 일반 신규고객 이벤트만', link: 'https://www.hanaw.com' },
+  { broker: '하나증권', status: '확인필요', note: '2026.05.07~08.31 신규 계좌개설 이벤트 진행 중 (미성년 특화 여부 확인 필요)', link: 'https://www.hanaw.com' },
   { broker: 'IBK투자증권', status: '미발견', note: '미성년은 영업점 개설, 특화 이벤트 없음', link: '' },
   { broker: '한화투자증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
   { broker: '신한투자증권', status: '확인필요', note: '2024 미성년 이벤트 다수(종료). 자녀계좌 개설 상시 운영', link: 'https://m.shinhansec.com/mweb/acct/cact/amact0015' },
