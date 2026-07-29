@@ -1,14 +1,14 @@
 // 증권사 자녀계좌 개설 이벤트 — 수기 큐레이션 데이터.
 // 대부분 증권사 이벤트 페이지가 봇 차단/동적렌더/EUC-KR/앱전용이라 자동 수집이 불가하여
 // 여기 배열을 직접 갱신한다. (매주 월요일 10시 스케줄 갱신 대상)
-const UPDATED_AT = '2026-07-27'; // 데이터가 실제 바뀐 날 (정리 기준)
-const CHECKED_AT = '2026-07-27'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
+const UPDATED_AT = '2026-07-29'; // 데이터가 실제 바뀐 날 (정리 기준)
+const CHECKED_AT = '2026-07-29'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
 
 // 업데이트 메모 — 이벤트 '내용이 실제로 바뀐 것'만 최신순으로 기록 (배치가 변경 시 맨 앞에 추가)
 const CHANGES = [
+  { date: '2026-07-29', text: 'SK증권 자녀 계좌 이벤트가 진행 중으로 확인되어 다시 추가했어요' },
   { date: '2026-07-27', text: '미래에셋 이벤트 기간이 2026년 12월 31일까지 연장되었어요' },
   { date: '2026-07-27', text: '미래에셋에 국내주식 수수료 90일 무료 혜택이 추가되었어요' },
-  { date: '2026-07-23', text: 'SK증권·나무증권 이벤트가 종료되어 목록에서 제외했어요' },
   { date: '2026-07-23', text: '한국투자증권 자녀계좌 이벤트가 새로 시작되었어요' },
 ];
 
@@ -74,6 +74,18 @@ const EVENTS = [
     usFee: '',
     link: 'https://fundsupermarket.wooriib.com/fmg/FMG4030002/main.do?articleNo=274',
   },
+  {
+    broker: 'SK증권',
+    title: '우리 아이 미래 투자',
+    period: '2026.07.01 ~ 2026.07.31',
+    benefits: [
+      '스마트금융센터(비대면) 신규 미성년 계좌 개설 + 순입금·국내주식 거래 실적 구간별 현금 지급 (최대 8만원)',
+      '부모 명의 SK증권 계좌 보유 필수',
+    ],
+    domesticFee: '',
+    usFee: '',
+    link: 'https://direct-sks.co.kr/account_underage',
+  },
 ];
 
 // 추가 조사 대상 — 현재 진행 여부 미확정 (status: 확인필요 | 미발견 | 해당없음)
@@ -92,6 +104,7 @@ const PENDING = [
   { broker: '유진투자증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
   { broker: '교보증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
   { broker: '키움증권', status: '확인필요', note: '‘우리아이 국내주식 더모으기’(2025 종료) 등 정기 운영사. 2026 현재분 미확인', link: 'https://www.kiwoom.com/e/m/home/event/VEvent20230038View' },
+  { broker: 'NH투자증권 (나무)', status: '확인필요', note: '자녀 주식모으기 이벤트 이력(2026.06.30 종료). 현행 여부 재확인 필요', link: 'https://www.mynamuhbegin.com/children' },
 ];
 
 export default function handler(req, res) {
