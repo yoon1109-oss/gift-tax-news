@@ -30,6 +30,8 @@
     }
     .logo { font-family: 'Noto Serif KR', serif; font-size: 17px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 9px; }
     .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); animation: pulse 2.5s infinite; }
+    .help-link { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--muted); color: var(--muted); font-family: 'Noto Sans KR', sans-serif; font-size: 11px; font-weight: 600; line-height: 1; text-decoration: none; cursor: pointer; transition: all 0.15s; }
+    .help-link:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
     @keyframes pulse { 0%,100%{opacity:1;box-shadow:0 0 8px var(--accent)} 50%{opacity:.5;box-shadow:0 0 3px var(--accent)} }
     .header-right { display: flex; align-items: center; gap: 12px; }
     .last-updated { font-size: 11px; color: var(--muted); }
@@ -171,7 +173,7 @@
 <body>
 
 <header>
-  <div class="logo"><div class="logo-dot"></div>모니터링</div>
+  <div class="logo"><div class="logo-dot"></div>모니터링<a class="help-link" href="https://claude.ai/code/artifact/41a51599-3a44-4d9d-b5e2-915fc68b9a7c" target="_blank" rel="noopener" title="기능 정의서 보기" aria-label="기능 정의서 보기">?</a></div>
   <div class="header-right">
     <span class="last-updated" id="lastUpdated">—</span>
     <button class="refresh-btn" id="refreshBtn" onclick="resetAndFetch()">
