@@ -365,13 +365,13 @@
   }
 
   function renderRelated(grid, items, kw) {
-    // 연관도 점수 내림차순(동점이면 sim 순서), 단 같은 사건 중복 배제하고 상위 3건
+    // 연관도 점수 내림차순(동점이면 sim 순서), 단 같은 사건 중복 배제하고 상위 5건
     const scored = [...items]
       .map(n => ({ n, s: relatedScore(n) }))
       .sort((a, b) => b.s - a.s || (a.n._rank ?? 1e9) - (b.n._rank ?? 1e9));
     const candidates = [], pT = [], pTD = [], pSubj = [];
     for (const c of scored) {
-      if (candidates.length >= 3) break;
+      if (candidates.length >= 5) break;
       const gt = titleBigrams(c.n.title);
       const gtd = titleBigrams(c.n.title + ' ' + (c.n.desc || '').slice(0, 120));
       const subj = leadSubject(c.n.title);
