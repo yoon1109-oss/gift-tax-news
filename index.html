@@ -222,6 +222,10 @@
     <input type="radio" name="newsFilter" value="event" onchange="onModeChange('event')">
     <span>계좌 이벤트</span>
   </label>
+  <label class="radio-wrap" id="wrap-press">
+    <input type="radio" name="newsFilter" value="press" onchange="onModeChange('press')">
+    <span>세무사회 보도자료</span>
+  </label>
 </div>
 
 <div class="blog-keywords" id="blogKeywords">
@@ -250,6 +254,7 @@
   let rankCounter = 0, relatedLinks = new Set(), groups = [];
   let blogItems = [], cafeItems = [], blogLoaded = false, cafeLoaded = false;
   let eventsLoaded = false, eventsData = null;
+  let pressLoaded = false, pressData = null;
   // 블로그 탭: 30개씩 페이지네이션 (최초 로딩 축소 + 스크롤 시 추가 로딩)
   const BLOG_PAGE = 30;
   let blogStart = 1, blogEnd = false, blogLoading = false;
@@ -413,7 +418,7 @@
   }
 
   function renderNextPage() {
-    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event') return;
+    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'press') return;
     if (renderedCount >= allNews.length) { checkEnd(); return; }
     const grid = document.getElementById('newsGrid');
     const kw = currentMode === 'all' ? ['자녀','증여'] : '파이';
@@ -469,7 +474,7 @@
   const observer = new IntersectionObserver(entries => {
     if (!entries[0].isIntersecting) return;
     if (currentMode === 'blog') { if (!blogEnd && !blogLoading) loadBlogPage(); return; }
-    if (currentMode==='cafe' || currentMode==='event') return;
+    if (currentMode==='cafe' || currentMode==='event' || currentMode==='press') return;
     if (renderedCount < allNews.length) renderNextPage();
   }, { rootMargin: '400px' });
   observer.observe(document.getElementById('sentinel'));
@@ -478,11 +483,12 @@
     currentMode = mode;
     document.querySelectorAll('.radio-wrap').forEach(w => w.classList.remove('checked'));
     document.getElementById('wrap-' + mode).classList.add('checked');
-    document.querySelector('.stats-bar').style.display = (mode === 'event' || mode === 'blog') ? 'none' : 'flex';
+    document.querySelector('.stats-bar').style.display = (mode === 'event' || mode === 'blog' || mode === 'press') ? 'none' : 'flex';
     document.getElementById('blogKeywords').style.display = (mode === 'blog') ? 'flex' : 'none';
     if (mode === 'blog') { blogItems = []; blogStart = 1; blogEnd = false; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { showEvents(); }
+    else if (mode === 'press') { showPress(); }
     else { resetNews(); startLoad(); }
   }
 
@@ -678,6 +684,54 @@
     }
   }
 
+  // 세무사회 보도자료 — 증여/상속 관련은 '연관도 높음'으로 상단 분류
+  const PRESS_REL_KW = ['증여','상속','증여세','상속세','유산','가업승계','물려', '세대생략'];
+  async function showPress() {
+    resetGrid('세무사회 보도자료를 불러오는 중...');
+    document.querySelector('.stats-bar').style.display = 'none';
+    if (!pressLoaded) {
+      try {
+        const res = await fetch('/api/kacta');
+        pressData = await res.json();
+        pressLoaded = true;
+      } catch(e) { document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">보도자료를 불러오지 못했습니다.</p>'; return; }
+    }
+    if (currentMode !== 'press') return;
+    document.getElementById('initLoader').style.display = 'none';
+    document.getElementById('endMsg').style.display = 'none';
+    const items = (pressData && pressData.items) || [];
+    const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
+    if (!items.length) { grid.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">보도자료가 없습니다.</p>'; return; }
+
+    const note = document.createElement('div');
+    note.className = 'event-note';
+    note.innerHTML = `<b>한국세무사회 보도자료</b> · 최신 ${items.length}건 · 제목 클릭 시 세무사회 원문으로 이동`;
+    grid.appendChild(note);
+
+    const isRel = t => PRESS_REL_KW.some(k => (t||'').includes(k));
+    const rel = items.filter(i => isRel(i.title));
+    const rest = items.filter(i => !isRel(i.title));
+
+    const card = (i, cls) => {
+      const el = document.createElement('a');
+      el.className = cls; el.href = i.link; el.target = '_blank'; el.rel = 'noopener';
+      el.innerHTML = `<div class="card-meta"><span class="card-date">${esc(i.date)}</span></div><div class="card-title">${esc(i.title)}</div>`;
+      grid.appendChild(el);
+    };
+
+    if (rel.length) {
+      const sec = document.createElement('div');
+      sec.className = 'related-section';
+      sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">증여·상속 관련 보도자료</span></div>`;
+      grid.appendChild(sec);
+      rel.forEach(i => card(i, 'related-card'));
+      const divider = document.createElement('div');
+      divider.className = 'divider-label'; divider.textContent = '전체 보도자료';
+      grid.appendChild(divider);
+    }
+    (rel.length ? rest : items).forEach(i => card(i, 'news-card'));
+  }
+
   function renderSecondaryItems(items, type) {
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
     if (!items.length) { grid.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">검색 결과가 없습니다.</p>'; return; }
@@ -712,6 +766,7 @@
     if (currentMode === 'blog') showBlog().catch(()=>{});
     else if (currentMode === 'cafe') showCafe().catch(()=>{});
     else if (currentMode === 'event') showEvents().catch(()=>{});
+    else if (currentMode === 'press') { pressLoaded = false; showPress().catch(()=>{}); }
     else { resetNews(); startLoad().catch(()=>{}); }
     setTimeout(() => document.getElementById('refreshBtn').classList.remove('loading'), 1500);
   }
