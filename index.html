@@ -783,6 +783,25 @@
     note.innerHTML = `<b>증여·상속세 주요 지표</b> · ${esc(d.basis||'')} 기준 · 출처 ${esc(d.source||'')}`;
     grid.appendChild(note);
 
+    // 핵심 타겟: 수증자 연령별 증여
+    const age = d.age;
+    if (age && (age.items||[]).length) {
+      const sec = document.createElement('div');
+      sec.className = 'related-section';
+      sec.innerHTML = `<div class="related-header"><span class="related-badge">핵심 타겟</span><span class="related-label">${esc(age.title||'수증자 연령별 증여')}</span></div>`;
+      grid.appendChild(sec);
+      age.items.forEach(a => {
+        const el = document.createElement('div');
+        el.className = 'related-card';
+        el.innerHTML = `<div class="card-meta"><span class="event-broker">${esc(a.group)}</span>${a.tag ? `<span class="dup-badge">${esc(a.tag)}</span>` : ''}</div>` +
+          (a.lines||[]).map(l => `<div class="card-desc" style="-webkit-line-clamp:unset">${esc(l)}</div>`).join('');
+        grid.appendChild(el);
+      });
+      const dv = document.createElement('div');
+      dv.className = 'divider-label'; dv.textContent = '증여·상속세 요약 지표';
+      grid.appendChild(dv);
+    }
+
     (d.metrics || []).forEach(g => {
       const box = document.createElement('div');
       box.className = 'stat-group';

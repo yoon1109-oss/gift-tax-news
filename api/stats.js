@@ -1,9 +1,21 @@
-// 증여·상속세 주요 지표 — 큐레이션 데이터.
-// KOSIS/TASIS Open API 키 발급 전까지 공식 통계(e-나라지표) 수치를 수기로 넣는다.
-// 키 확보 시 자동 연동으로 전환 예정.
+// 증여·상속세 주요 지표 — 큐레이션 데이터. (KOSIS 자동연동은 통계표 파라미터 확정 후 전환)
+// 출처: 국세청 국세통계(e-나라지표) 및 이를 인용한 보도.
 const UPDATED_AT = '2026-07-30';
 const BASIS = '2025년';
 const SOURCE = 'e-나라지표(국세통계)';
+
+// ── 핵심 타겟: 수증자 연령별 증여 현황 (미성년·20~50대) ──
+const AGE = {
+  title: '수증자 연령별 증여 (핵심 타겟)',
+  items: [
+    { group: '미성년 (만 19세 미만)', tag: '타겟',
+      lines: ['2024년 14,217건 · 1조 2,382억원', '1인당 평균 8,709만원 · 최근 5년 +44%'] },
+    { group: '20·30대 (MZ)', tag: '타겟',
+      lines: ['2018~2022 누적 37.0만건 · 73.4조원', '20대 27.0조 / 30대 46.4조 · 20대 수증인 증가율 최고(+66%)'] },
+    { group: '40·50대', tag: '',
+      lines: ['연령대별 상세 건수·재산가액은 국세통계(수증인 연령별) 참고', '아래 바로가기에서 확인'] },
+  ],
+};
 
 const METRICS = [
   { group: '증여세', items: [
@@ -17,51 +29,16 @@ const METRICS = [
 ];
 
 const SOURCES = [
+  { title: '수증인의 연령별 증여세 현황 (KOSIS 6.4.5)', desc: '미성년·20~50대 등 연령대별 결정 건수·재산가액·세액', link: 'https://kosis.kr/statHtml/statHtml.do?orgId=133&tblId=DT_133N_645' },
   { title: '증여세 신고 현황 (국세통계포털 TASIS)', desc: '건수·재산가액·결정세액, 규모별·재산종류별·연령별 상세', link: 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/cm/index.xml' },
-  { title: '증여세 신고 현황 원자료 (공공데이터포털)', desc: '연도별 CSV — 국세청 제공', link: 'https://www.data.go.kr/data/15119378/fileData.do' },
   { title: '부동산 증여 거래현황 (한국부동산원 R-ONE)', desc: '거래원인별 부동산거래 중 증여 — 월 단위', link: 'https://www.reb.or.kr/r-one/' },
   { title: '상속·증여세 지표 시계열 (e-나라지표)', desc: '연도별 과세건수·총결정세액', link: 'https://www.index.go.kr/unity/potal/main/EachDtlPageDetail.do?idx_cd=2848' },
 ];
 
-const KEY = process.env.KOSIS_KEY;
-
-export default async function handler(req, res) {
+export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-
-  // ── 개발용 디버그 모드 (KOSIS 통계표 탐색) ──
-  const dbg = req.query.debug;
-  if (dbg) {
-    try {
-      if (dbg === 'key') return res.status(200).json({ hasKey: !!KEY, len: (KEY || '').length });
-      if (dbg === 'search') {
-        const q = req.query.q || '증여';
-        const url = `https://kosis.kr/openapi/statisticsSearch.do?method=getList&apiKey=${KEY}&searchNm=${encodeURIComponent(q)}&startCount=1&resultCount=20&format=json&jsonVD=Y`;
-        const r = await fetch(url);
-        const t = await r.text();
-        let j; try { j = JSON.parse(t); } catch { j = { raw: t.slice(0, 2000) }; }
-        return res.status(200).json(j);
-      }
-      if (dbg === 'meta') {
-        const { orgId, tblId, type = 'OBJ' } = req.query; // type=OBJ 분류 / ITM 항목
-        const url = `https://kosis.kr/openapi/statisticsData.do?method=getMeta&apiKey=${KEY}&orgId=${orgId}&tblId=${tblId}&type=${type}&format=json&jsonVD=Y`;
-        const r = await fetch(url);
-        const t = await r.text();
-        let j; try { j = JSON.parse(t); } catch { j = { raw: t.slice(0, 3000) }; }
-        return res.status(200).json(j);
-      }
-      if (dbg === 'data') {
-        const { orgId, tblId, objL1 = 'ALL', itmId = 'ALL', prdSe = 'Y', newEstPrdCnt = '1' } = req.query;
-        const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${KEY}&itmId=${itmId}&objL1=${objL1}&format=json&jsonVD=Y&prdSe=${prdSe}&newEstPrdCnt=${newEstPrdCnt}&orgId=${orgId}&tblId=${tblId}`;
-        const r = await fetch(url);
-        const t = await r.text();
-        let j; try { j = JSON.parse(t); } catch { j = { raw: t.slice(0, 3000) }; }
-        return res.status(200).json({ url: url.replace(KEY || '', 'KEY'), data: j });
-      }
-    } catch (e) { return res.status(200).json({ error: e.message }); }
-  }
-
-  res.status(200).json({ updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE, metrics: METRICS, sources: SOURCES });
+  res.status(200).json({ updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE, age: AGE, metrics: METRICS, sources: SOURCES });
 }
