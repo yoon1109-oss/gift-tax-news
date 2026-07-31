@@ -23,10 +23,37 @@ const SOURCES = [
   { title: '상속·증여세 지표 시계열 (e-나라지표)', desc: '연도별 과세건수·총결정세액', link: 'https://www.index.go.kr/unity/potal/main/EachDtlPageDetail.do?idx_cd=2848' },
 ];
 
-export default function handler(req, res) {
+const KEY = process.env.KOSIS_KEY;
+
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+
+  // ── 개발용 디버그 모드 (KOSIS 통계표 탐색) ──
+  const dbg = req.query.debug;
+  if (dbg) {
+    try {
+      if (dbg === 'key') return res.status(200).json({ hasKey: !!KEY, len: (KEY || '').length });
+      if (dbg === 'search') {
+        const q = req.query.q || '증여';
+        const url = `https://kosis.kr/openapi/statisticsSearch.do?method=getList&apiKey=${KEY}&searchNm=${encodeURIComponent(q)}&startCount=1&resultCount=20&format=json&jsonVD=Y`;
+        const r = await fetch(url);
+        const t = await r.text();
+        let j; try { j = JSON.parse(t); } catch { j = { raw: t.slice(0, 2000) }; }
+        return res.status(200).json(j);
+      }
+      if (dbg === 'data') {
+        const { orgId, tblId, objL1 = 'ALL', itmId = 'ALL', prdSe = 'Y', newEstPrdCnt = '1' } = req.query;
+        const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${KEY}&itmId=${itmId}&objL1=${objL1}&format=json&jsonVD=Y&prdSe=${prdSe}&newEstPrdCnt=${newEstPrdCnt}&orgId=${orgId}&tblId=${tblId}`;
+        const r = await fetch(url);
+        const t = await r.text();
+        let j; try { j = JSON.parse(t); } catch { j = { raw: t.slice(0, 3000) }; }
+        return res.status(200).json({ url: url.replace(KEY || '', 'KEY'), data: j });
+      }
+    } catch (e) { return res.status(200).json({ error: e.message }); }
+  }
+
   res.status(200).json({ updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE, metrics: METRICS, sources: SOURCES });
 }
