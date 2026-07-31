@@ -70,6 +70,24 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
+  const dbg = req.query.debug;
+  if (dbg) {
+    const kg = async u => { const r = await fetch(u); const t = await r.text(); try { return JSON.parse(t); } catch { return { raw: t.slice(0, 2500) }; } };
+    try {
+      if (dbg === 'search') return res.status(200).json(await kg(`https://kosis.kr/openapi/statisticsSearch.do?method=getList&apiKey=${KEY}&searchNm=${encodeURIComponent(req.query.q || '증여세 결정')}&startCount=1&resultCount=25&format=json&jsonVD=Y`));
+      if (dbg === 'data') {
+        const { orgId, tblId, itmId = 'ALL', newEstPrdCnt = '1' } = req.query;
+        for (const c of [{ objL1: 'ALL' }, { objL1: 'ALL', objL2: 'ALL' }, { objL1: 'ALL', objL2: 'ALL', objL3: 'ALL' }]) {
+          const op = Object.entries(c).map(([k, v]) => `${k}=${v}`).join('&');
+          const j = await kg(`https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${KEY}&itmId=${itmId}&${op}&format=json&jsonVD=Y&prdSe=Y&newEstPrdCnt=${newEstPrdCnt}&orgId=${orgId}&tblId=${tblId}`);
+          if (Array.isArray(j) && j.length) return res.status(200).json({ combo: c, rows: j.length, sample: j.slice(0, 45) });
+          var last = Array.isArray(j) ? null : j;
+        }
+        return res.status(200).json({ err: last });
+      }
+    } catch (e) { return res.status(200).json({ error: e.message }); }
+  }
+
   const age = (await kosisAge()) || AGE_FALLBACK;
   res.status(200).json({ updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE, age, metrics: METRICS, sources: SOURCES });
 }
