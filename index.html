@@ -129,6 +129,15 @@
     .card-date { font-size: 11px; color: var(--muted); }
     .card-like { font-size: 11px; font-weight: 600; color: #f9a26c; display: inline-flex; align-items: center; gap: 3px; }
 
+    /* 통계 타일 */
+    .stat-group { margin-bottom: 12px; }
+    .sg-title { font-size: 13px; font-weight: 700; color: var(--text); margin: 6px 0 8px; }
+    .sg-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .s-tile { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 13px 15px; }
+    .st-label { font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+    .st-value { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.15; }
+    .st-delta { font-size: 11px; color: var(--muted2); margin-top: 4px; }
+
     /* 계좌 이벤트 카드 */
     .event-note { font-size: 11px; color: var(--muted); line-height: 1.7; padding: 0 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
     .event-note b { color: var(--muted2); font-weight: 600; }
@@ -222,6 +231,10 @@
     <input type="radio" name="newsFilter" value="press" onchange="onModeChange('press')">
     <span>세무사회 보도자료</span>
   </label>
+  <label class="radio-wrap" id="wrap-stats">
+    <input type="radio" name="newsFilter" value="stats" onchange="onModeChange('stats')">
+    <span>통계</span>
+  </label>
 </div>
 
 <div class="blog-keywords" id="newsKeywords" style="display:flex">
@@ -257,6 +270,7 @@
   let blogItems = [], cafeItems = [], blogLoaded = false, cafeLoaded = false;
   let eventsLoaded = false, eventsData = null;
   let pressLoaded = false, pressData = null;
+  let statsLoaded = false, statsData = null;
   // 블로그 탭: 30개씩 페이지네이션 (최초 로딩 축소 + 스크롤 시 추가 로딩)
   const BLOG_PAGE = 30;
   let blogStart = 1, blogEnd = false, blogLoading = false;
@@ -420,7 +434,7 @@
   }
 
   function renderNextPage() {
-    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'press') return;
+    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'press' || currentMode === 'stats') return;
     if (renderedCount >= allNews.length) { checkEnd(); return; }
     const grid = document.getElementById('newsGrid');
     const kw = currentMode === 'all' ? ['자녀','증여'] : '파이';
@@ -476,7 +490,7 @@
   const observer = new IntersectionObserver(entries => {
     if (!entries[0].isIntersecting) return;
     if (currentMode === 'blog') { if (!blogEnd && !blogLoading) loadBlogPage(); return; }
-    if (currentMode==='cafe' || currentMode==='event' || currentMode==='press') return;
+    if (currentMode==='cafe' || currentMode==='event' || currentMode==='press' || currentMode==='stats') return;
     if (renderedCount < allNews.length) renderNextPage();
   }, { rootMargin: '400px' });
   observer.observe(document.getElementById('sentinel'));
@@ -485,13 +499,14 @@
     currentMode = mode;
     document.querySelectorAll('.radio-wrap').forEach(w => w.classList.remove('checked'));
     document.getElementById('wrap-' + mode).classList.add('checked');
-    document.querySelector('.stats-bar').style.display = (mode === 'event' || mode === 'blog' || mode === 'press') ? 'none' : 'flex';
+    document.querySelector('.stats-bar').style.display = (mode === 'event' || mode === 'blog' || mode === 'press' || mode === 'stats') ? 'none' : 'flex';
     document.getElementById('blogKeywords').style.display = (mode === 'blog') ? 'flex' : 'none';
     document.getElementById('newsKeywords').style.display = (mode === 'all') ? 'flex' : 'none';
     if (mode === 'blog') { blogItems = []; blogStart = 1; blogEnd = false; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { showEvents(); }
     else if (mode === 'press') { showPress(); }
+    else if (mode === 'stats') { showStats(); }
     else { // 뉴스 검색 탭 — 키워드 칩을 '자녀 증여'로 초기화
       document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === 'all'));
       resetNews(); startLoad();
@@ -746,6 +761,50 @@
     (rel.length ? rest : items).forEach(i => card(i, 'news-card'));
   }
 
+  // 통계 — 증여·상속세 주요 지표(큐레이션) + 공식 통계 바로가기
+  async function showStats() {
+    resetGrid('통계를 불러오는 중...');
+    document.querySelector('.stats-bar').style.display = 'none';
+    if (!statsLoaded) {
+      try {
+        const res = await fetch('/api/stats');
+        statsData = await res.json();
+        statsLoaded = true;
+      } catch(e) { document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">통계를 불러오지 못했습니다.</p>'; return; }
+    }
+    if (currentMode !== 'stats') return;
+    document.getElementById('initLoader').style.display = 'none';
+    document.getElementById('endMsg').style.display = 'none';
+    const d = statsData || {};
+    const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
+
+    const note = document.createElement('div');
+    note.className = 'event-note';
+    note.innerHTML = `<b>증여·상속세 주요 지표</b> · ${esc(d.basis||'')} 기준 · 출처 ${esc(d.source||'')}`;
+    grid.appendChild(note);
+
+    (d.metrics || []).forEach(g => {
+      const box = document.createElement('div');
+      box.className = 'stat-group';
+      box.innerHTML = `<div class="sg-title">${esc(g.group)}</div><div class="sg-tiles">` +
+        g.items.map(it => `<div class="s-tile"><div class="st-label">${esc(it.label)}</div><div class="st-value">${esc(it.value)}</div><div class="st-delta">${esc(it.delta)}</div></div>`).join('') +
+        `</div>`;
+      grid.appendChild(box);
+    });
+
+    if ((d.sources || []).length) {
+      const divider = document.createElement('div');
+      divider.className = 'divider-label'; divider.textContent = '공식 통계 바로가기';
+      grid.appendChild(divider);
+      d.sources.forEach(s => {
+        const el = document.createElement('a');
+        el.className = 'news-card'; el.href = s.link; el.target = '_blank'; el.rel = 'noopener';
+        el.innerHTML = `<div class="card-title">${esc(s.title)}</div><div class="card-desc">${esc(s.desc)}</div><div class="event-link">바로가기 →</div>`;
+        grid.appendChild(el);
+      });
+    }
+  }
+
   function renderSecondaryItems(items, type) {
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
     if (!items.length) { grid.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">검색 결과가 없습니다.</p>'; return; }
@@ -781,6 +840,7 @@
     else if (currentMode === 'cafe') showCafe().catch(()=>{});
     else if (currentMode === 'event') showEvents().catch(()=>{});
     else if (currentMode === 'press') { pressLoaded = false; showPress().catch(()=>{}); }
+    else if (currentMode === 'stats') { statsLoaded = false; showStats().catch(()=>{}); }
     else { resetNews(); startLoad().catch(()=>{}); }
     setTimeout(() => document.getElementById('refreshBtn').classList.remove('loading'), 1500);
   }
