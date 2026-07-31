@@ -36,10 +36,45 @@ const SOURCES = [
   { title: '상속·증여세 지표 시계열 (e-나라지표)', desc: '연도별 과세건수·총결정세액', link: 'https://www.index.go.kr/unity/potal/main/EachDtlPageDetail.do?idx_cd=2848' },
 ];
 
-export default function handler(req, res) {
+const KEY = process.env.KOSIS_KEY;
+async function kget(url) { const r = await fetch(url); const t = await r.text(); try { return JSON.parse(t); } catch { return { raw: t.slice(0, 2500) }; } }
+
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+
+  const dbg = req.query.debug;
+  if (dbg) {
+    try {
+      if (dbg === 'search') {
+        const q = req.query.q || '증여';
+        return res.status(200).json(await kget(`https://kosis.kr/openapi/statisticsSearch.do?method=getList&apiKey=${KEY}&searchNm=${encodeURIComponent(q)}&startCount=1&resultCount=25&format=json&jsonVD=Y`));
+      }
+      if (dbg === 'meta') {
+        const { orgId, tblId, type = 'OBJ' } = req.query;
+        return res.status(200).json(await kget(`https://kosis.kr/openapi/statisticsData.do?method=getMeta&apiKey=${KEY}&orgId=${orgId}&tblId=${tblId}&type=${type}&format=json&jsonVD=Y`));
+      }
+      if (dbg === 'data') {
+        const { orgId, tblId, itmId = 'ALL', prdSe = 'Y', newEstPrdCnt = '1' } = req.query;
+        // objL1~objL3 조합을 자동으로 시도해 성공하는 걸 반환
+        const combos = [
+          { objL1: 'ALL' },
+          { objL1: 'ALL', objL2: 'ALL' },
+          { objL1: 'ALL', objL2: 'ALL', objL3: 'ALL' },
+        ];
+        for (const c of combos) {
+          const objParams = Object.entries(c).map(([k, v]) => `${k}=${v}`).join('&');
+          const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${KEY}&itmId=${itmId}&${objParams}&format=json&jsonVD=Y&prdSe=${prdSe}&newEstPrdCnt=${newEstPrdCnt}&orgId=${orgId}&tblId=${tblId}`;
+          const j = await kget(url);
+          if (Array.isArray(j) && j.length) return res.status(200).json({ combo: c, rows: j.length, sample: j.slice(0, 40) });
+          if (!Array.isArray(j)) var lastErr = j;
+        }
+        return res.status(200).json({ err: lastErr || 'no rows for any objL combo' });
+      }
+    } catch (e) { return res.status(200).json({ error: e.message }); }
+  }
+
   res.status(200).json({ updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE, age: AGE, metrics: METRICS, sources: SOURCES });
 }
