@@ -208,11 +208,7 @@
   <span class="filter-label">조회</span>
   <label class="radio-wrap checked" id="wrap-all">
     <input type="radio" name="newsFilter" value="all" checked onchange="onModeChange('all')">
-    <span>증여 기사</span>
-  </label>
-  <label class="radio-wrap" id="wrap-hanwha">
-    <input type="radio" name="newsFilter" value="hanwha" onchange="onModeChange('hanwha')">
-    <span>파이 기사</span>
+    <span>뉴스 검색</span>
   </label>
   <label class="radio-wrap" id="wrap-blog">
     <input type="radio" name="newsFilter" value="blog" onchange="onModeChange('blog')">
@@ -226,6 +222,12 @@
     <input type="radio" name="newsFilter" value="press" onchange="onModeChange('press')">
     <span>세무사회 보도자료</span>
   </label>
+</div>
+
+<div class="blog-keywords" id="newsKeywords" style="display:flex">
+  <span class="filter-label">키워드</span>
+  <span class="kw-chip active" data-mode="all" onclick="selectNewsKeyword('all', this)">자녀 증여</span>
+  <span class="kw-chip" data-mode="hanwha" onclick="selectNewsKeyword('hanwha', this)">한화생명 파이</span>
 </div>
 
 <div class="blog-keywords" id="blogKeywords">
@@ -485,11 +487,15 @@
     document.getElementById('wrap-' + mode).classList.add('checked');
     document.querySelector('.stats-bar').style.display = (mode === 'event' || mode === 'blog' || mode === 'press') ? 'none' : 'flex';
     document.getElementById('blogKeywords').style.display = (mode === 'blog') ? 'flex' : 'none';
+    document.getElementById('newsKeywords').style.display = (mode === 'all') ? 'flex' : 'none';
     if (mode === 'blog') { blogItems = []; blogStart = 1; blogEnd = false; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { showEvents(); }
     else if (mode === 'press') { showPress(); }
-    else { resetNews(); startLoad(); }
+    else { // 뉴스 검색 탭 — 키워드 칩을 '자녀 증여'로 초기화
+      document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === 'all'));
+      resetNews(); startLoad();
+    }
   }
 
   function cleanHtml(s) { return (s||'').replace(/<[^>]*>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#\d+;/g,'').replace(/&apos;/g,"'"); }
@@ -548,6 +554,14 @@
         ${item.desc ? `<div class="card-desc">${esc(item.desc.slice(0,200))}</div>` : ''}`;
       grid.appendChild(el);
     });
+  }
+
+  function selectNewsKeyword(mode, el) {
+    if (mode === currentMode && allNews.length) return;
+    document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    currentMode = mode; // 'all'=자녀 증여, 'hanwha'=한화생명 파이
+    resetNews(); startLoad();
   }
 
   function selectBlogKeyword(kw, el) {
