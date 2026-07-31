@@ -17,7 +17,7 @@ const METRICS = [
 ];
 
 const SOURCES = [
-  { title: '증여세 신고 현황 (국세통계포털 TASIS)', desc: '건수·재산가액·결정세액, 규모별·재산종류별·연령별 상세', link: 'https://tasis.nts.go.kr/' },
+  { title: '증여세 신고 현황 (국세통계포털 TASIS)', desc: '건수·재산가액·결정세액, 규모별·재산종류별·연령별 상세', link: 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/cm/index.xml' },
   { title: '증여세 신고 현황 원자료 (공공데이터포털)', desc: '연도별 CSV — 국세청 제공', link: 'https://www.data.go.kr/data/15119378/fileData.do' },
   { title: '부동산 증여 거래현황 (한국부동산원 R-ONE)', desc: '거래원인별 부동산거래 중 증여 — 월 단위', link: 'https://www.reb.or.kr/r-one/' },
   { title: '상속·증여세 지표 시계열 (e-나라지표)', desc: '연도별 과세건수·총결정세액', link: 'https://www.index.go.kr/unity/potal/main/EachDtlPageDetail.do?idx_cd=2848' },
