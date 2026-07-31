@@ -44,6 +44,14 @@ export default async function handler(req, res) {
         let j; try { j = JSON.parse(t); } catch { j = { raw: t.slice(0, 2000) }; }
         return res.status(200).json(j);
       }
+      if (dbg === 'meta') {
+        const { orgId, tblId, type = 'OBJ' } = req.query; // type=OBJ 분류 / ITM 항목
+        const url = `https://kosis.kr/openapi/statisticsData.do?method=getMeta&apiKey=${KEY}&orgId=${orgId}&tblId=${tblId}&type=${type}&format=json&jsonVD=Y`;
+        const r = await fetch(url);
+        const t = await r.text();
+        let j; try { j = JSON.parse(t); } catch { j = { raw: t.slice(0, 3000) }; }
+        return res.status(200).json(j);
+      }
       if (dbg === 'data') {
         const { orgId, tblId, objL1 = 'ALL', itmId = 'ALL', prdSe = 'Y', newEstPrdCnt = '1' } = req.query;
         const url = `https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${KEY}&itmId=${itmId}&objL1=${objL1}&format=json&jsonVD=Y&prdSe=${prdSe}&newEstPrdCnt=${newEstPrdCnt}&orgId=${orgId}&tblId=${tblId}`;
