@@ -85,19 +85,10 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
-  if (req.query.debug === 'years') {
-    const out = {};
-    for (const [nm, tbl] of [['연령별645', 'DT_133N_645'], ['증여652', 'DT_133N_652'], ['상속622', 'DT_133N_622']]) {
-      const rows = await kosisRows(tbl, 3);
-      out[nm] = rows ? [...new Set(rows.map(x => x.PRD_DE))].sort() : 'null';
-    }
-    return res.status(200).json(out);
-  }
-
   const [age, metrics] = await Promise.all([kosisAge(), kosisMetrics()]);
   res.status(200).json({
     updatedAt: UPDATED_AT,
-    basis: '국세통계 최신 · 표별 연도 표기',
+    basis: 'KOSIS 최신 공개분 자동 반영 (결정 기준 · 2025년분 미공개)',
     source: SOURCE,
     age: age || AGE_FALLBACK,
     metrics: metrics || METRICS_FALLBACK,
