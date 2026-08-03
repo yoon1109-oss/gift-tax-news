@@ -6,6 +6,7 @@ const CHECKED_AT = '2026-08-03'; // 마지막으로 재조사·확인한 날 (�
 
 // 업데이트 메모 — 이벤트 '내용이 실제로 바뀐 것'만 최신순으로 기록 (배치가 변경 시 맨 앞에 추가)
 const CHANGES = [
+  { date: '2026-08-03', text: '키움증권 미성년자계좌개설 이벤트(~9/30)가 확인되어 새로 추가했어요' },
   { date: '2026-08-03', text: 'SK증권 이벤트가 8월분(8/1~8/31, 최대 5만원)으로 갱신되었어요' },
   { date: '2026-08-03', text: '우리투자증권 이벤트가 종료되어 목록에서 내렸어요' },
 ];
@@ -62,6 +63,17 @@ const EVENTS = [
     link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i&cmd=TF04gb010002&currentPage=1&num=6518',
   },
   {
+    broker: '키움증권',
+    title: '미성년자계좌개설 이벤트',
+    period: '~ 2026.09.30',
+    benefits: [
+      '비대면 위탁종합계좌(앱·웹) 개설 + 이벤트 신청 시 국내 ETF 지급 (개설·신청 완료일 기준 1개월 내)',
+    ],
+    domesticFee: '',
+    usFee: '',
+    link: 'https://www.kiwoom.com/e/m/home/event/VEvent20260076View',
+  },
+  {
     broker: 'SK증권',
     title: '우리 아이 미래 투자',
     period: '2026.08.01 ~ 2026.08.31',
@@ -79,7 +91,7 @@ const EVENTS = [
 const PENDING = [
   { broker: '대신증권', status: '확인필요', note: '2024.03 미성년 비대면 계좌 이벤트(종료). 현재는 일반 신규고객 대상만', link: 'https://www.daishin.com/g.ds?m=1109&p=12931&v=12831' },
   { broker: '유안타증권', status: '확인필요', note: '2024.05 ‘가정의 달 자녀계좌개설’(선착순 100명 2만원, 종료)', link: 'https://www.myasset.com' },
-  { broker: 'KB증권', status: '확인필요', note: '2023 ‘우리아이 부자만들기’(종료). 미성년 비대면 서비스는 상시 운영', link: 'https://m.kbsec.com/go.able?linkcd=m06110000' },
+  { broker: 'KB증권', status: '확인필요', note: '우리아이계좌개설 상시 운영 + 신규계좌 주식쿠폰 최대 3.5만원(미성년 한정 여부·기간 미확정)', link: 'https://m.kbsec.com/go.able?linkcd=m06110000' },
   { broker: '신영증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
   { broker: '메리츠증권', status: '해당없음', note: '슈퍼365는 만 19세 이상. 미성년 특화 이벤트 없음', link: '' },
   { broker: 'DB증권 (구 DB금융투자)', status: '확인필요', note: '‘우리아이 비대면 계좌 만들기’(미국주식 소수점 최대 5만원) — 기간 미확인', link: 'https://www.dbsec.co.kr/custcenter/notices/cu_NoticesEvent_lst.do' },
@@ -90,7 +102,6 @@ const PENDING = [
   { broker: '현대차증권', status: '미발견', note: '현대차 제휴 신규계좌(7/10~10/9)는 미성년 특화 아님', link: '' },
   { broker: '유진투자증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
   { broker: '교보증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
-  { broker: '키움증권', status: '확인필요', note: '‘우리아이 국내주식 더모으기’(2025 종료) 등 정기 운영사. 2026 현재분 미확인', link: 'https://www.kiwoom.com/e/m/home/event/VEvent20230038View' },
   { broker: '우리투자증권', status: '확인필요', note: '우리아이 계좌개설 이벤트(2026.06.12~07.31) 종료. 후속 이벤트 미확인', link: 'https://fundsupermarket.wooriib.com/fmg/FMG4030002/main.do?articleNo=274' },
   { broker: 'NH투자증권 (나무)', status: '확인필요', note: '자녀 주식모으기 이벤트 이력(2026.06.30 종료). 현행 여부 재확인 필요', link: 'https://www.mynamuhbegin.com/children' },
 ];
