@@ -236,6 +236,7 @@
 <div class="blog-keywords" id="newsKeywords" style="display:flex">
   <span class="filter-label">키워드</span>
   <span class="kw-chip active" data-mode="all" onclick="selectNewsKeyword('all', this)">자녀 증여</span>
+  <span class="kw-chip" data-mode="family" onclick="selectNewsKeyword('family', this)">가족 자산 관리</span>
   <span class="kw-chip" data-mode="hanwha" onclick="selectNewsKeyword('hanwha', this)">한화생명 파이</span>
 </div>
 
@@ -308,7 +309,11 @@
     return true;
   }
 
-  function getKeyword() { return currentMode === 'all' ? '자녀 증여' : '한화생명 파이 증여'; }
+  function getKeyword() {
+    if (currentMode === 'all') return '자녀 증여';
+    if (currentMode === 'family') return '가족 자산관리 증여';
+    return '한화생명 파이 증여';
+  }
 
   function cleanItem(item) {
     const clean = s => (s||'').replace(/<[^>]*>/g,'').replace(/&quot;/g,'"').replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&#\d+;/g,'');
@@ -380,10 +385,18 @@
     // 가족 자산관리
     '자산관리','가족',
   ];
+  // 가족 자산관리 모드 전용 가중 키워드 (상속·승계 설계, 신탁, 세대 이전 중심)
+  const REL_HIGH_FAMILY = ['가족','자산관리','증여','상속','신탁','자산 이전','세대'];
+  const RELATED_KW_FAMILY = [
+    '증여세','상속세','절세','공제','비과세','사전증여','유언대용신탁','증여신탁','노후','은퇴',
+    '세무','설계','승계','자녀','손주','부모','자산 승계','재산',
+  ];
   function relatedScore(n) {
     const t = n.title || '', d = n.desc || '';
-    return REL_HIGH.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
-         + RELATED_KW.reduce((s, k) => s + (t.includes(k) ? 2 : 0) + (d.includes(k) ? 1 : 0), 0);
+    const high = currentMode === 'family' ? REL_HIGH_FAMILY : REL_HIGH;
+    const base = currentMode === 'family' ? RELATED_KW_FAMILY : RELATED_KW;
+    return high.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
+         + base.reduce((s, k) => s + (t.includes(k) ? 2 : 0) + (d.includes(k) ? 1 : 0), 0);
   }
 
   function renderRelated(grid, items, kw) {
@@ -408,7 +421,10 @@
 
     const sec = document.createElement('div');
     sec.className = 'related-section';
-    sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">자녀 증여 관련 기사</span></div>`;
+    const relLabel = currentMode === 'family' ? '가족 자산관리·증여 관련 기사'
+                   : currentMode === 'hanwha' ? '한화생명 파이 관련 기사'
+                   : '자녀 증여 관련 기사';
+    sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">${relLabel}</span></div>`;
 
     candidates.forEach(({n}, i) => {
       const el = document.createElement('a');
@@ -435,10 +451,12 @@
     if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'press' || currentMode === 'stats') return;
     if (renderedCount >= allNews.length) { checkEnd(); return; }
     const grid = document.getElementById('newsGrid');
-    const kw = currentMode === 'all' ? ['자녀','증여'] : '파이';
+    const kw = currentMode === 'all' ? ['자녀','증여']
+             : currentMode === 'family' ? ['가족','자산관리','증여']
+             : '파이';
 
     // 첫 렌더시에만 연관 기사 섹션 삽입
-    if (renderedCount === 0 && currentMode === 'all') {
+    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family')) {
       renderRelated(grid, allNews, kw);
     }
 
