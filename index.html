@@ -289,7 +289,7 @@
   const OWNER_KW = ['오너','총수','창업주','창업자','일가','블록딜','대주주','최대주주','경영권','지분','株','2세','3세','4세','오너가','가업승계','기업승계'];
   // 부동산 증여·편법증여·근저당·정치성 노이즈 제외 (예: '대통령도 쓴 근저당 매매…', 아파트/주택 증여 류)
   const NOISE_KW = ['근저당','편법증여','편법 증여','셀러 파이낸싱','셀러파이낸싱','집주인 대출','대통령','이재명',
-    '부동산','아파트','주택','빌딩','상가','토지','오피스텔'];
+    '부동산','아파트','주택','빌딩','상가','토지','오피스텔','건물'];
   function isOwnerNews(t) {
     const s = t || '';
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
@@ -398,17 +398,17 @@
   }
 
   function renderRelated(grid, items, kw) {
-    // 연관도 점수 내림차순(동점이면 sim 순서), 단 같은 사건 중복 배제하고 상위 5건
+    // 연관도 점수 내림차순(동점이면 sim 순서), 단 같은 사건 중복 배제하고 상위 4건
     const scored = [...items]
       .map(n => ({ n, s: relatedScore(n) }))
       .sort((a, b) => b.s - a.s || (a.n._rank ?? 1e9) - (b.n._rank ?? 1e9));
     const candidates = [], pT = [], pTD = [], pSubj = [];
     for (const c of scored) {
-      if (candidates.length >= 5) break;
+      if (candidates.length >= 4) break;
       const gt = titleBigrams(c.n.title);
       const gtd = titleBigrams(c.n.title + ' ' + (c.n.desc || '').slice(0, 120));
       const subj = leadSubject(c.n.title);
-      // 같은 사건/주체 배제: 제목 유사 or 제목+본문 유사 or 동일 주체(회사명) → 서로 다른 3건 확보
+      // 같은 사건/주체 배제: 제목 유사 or 제목+본문 유사 or 동일 주체(회사명) → 서로 다른 4건 확보
       const dup = pT.some((s, k) =>
         bgJaccard(gt, s) >= 0.2 || bgJaccard(gtd, pTD[k]) >= 0.3 || (subj.length >= 2 && subj === pSubj[k]));
       if (dup) continue;
