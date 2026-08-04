@@ -106,6 +106,22 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
+
+  // [임시] KOSIS 조회 — 연령별 표의 보유 연도/신고기준 표 존재 여부 확인용
+  if (req.query.debug) {
+    const kg = async u => { const r = await fetch(u); const t = await r.text(); try { return JSON.parse(t); } catch { return { raw: t.slice(0,1500) }; } };
+    if (req.query.debug === 'search') {
+      const q = req.query.q || '연령별 증여';
+      const j = await kg(`https://kosis.kr/openapi/statisticsSearch.do?method=getList&apiKey=${KEY}&searchNm=${encodeURIComponent(q)}&startCount=1&resultCount=30&format=json&jsonVD=Y`);
+      return res.status(200).json(Array.isArray(j) ? j.map(x => ({ org: x.ORG_ID, tbl: x.TBL_ID, nm: x.TBL_NM })) : j);
+    }
+    if (req.query.debug === 'years') {
+      const t = req.query.tblId || 'DT_133N_645';
+      const j = await kg(`https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${KEY}&itmId=ALL&objL1=ALL&objL2=ALL&format=json&jsonVD=Y&prdSe=Y&newEstPrdCnt=3&orgId=133&tblId=${t}`);
+      return res.status(200).json({ tbl: t, years: Array.isArray(j) ? [...new Set(j.map(x => x.PRD_DE))].sort() : j });
+    }
+  }
+
   const age = (await kosisAge()) || AGE_FALLBACK;
   res.status(200).json({
     updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE,
