@@ -17,15 +17,21 @@ function clean(s) {
 // 앞머리 [보도자료] / [보도자료/조세브리핑] 등 대괄호 태그 제거
 const stripTag = t => t.replace(/^\s*\[[^\]]*\]\s*/, '').trim();
 
-async function fetchDecoded(url) {
-  const r = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' } });
-  const buf = await r.arrayBuffer();
-  return new TextDecoder('euc-kr').decode(buf);
+// 세무사회 서버가 느릴 때 전체 응답이 묶이지 않도록 요청별 타임아웃을 건다.
+async function fetchDecoded(url, timeoutMs = 0) {
+  const ctl = timeoutMs ? new AbortController() : null;
+  const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
+  try {
+    const r = await fetch(url, { headers: { 'user-agent': 'Mozilla/5.0' }, signal: ctl?.signal });
+    const buf = await r.arrayBuffer();
+    return new TextDecoder('euc-kr').decode(buf);
+  } finally { if (timer) clearTimeout(timer); }
 }
 
+// 상세에서 전체 제목을 가져오되, 2.5초 넘으면 목록의 (잘린) 제목으로 폴백
 async function fullTitle(key, fallback) {
   try {
-    const html = await fetchDecoded(`${BASE}?mode=view&GotoPage=1&bbs_key=${key}`);
+    const html = await fetchDecoded(`${BASE}?mode=view&GotoPage=1&bbs_key=${key}`, 2500);
     const m = html.match(/<td[^>]*colspan="4"[^>]*align="left"[^>]*>([\s\S]*?)<\/td>/i);
     const t = m ? stripTag(clean(m[1])) : '';
     return t || fallback;
@@ -40,7 +46,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
   try {
-    const html = await fetchDecoded(BASE);
+    const html = await fetchDecoded(BASE, 6000);
     // <a href="javascript:goView(1,KEY)"> 제목(잘림)</a> ... <font>YYYY-MM-DD</font>
     const re = /goView\(1,(\d+)\)"[^>]*>([\s\S]*?)<\/a>[\s\S]{0,180}?(\d{4}-\d{2}-\d{2})/g;
     const rows = [];
