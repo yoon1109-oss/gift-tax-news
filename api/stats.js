@@ -94,12 +94,24 @@ const SOURCES = [
   { title: '국세통계포털(TASIS)', desc: '자산종류별·성별 등 증여세 상세 통계', link: 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/cm/index.xml' },
 ];
 
-export default function handler(req, res) {
+const KEY = process.env.KOSIS_KEY;
+
+export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1800');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
+
+  if (req.query.debug) {
+    const kg = async u => { const r = await fetch(u); const t = await r.text(); try { return JSON.parse(t); } catch { return { raw: t.slice(0,1200) }; } };
+    const t = req.query.tblId || 'DT_133N_A6341';
+    const j = await kg(`https://kosis.kr/openapi/Param/statisticsParameterData.do?method=getList&apiKey=${KEY}&itmId=ALL&objL1=ALL&objL2=ALL&format=json&jsonVD=Y&prdSe=Y&newEstPrdCnt=1&orgId=133&tblId=${t}`);
+    if (!Array.isArray(j)) return res.status(200).json(j);
+    return res.status(200).json({ tbl: t, years: [...new Set(j.map(x=>x.PRD_DE))],
+      rows: j.filter(x=>x.C1_NM==='합계'||x.C1_NM==='계').slice(0,40).map(x=>({c1:x.C1_NM,c2:x.C2_NM,itm:x.ITM_NM,dt:x.DT,unit:x.UNIT_NM})) });
+  }
+
   res.status(200).json({
     updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE,
     age: PI_POINTS, metrics: METRICS, sources: SOURCES,
