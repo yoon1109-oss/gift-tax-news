@@ -351,10 +351,13 @@
     }
     document.getElementById('loadingBadge').classList.add('active');
     const existingLinks = new Set(allNews.map(n => n.link));
-    for (let start = 101; start <= 201; start += 100) {
-      if (currentMode !== (document.querySelector('input[name="newsFilter"]:checked')?.value||'all')) break;
-      try {
-        const items = await fetchBatch(keyword, start);
+    const modeAtStart = currentMode;
+    // 배경 배치(101·201)는 병렬로 받되, 관련도(_rank) 보존을 위해 순서대로 처리
+    const batches = await Promise.all(
+      [101, 201].map(start => fetchBatch(keyword, start).catch(() => []))
+    );
+    if (currentMode === modeAtStart) {
+      for (const items of batches) {
         items.forEach(item => {
           const n = cleanItem(item);
           if (!existingLinks.has(n.link)) {
@@ -364,9 +367,9 @@
             if (assignGroup(n)) { n._rank = rankCounter++; allNews.push(n); }
           }
         });
-        allNews.sort((a,b) => b.pubDate - a.pubDate); updateStats();
         if (items.length < 100) break;
-      } catch(e) { break; }
+      }
+      allNews.sort((a,b) => b.pubDate - a.pubDate); updateStats();
     }
     bgDone = true;
     document.getElementById('loadingBadge').classList.remove('active');

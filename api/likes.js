@@ -3,6 +3,7 @@
 // (해당 엔드포인트는 CORS 미허용 + referer 필요라 브라우저 직접 호출 불가)
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900'); // 공감수
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
@@ -26,7 +27,7 @@ export default async function handler(req, res) {
   };
 
   // 동시성 10으로 제한해 순차 배치 처리
-  const POOL = 10;
+  const POOL = 20;
   for (let i = 0; i < ids.length; i += POOL) {
     await Promise.all(ids.slice(i, i + POOL).map(fetchOne));
   }

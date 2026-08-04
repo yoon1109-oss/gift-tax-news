@@ -108,6 +108,7 @@ const PENDING = [
 
 export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1800'); // 이벤트: 주간 갱신
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
