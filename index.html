@@ -231,6 +231,10 @@
     <input type="radio" name="newsFilter" value="press" onchange="onModeChange('press')">
     <span>세무사회 보도자료</span>
   </label>
+  <label class="radio-wrap" id="wrap-stats">
+    <input type="radio" name="newsFilter" value="stats" onchange="onModeChange('stats')">
+    <span>통계</span>
+  </label>
 </div>
 
 <div class="blog-keywords" id="newsKeywords" style="display:flex">
@@ -816,7 +820,7 @@
 
     const note = document.createElement('div');
     note.className = 'event-note';
-    note.innerHTML = `<b>증여·상속세 주요 지표</b> · ${esc(d.basis||'')} 기준 · 출처 ${esc(d.source||'')}`;
+    note.innerHTML = `<b>증여 통계</b> · ${esc(d.basis||'')} · 출처 ${esc(d.source||'')}`;
     grid.appendChild(note);
 
     // 핵심 타겟: 수증자 연령별 증여
