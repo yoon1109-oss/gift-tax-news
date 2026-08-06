@@ -33,6 +33,7 @@ const Y = {
   세액공제_신고: 172766,
   세액공제_외국납부: 5471,
   자진납부세액: 5924535,
+  // 지역별 원본 — 현재 화면에서는 쓰지 않음(요약 타일·로우 테이블 모두 제거). 필요해지면 여기서 꺼내 쓸 것.
   지역: [
     { name: '서울', cnt: 63057, amt: 16158854 }, { name: '인천', cnt: 7403, amt: 897271 },
     { name: '경기', cnt: 47279, amt: 6993844 }, { name: '강원', cnt: 3811, amt: 384737 },
@@ -101,9 +102,6 @@ const METRICS = [
     { label: '산출세액', value: jo(Y.산출세액), delta: `과표 대비 ${pct(Y.산출세액, Y.과세표준)}` },
     { label: '자진납부세액', value: jo(Y.자진납부세액), delta: `세액공제 ${jo(Y.세액공제_소계)} 반영` },
   ]},
-  { group: '지역 분포 (재산가액 상위)', items: [...Y.지역].sort((a, b) => b.amt - a.amt).slice(0, 4).map(r => ({
-    label: r.name, value: jo(r.amt), delta: `${nf(r.cnt)}건 · 건당 ${perCase(r.amt, r.cnt)}`,
-  }))},
 ];
 
 const RAW = [
