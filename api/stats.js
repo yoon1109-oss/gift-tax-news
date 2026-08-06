@@ -124,9 +124,6 @@ const RAW = [
       ['　└ 납부세액공제', nf(Y.세액공제_납부)], ['　└ 신고세액공제', nf(Y.세액공제_신고)],
       ['　└ 외국납부세액', nf(Y.세액공제_외국납부)], ['자진납부할세액', nf(Y.자진납부세액)],
     ]},
-  { title: '2025년 지역별 신고 현황', note: '단위: 건 / 백만원 · 재산가액 내림차순',
-    columns: ['지역', '신고건수', '증여재산가액', '건당 평균'],
-    rows: [...Y.지역].sort((a, b) => b.amt - a.amt).map(r => [r.name, nf(r.cnt), nf(r.amt), perCase(r.amt, r.cnt)]) },
 ];
 
 const SOURCES = [
