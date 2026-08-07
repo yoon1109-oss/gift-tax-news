@@ -261,6 +261,7 @@
   <span class="filter-label">키워드</span>
   <span class="kw-chip active" data-mode="all" onclick="selectNewsKeyword('all', this)">자녀 증여</span>
   <span class="kw-chip" data-mode="family" onclick="selectNewsKeyword('family', this)">가족 자산 관리</span>
+  <span class="kw-chip" data-mode="platform" onclick="selectNewsKeyword('platform', this)">금융 플랫폼</span>
   <span class="kw-chip" data-mode="hanwha" onclick="selectNewsKeyword('hanwha', this)">한화생명 파이</span>
 </div>
 
@@ -336,6 +337,7 @@
   function getKeyword() {
     if (currentMode === 'all') return '자녀 증여';
     if (currentMode === 'family') return '가족 자산 관리';
+    if (currentMode === 'platform') return '금융 플랫폼';
     return '한화생명 파이 증여';
   }
 
@@ -393,7 +395,16 @@
         });
         if (items.length < 100) break;
       }
-      allNews.sort((a,b) => b.pubDate - a.pubDate); updateStats();
+      allNews.sort((a,b) => b.pubDate - a.pubDate);
+      // 연관도 섹션은 1차 배치(100건 중 필터를 통과한 40건 안팎)만 보고 이미 그려져 있다.
+      // 배경 배치까지 합친 전체 기준으로 다시 뽑지 않으면 2·3차에 들어온 상위 기사가 영영 누락된다.
+      // 사용자가 아직 위쪽을 보고 있을 때만 다시 그려 스크롤 위치가 튀지 않게 한다.
+      if (window.scrollY < 200) {
+        document.getElementById('newsGrid').innerHTML = '';
+        renderedCount = 0; relatedLinks = new Set();
+        renderNextPage();
+      }
+      updateStats();
     }
     bgDone = true;
     document.getElementById('loadingBadge').classList.remove('active');
@@ -416,10 +427,19 @@
   // 가족 자산관리 모드: 주제어(가족·자산관리)에만 가중. 증여·신탁까지 가중하면
   // 신탁 상품 기사가 상위를 독식해 '가족 자산관리' 본래 기사(세미나·설계 등)가 밀림.
   const REL_FAMILY = ['가족','자산관리','자산 관리'];
+  // 금융 플랫폼 모드: 검색어가 넓어 카카오 실적·AI 플랫폼 같은 비금융 기사가 다수 섞인다.
+  // 그래서 '금융 서비스 플랫폼의 동향'(제목 +3 / 본문 +2)을 축으로 잡고,
+  // 파이와 같은 영역(자녀·증여·자산관리)을 다루면 함께 가산되도록 했다.
+  const REL_PLAT_HIGH = ['자녀','증여','미성년','자산관리','자산 관리','생애주기','연금','저축','슈퍼앱','MAU','금융앱','뱅킹'];
+  const REL_PLAT = ['플랫폼','앱','핀테크','디지털','간편','비대면','이용자','가입자','출시','론칭','개편','고도화','페이','송금','결제','계좌','은행','증권','보험'];
   function relatedScore(n) {
     const t = n.title || '', d = n.desc || '';
     if (currentMode === 'family') {
       return REL_FAMILY.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 1 : 0), 0);
+    }
+    if (currentMode === 'platform') {
+      return REL_PLAT_HIGH.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
+           + REL_PLAT.reduce((s, k) => s + (t.includes(k) ? 2 : 0) + (d.includes(k) ? 1 : 0), 0);
     }
     return REL_HIGH.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
          + REL_GUIDE.reduce((s, k) => s + (t.includes(k) ? 4 : 0) + (d.includes(k) ? 2 : 0), 0)
@@ -450,6 +470,7 @@
     const sec = document.createElement('div');
     sec.className = 'related-section';
     const relLabel = currentMode === 'family' ? '가족 자산 관리 관련 기사'
+                   : currentMode === 'platform' ? '금융 플랫폼 관련 기사'
                    : currentMode === 'hanwha' ? '한화생명 파이 관련 기사'
                    : '자녀 증여 관련 기사';
     sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">${relLabel}</span></div>`;
@@ -481,10 +502,11 @@
     const grid = document.getElementById('newsGrid');
     const kw = currentMode === 'all' ? ['자녀','증여']
              : currentMode === 'family' ? ['가족','자산관리']
+             : currentMode === 'platform' ? ['금융','플랫폼']
              : '파이';
 
     // 첫 렌더시에만 연관 기사 섹션 삽입
-    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family')) {
+    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family' || currentMode === 'platform')) {
       renderRelated(grid, allNews, kw);
     }
 
