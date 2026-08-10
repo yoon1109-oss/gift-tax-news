@@ -30,6 +30,7 @@ api/stats.js    증여세 통계 — 국세통계 6.3.1 (2025년 신고분) 하�
 | 뉴스 검색 | `all` / `family` / `platform` / `hanwha` | 키워드 칩 4종 (`자녀 증여` / `가족 자산 관리` / `금융 플랫폼` / `한화생명 파이 증여`) |
 | 블로그 검색 | `blog` | 키워드 칩 3종, 30개씩 무한스크롤, 공감수(♥) 표시 |
 | 계좌 이벤트 | `event` | `api/events.js` 큐레이션 카드 + 업데이트 메모 |
+| 친구 초대 이벤트 | `referral` | 같은 `api/events.js`의 `referral`·`referralPending` |
 | 세무사회 보도자료 | `press` | 1페이지 15건, 증여·상속·세무대리는 상단 분류 |
 | 통계 | `stats` | 증여세 신고 현황 — 유의사항 + 주요 지표 + 요약 타일 + 로우 데이터 |
 
@@ -65,8 +66,9 @@ api/stats.js    증여세 통계 — 국세통계 6.3.1 (2025년 신고분) 하�
 이벤트가 바뀌면 이 파일만 수정:
 
 - `EVENTS[]` 진행중 확정 / `PENDING[]` 추가 조사 대상 / `CHANGES[]` 업데이트 메모(사용자 노출)
-- `REFERRAL[]` / `REFERRAL_PENDING[]` — 일반(성인) 계좌 **친구 초대·추천** 이벤트. 화면에서
-  `.section-rule` 구분선 아래 별도 영역으로 렌더. 자녀계좌와 성격이 다르므로 섞지 말 것
+- `REFERRAL[]` / `REFERRAL_PENDING[]` — **친구 초대 이벤트** 탭(`mode='referral'`) 데이터.
+  같은 `api/events.js`를 공유하되 화면은 별도 탭. `REFERRAL_PENDING`에는 `확인필요`만 두고
+  조사 결과 '미발견'인 곳은 넣지 않는다
 - `UPDATED_AT` 데이터가 실제 바뀐 날 / `CHECKED_AT` 마지막 확인일(변경 없어도 갱신)
 
 **원칙 (SK증권 누락 사고 이후)**:

@@ -111,8 +111,6 @@
       display: flex; align-items: center; gap: 8px;
     }
     .divider-label::after { content:''; flex: 1; height: 1px; background: var(--border); }
-    /* 성격이 다른 영역을 가르는 굵은 구분선 (계좌 이벤트 → 친구 초대 이벤트) */
-    .section-rule { height: 1px; background: var(--border); margin: 26px 0 18px; }
 
     .news-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 6px;
@@ -248,6 +246,10 @@
   <label class="radio-wrap" id="wrap-event">
     <input type="radio" name="newsFilter" value="event" onchange="onModeChange('event')">
     <span>계좌 이벤트</span>
+  </label>
+  <label class="radio-wrap" id="wrap-referral">
+    <input type="radio" name="newsFilter" value="referral" onchange="onModeChange('referral')">
+    <span>친구 초대 이벤트</span>
   </label>
   <label class="radio-wrap" id="wrap-press">
     <input type="radio" name="newsFilter" value="press" onchange="onModeChange('press')">
@@ -499,7 +501,7 @@
   }
 
   function renderNextPage() {
-    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'press' || currentMode === 'stats') return;
+    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'press' || currentMode === 'stats') return;
     if (renderedCount >= allNews.length) { checkEnd(); return; }
     const grid = document.getElementById('newsGrid');
     const kw = currentMode === 'all' ? ['자녀','증여']
@@ -558,7 +560,7 @@
   const observer = new IntersectionObserver(entries => {
     if (!entries[0].isIntersecting) return;
     if (currentMode === 'blog') { if (!blogEnd && !blogLoading) loadBlogPage(); return; }
-    if (currentMode==='cafe' || currentMode==='event' || currentMode==='press' || currentMode==='stats') return;
+    if (currentMode==='cafe' || currentMode==='event' || currentMode==='referral' || currentMode==='press' || currentMode==='stats') return;
     if (renderedCount < allNews.length) renderNextPage();
   }, { rootMargin: '400px' });
   observer.observe(document.getElementById('sentinel'));
@@ -573,6 +575,7 @@
     if (mode === 'blog') { blogItems = []; blogStart = 1; blogEnd = false; blogPrefetch = null; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { showEvents(); }
+    else if (mode === 'referral') { showReferral(); }
     else if (mode === 'press') { showPress(); }
     else if (mode === 'stats') { showStats(); }
     else { // 뉴스 검색 탭 — 키워드 칩을 '자녀 증여'로 초기화
@@ -799,47 +802,75 @@
       grid.appendChild(sec);
     }
 
-    // ── 일반(성인) 계좌 친구 초대·추천 이벤트 — 자녀계좌와 성격이 달라 구분선 아래로 분리
+  }
+
+  // 친구 초대·추천 이벤트 — api/events.js를 공유하되 별도 탭으로 표시
+  async function showReferral() {
+    resetGrid('친구 초대 이벤트를 불러오는 중...');
+    document.querySelector('.stats-bar').style.display = 'flex';
+    if (!eventsLoaded) {
+      try {
+        const res = await fetch('/api/events');
+        eventsData = await res.json();
+        eventsLoaded = true;
+      } catch(e) { document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">이벤트를 불러오지 못했습니다.</p>'; return; }
+    }
+    if (currentMode !== 'referral') return;
+    const referral = (eventsData && eventsData.referral) || [];
+    const refPending = (eventsData && eventsData.referralPending) || [];
+    document.getElementById('initLoader').style.display = 'none';
+    document.getElementById('endMsg').style.display = 'none';
+    document.getElementById('totalCount').textContent = referral.length;
+    document.getElementById('totalLabel').textContent = '건의 이벤트';
+    document.getElementById('sourceCount').textContent = referral.length + refPending.length;
+    document.getElementById('sourceLabel').textContent = '개 증권사';
+    renderReferral(eventsData || {});
+  }
+
+  function renderReferral(data) {
+    const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
     const referral = data.referral || [], refPending = data.referralPending || [];
-    if (referral.length || refPending.length) {
-      const hr = document.createElement('div');
-      hr.className = 'section-rule';
-      grid.appendChild(hr);
+    const checkedAt = data.checkedAt || '';
 
-      const rnote = document.createElement('div');
-      rnote.className = 'event-note';
-      rnote.innerHTML = '<b>친구 초대·추천 이벤트</b> · 일반(성인) 계좌 대상'
-        + `<span class="event-note-brokers">증권사는 자본시장법상 재산상 이익 제공 제한이 있어 이 유형 자체가 드뭅니다. 조사 ${referral.length + refPending.length}개사 중 ${referral.length}곳에서 확인.</span>`;
-      grid.appendChild(rnote);
+    const note = document.createElement('div');
+    note.className = 'event-note';
+    note.innerHTML = `<b>친구 초대·추천 이벤트</b>${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`
+      + `<span class="event-note-brokers">증권사는 자본시장법상 재산상 이익 제공 제한이 있어 이 유형 자체가 드뭅니다. 조사 ${referral.length + refPending.length}개사 중 ${referral.length}곳에서 확인.</span>`;
+    grid.appendChild(note);
 
-      referral.forEach(ev => {
-        const el = document.createElement('a');
-        el.className = 'news-card'; el.href = ev.link; el.target = '_blank'; el.rel = 'noopener';
-        el.innerHTML = `
-          <div class="card-meta">
-            <span class="event-broker">${esc(ev.broker)}</span>
-            <span class="event-period">${esc(ev.period)}</span>
-          </div>
-          ${ev.title ? `<div class="event-title">${esc(ev.title)}</div>` : ''}
-          <ul class="event-benefits">${(ev.benefits||[]).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
-          <div class="event-link">공식 페이지 바로가기 →</div>`;
+    if (!referral.length && !refPending.length) {
+      grid.insertAdjacentHTML('beforeend', '<p style="color:var(--muted);text-align:center;padding:40px">확인된 이벤트가 없습니다.</p>');
+      return;
+    }
+
+    referral.forEach((ev, i) => {
+      const el = document.createElement('a');
+      el.className = 'news-card'; el.href = ev.link; el.target = '_blank'; el.rel = 'noopener';
+      el.style.animationDelay = `${Math.min(i*0.05,0.5)}s`;
+      el.innerHTML = `
+        <div class="card-meta">
+          <span class="event-broker">${esc(ev.broker)}</span>
+          <span class="event-period">${esc(ev.period)}</span>
+        </div>
+        ${ev.title ? `<div class="event-title">${esc(ev.title)}</div>` : ''}
+        <ul class="event-benefits">${(ev.benefits||[]).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+        <div class="event-link">공식 페이지 바로가기 →</div>`;
+      grid.appendChild(el);
+    });
+
+    if (refPending.length) {
+      const dv = document.createElement('div');
+      dv.className = 'divider-label'; dv.textContent = '확인 필요';
+      grid.appendChild(dv);
+      refPending.forEach(p => {
+        const el = document.createElement(p.link ? 'a' : 'div');
+        el.className = 'event-pending';
+        if (p.link) { el.href = p.link; el.target = '_blank'; el.rel = 'noopener'; }
+        el.innerHTML = `<div class="card-meta"><span class="event-broker-sm">${esc(p.broker)}</span>` +
+          `<span class="event-period">${esc(p.status)}</span></div>` +
+          `<div class="event-pending-note">${esc(p.note)}</div>`;
         grid.appendChild(el);
       });
-
-      if (refPending.length) {
-        const dv = document.createElement('div');
-        dv.className = 'divider-label'; dv.textContent = '미발견·확인 필요';
-        grid.appendChild(dv);
-        refPending.forEach(p => {
-          const el = document.createElement(p.link ? 'a' : 'div');
-          el.className = 'event-pending';
-          if (p.link) { el.href = p.link; el.target = '_blank'; el.rel = 'noopener'; }
-          el.innerHTML = `<div class="card-meta"><span class="event-broker-sm">${esc(p.broker)}</span>` +
-            `<span class="event-period">${esc(p.status)}</span></div>` +
-            `<div class="event-pending-note">${esc(p.note)}</div>`;
-          grid.appendChild(el);
-        });
-      }
     }
   }
 
@@ -1020,6 +1051,7 @@
     if (currentMode === 'blog') showBlog().catch(()=>{});
     else if (currentMode === 'cafe') showCafe().catch(()=>{});
     else if (currentMode === 'event') showEvents().catch(()=>{});
+    else if (currentMode === 'referral') showReferral().catch(()=>{});
     else if (currentMode === 'press') { pressLoaded = false; showPress().catch(()=>{}); }
     else if (currentMode === 'stats') { statsLoaded = false; showStats().catch(()=>{}); }
     else { resetNews(); startLoad().catch(()=>{}); }
