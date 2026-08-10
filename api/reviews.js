@@ -10,6 +10,7 @@ const APPLE_ID = '6755743981';
 const PLAY_URL = `https://play.google.com/store/apps/details?id=${PLAY_ID}&hl=ko&gl=KR`;
 const APPLE_URL = `https://apps.apple.com/kr/app/id${APPLE_ID}`;
 
+const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const TIMEOUT = 8000;
 async function get(url, opts = {}) {
   const ac = new AbortController();
@@ -62,8 +63,49 @@ async function playSummary() {
 }
 
 // ── 애플 앱스토어 ────────────────────────────────────────────
-// 애플 RSS는 같은 앱이어도 호출 시점에 따라 빈 피드를 돌려줄 때가 있다(캐시 반영 지연).
-// 정렬을 바꿔 한 번 더 시도해 빈손으로 끝나는 경우를 줄인다.
+// 애플 리뷰 본문은 앱스토어 페이지에 서버 렌더링돼 있다. RSS가 비어 오는 일이 잦아
+// (2026-08-10 확인) 이쪽을 1차 출처로 쓴다. 클래스명은 svelte 해시가 붙어 바뀌므로
+// 안정적인 속성(id="review-N-title", data-testid, <time datetime>)에만 의존한다.
+const untag = s => String(s || '')
+  .replace(/<!--.*?-->/g, '').replace(/<[^>]*>/g, '')
+  .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<')
+  .replace(/&gt;/g, '>').replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim();
+
+async function appleFromPage() {
+  const res = await get(`https://apps.apple.com/kr/app/id${APPLE_ID}`, {
+    headers: { 'Accept-Language': 'ko-KR', 'User-Agent': UA },
+    redirect: 'follow',
+    timeout: 10000,
+  });
+  if (!res.ok) throw new Error('apple page ' + res.status);
+  const html = await res.text();
+  const blocks = html.split(/aria-labelledby="review-(\d+)-title"/).slice(1);
+  const seen = new Set(), out = [];
+  for (let i = 0; i < blocks.length; i += 2) {
+    const id = blocks[i], b = blocks[i + 1] || '';
+    if (seen.has(id)) continue;                       // 같은 리뷰가 모달용으로 한 번 더 나온다
+    const body = b.match(/data-testid="truncate-text"[^>]*>([\s\S]*?)<\/p>/);
+    const text = body ? untag(body[1]) : '';
+    if (!text) continue;
+    seen.add(id);
+    const title = b.match(/id="review-\d+-title"[^>]*>([\s\S]*?)<\/h3>/);
+    const stars = b.match(/aria-label="별\s*(\d+)\s*개"/);
+    const date = b.match(/<time[^>]*datetime="([^"]+)"/);
+    const author = b.match(/class="author[^"]*"[^>]*>([\s\S]*?)<\/span>/);
+    out.push({
+      store: 'apple',
+      author: author ? untag(author[1]) : '익명',
+      rating: stars ? Number(stars[1]) : 0,
+      title: title ? untag(title[1]) : '',
+      text,
+      date: date ? date[1].slice(0, 10) : '',
+      version: '', thumbsUp: 0, reply: '',
+    });
+  }
+  return out;
+}
+
+// RSS는 보조 출처. 호출 시점에 따라 빈 피드를 돌려줄 때가 있어 정렬을 바꿔 한 번 더 시도한다.
 async function appleFeed(sortBy) {
   const res = await get(`https://itunes.apple.com/kr/rss/customerreviews/id=${APPLE_ID}/sortBy=${sortBy}/json`);
   if (!res.ok) throw new Error('apple ' + res.status);
@@ -73,13 +115,13 @@ async function appleFeed(sortBy) {
   return entries;
 }
 
-async function appleReviews() {
+async function appleFromRss() {
   const seen = new Set(), entries = [];
   for (const sort of ['mostRecent', 'mostHelpful']) {
     let list = [];
-    try { list = await appleFeed(sort); } catch (e) { if (!entries.length && sort === 'mostHelpful') throw e; }
+    try { list = await appleFeed(sort); } catch (e) { /* 보조 출처라 실패해도 넘어간다 */ }
     for (const e of list) {
-      const id = (e.id && (e.id.label || e.id.attributes?.['im:id'])) || JSON.stringify(e).slice(0, 80);
+      const id = (e.id && (e.id.label || (e.id.attributes && e.id.attributes['im:id']))) || JSON.stringify(e).slice(0, 80);
       if (seen.has(id)) continue;
       seen.add(id); entries.push(e);
     }
@@ -96,6 +138,24 @@ async function appleReviews() {
     thumbsUp: Number(e['im:voteSum'] && e['im:voteSum'].label) || 0,
     reply: '',
   })).filter(r => r.text);
+}
+
+// 페이지(1차) + RSS(보조)를 합친다. RSS에는 앱 버전·도움됨 수가 있어 겹치는 건은 그쪽 값을 채운다.
+async function appleReviews() {
+  const [page, rss] = await Promise.all([
+    appleFromPage().catch(() => null),
+    appleFromRss().catch(() => []),
+  ]);
+  if (page === null && !rss.length) throw new Error('apple: 페이지·RSS 모두 실패');
+  const key = r => `${r.author}|${r.text.slice(0, 40)}`;
+  const merged = new Map();
+  for (const r of (page || [])) merged.set(key(r), r);
+  for (const r of rss) {
+    const k = key(r), cur = merged.get(k);
+    if (!cur) merged.set(k, r);
+    else merged.set(k, { ...cur, version: cur.version || r.version, thumbsUp: cur.thumbsUp || r.thumbsUp });
+  }
+  return [...merged.values()];
 }
 
 async function appleSummary() {

@@ -19,7 +19,7 @@ api/likes.js    네이버 블로그 공감수(비공식 경로) 프록시
 api/events.js   증권사 자녀계좌 이벤트 — 수기 큐레이션 데이터
 api/kacta.js    한국세무사회 보도자료 목록 파싱(EUC-KR)
 api/stats.js    증여세 통계 — 국세통계 6.3.1 (2025년 신고분) 하드코딩
-api/reviews.js  파이 앱 스토어 리뷰 (구글 플레이 batchexecute + 애플 RSS)
+api/reviews.js  파이 앱 리뷰 (구글 플레이 batchexecute + 애플 스토어 페이지)
 ```
 
 ## 탭 구조
@@ -30,9 +30,8 @@ api/reviews.js  파이 앱 스토어 리뷰 (구글 플레이 batchexecute + 애
 |----|------|------|
 | 뉴스 검색 | `all` / `family` / `platform` / `hanwha` | 키워드 칩 4종 (`자녀 증여` / `가족 자산 관리` / `금융 플랫폼` / `한화생명 파이 증여`) |
 | 블로그 검색 | `blog` | 키워드 칩 3종, 30개씩 무한스크롤, 공감수(♥) 표시 |
-| 계좌 이벤트 | `event` | `api/events.js` 큐레이션 카드 + 업데이트 메모 |
-| 친구 초대 이벤트 | `referral` | 같은 `api/events.js`의 `referral`·`referralPending` |
-| 앱스토어 리뷰 | `reviews` | `api/reviews.js` — 파이 앱 구글 플레이 + 애플 앱스토어 리뷰 |
+| 이벤트 | `event` / `referral` | 서브탭 2종 — 계좌 이벤트 / 친구 초대 이벤트. 둘 다 `api/events.js` |
+| 앱 리뷰 | `reviews` | `api/reviews.js` — 파이 앱 구글 플레이 + 애플 앱스토어 |
 | 세무사회 보도자료 | `press` | 1페이지 15건, 증여·상속·세무대리는 상단 분류 |
 | 통계 | `stats` | 증여세 신고 현황 — 유의사항 + 주요 지표 + 요약 타일 + 로우 데이터 |
 
@@ -87,15 +86,19 @@ api/reviews.js  파이 앱 스토어 리뷰 (구글 플레이 batchexecute + 애
   늘면 `WebFetch(domain:...)` 를 추가해야 무인 실행이 막히지 않는다.
 - `event-sync.sh check`는 전체 증권사가 19개 미만이면 실패한다 (완전 삭제 방지 가드).
 
-## 앱스토어 리뷰 (api/reviews.js)
+## 앱 리뷰 (api/reviews.js)
 
 파이 앱: 구글 플레이 `hw.dp.plus` / 애플 `6755743981`.
 
 - **구글**: 공식 공개 API가 없어 플레이스토어 웹의 `batchexecute`(rpcid `UsvDTd`)를 POST로 호출.
   응답은 `)]}'` 접두사 뒤 중첩 JSON — `[0][2]`를 다시 파싱해야 배열이 나온다. 비공식 경로라
   구글이 형식을 바꾸면 깨진다. 평점 요약은 이 응답에 없어 상세 페이지 배지에서 정규식으로 읽는다
-- **애플**: 공식 RSS(`customerreviews`). 리뷰가 1건이면 `entry`가 배열이 아니라 **객체**로 온다.
-  **피드가 빈 채로 돌아올 때가 잦다**(애플 캐시 지연) — 정렬을 바꿔 재시도하지만 그래도 0건일 수 있다.
+- **애플**: RSS(`customerreviews`)가 **빈 피드를 돌려주는 일이 잦아**(2026-08-10 하루 종일 0건)
+  앱스토어 페이지 HTML을 1차 출처로 쓴다. 리뷰는 `aria-labelledby="review-<id>-title"` 컨테이너에
+  서버 렌더링돼 있다. 클래스명에 svelte 해시가 붙으므로 **안정적인 속성**(`id="review-N-title"`,
+  `data-testid="truncate-text"`, `<time datetime>`)에만 의존해 파싱할 것. 같은 리뷰가 모달용으로
+  한 번 더 나오니 id로 중복 제거 필요. RSS는 보조로 합쳐 앱 버전·도움됨 수를 채운다
+  (RSS는 리뷰 1건이면 `entry`가 배열이 아니라 **객체**로 온다).
   평점·별점 수는 `itunes.apple.com/lookup`으로 따로 받아 항상 표시된다
 - 스토어별로 독립 처리해 한쪽이 실패해도 다른 쪽은 표시된다 (`stores[].ok`)
 - 별점만 남긴 이용자는 리뷰 목록에 안 잡히므로 `count`(별점 수) > `written`(글 리뷰)가 정상

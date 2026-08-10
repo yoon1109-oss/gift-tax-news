@@ -253,15 +253,11 @@
   </label>
   <label class="radio-wrap" id="wrap-event">
     <input type="radio" name="newsFilter" value="event" onchange="onModeChange('event')">
-    <span>계좌 이벤트</span>
-  </label>
-  <label class="radio-wrap" id="wrap-referral">
-    <input type="radio" name="newsFilter" value="referral" onchange="onModeChange('referral')">
-    <span>친구 초대 이벤트</span>
+    <span>이벤트</span>
   </label>
   <label class="radio-wrap" id="wrap-reviews">
     <input type="radio" name="newsFilter" value="reviews" onchange="onModeChange('reviews')">
-    <span>앱스토어 리뷰</span>
+    <span>앱 리뷰</span>
   </label>
   <label class="radio-wrap" id="wrap-press">
     <input type="radio" name="newsFilter" value="press" onchange="onModeChange('press')">
@@ -271,6 +267,12 @@
     <input type="radio" name="newsFilter" value="stats" onchange="onModeChange('stats')">
     <span>통계</span>
   </label>
+</div>
+
+<div class="blog-keywords" id="eventTabs" style="display:none">
+  <span class="filter-label">분류</span>
+  <span class="kw-chip active" data-mode="event" onclick="selectEventTab('event', this)">계좌 이벤트</span>
+  <span class="kw-chip" data-mode="referral" onclick="selectEventTab('referral', this)">친구 초대 이벤트</span>
 </div>
 
 <div class="blog-keywords" id="newsKeywords" style="display:flex">
@@ -584,10 +586,13 @@
     document.querySelector('.stats-bar').style.display = (mode === 'event' || mode === 'blog' || mode === 'press' || mode === 'stats' || mode === 'reviews') ? 'none' : 'flex';
     document.getElementById('blogKeywords').style.display = (mode === 'blog') ? 'flex' : 'none';
     document.getElementById('newsKeywords').style.display = (mode === 'all') ? 'flex' : 'none';
+    document.getElementById('eventTabs').style.display = (mode === 'event') ? 'flex' : 'none';
     if (mode === 'blog') { blogItems = []; blogStart = 1; blogEnd = false; blogPrefetch = null; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
-    else if (mode === 'event') { showEvents(); }
-    else if (mode === 'referral') { showReferral(); }
+    else if (mode === 'event') { // 이벤트 탭 — 서브탭을 '계좌 이벤트'로 초기화
+      document.querySelectorAll('#eventTabs .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === 'event'));
+      showEvents();
+    }
     else if (mode === 'reviews') { showReviews(); }
     else if (mode === 'press') { showPress(); }
     else if (mode === 'stats') { showStats(); }
@@ -672,6 +677,16 @@
         ${item.desc ? `<div class="card-desc">${esc(item.desc.slice(0,200))}</div>` : ''}`;
       grid.appendChild(el);
     });
+  }
+
+  // 이벤트 탭의 서브탭 (계좌 이벤트 / 친구 초대 이벤트). 상단 탭은 'event' 하나로 유지되고
+  // currentMode만 바뀌므로 wrap-* 체크 상태는 건드리지 않는다.
+  function selectEventTab(mode, el) {
+    if (mode === currentMode) return;
+    document.querySelectorAll('#eventTabs .kw-chip').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    currentMode = mode;
+    if (mode === 'referral') showReferral(); else showEvents();
   }
 
   function selectNewsKeyword(mode, el) {
@@ -820,7 +835,7 @@
   // 친구 초대·추천 이벤트 — api/events.js를 공유하되 별도 탭으로 표시
   async function showReferral() {
     resetGrid('친구 초대 이벤트를 불러오는 중...');
-    document.querySelector('.stats-bar').style.display = 'flex';
+    document.querySelector('.stats-bar').style.display = 'none';
     if (!eventsLoaded) {
       try {
         const res = await fetch('/api/events');
