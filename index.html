@@ -111,6 +111,14 @@
       display: flex; align-items: center; gap: 8px;
     }
     .divider-label::after { content:''; flex: 1; height: 1px; background: var(--border); }
+    /* 앱스토어 리뷰 카드 */
+    .rv-stars { font-size: 13px; letter-spacing: 1px; }
+    .rv-good { color: #4ade80; } .rv-mid { color: #f9a26c; } .rv-bad { color: #f87171; }
+    .rv-store { font-size: 11px; color: var(--muted2); font-weight: 600; }
+    .rv-foot { font-size: 12px; color: var(--muted); margin-top: 8px; }
+    .rv-reply { font-size: 12px; color: var(--muted2); line-height: 1.6; margin-top: 8px;
+      padding: 9px 12px; background: var(--surface); border-radius: 6px; word-break: keep-all; }
+    .rv-reply b { color: var(--text); margin-right: 5px; }
 
     .news-card {
       background: var(--card); border: 1px solid var(--border); border-radius: 6px;
@@ -250,6 +258,10 @@
   <label class="radio-wrap" id="wrap-referral">
     <input type="radio" name="newsFilter" value="referral" onchange="onModeChange('referral')">
     <span>친구 초대 이벤트</span>
+  </label>
+  <label class="radio-wrap" id="wrap-reviews">
+    <input type="radio" name="newsFilter" value="reviews" onchange="onModeChange('reviews')">
+    <span>앱스토어 리뷰</span>
   </label>
   <label class="radio-wrap" id="wrap-press">
     <input type="radio" name="newsFilter" value="press" onchange="onModeChange('press')">
@@ -501,7 +513,7 @@
   }
 
   function renderNextPage() {
-    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'press' || currentMode === 'stats') return;
+    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'reviews' || currentMode === 'press' || currentMode === 'stats') return;
     if (renderedCount >= allNews.length) { checkEnd(); return; }
     const grid = document.getElementById('newsGrid');
     const kw = currentMode === 'all' ? ['자녀','증여']
@@ -560,7 +572,7 @@
   const observer = new IntersectionObserver(entries => {
     if (!entries[0].isIntersecting) return;
     if (currentMode === 'blog') { if (!blogEnd && !blogLoading) loadBlogPage(); return; }
-    if (currentMode==='cafe' || currentMode==='event' || currentMode==='referral' || currentMode==='press' || currentMode==='stats') return;
+    if (currentMode==='cafe' || currentMode==='event' || currentMode==='referral' || currentMode==='reviews' || currentMode==='press' || currentMode==='stats') return;
     if (renderedCount < allNews.length) renderNextPage();
   }, { rootMargin: '400px' });
   observer.observe(document.getElementById('sentinel'));
@@ -569,13 +581,14 @@
     currentMode = mode;
     document.querySelectorAll('.radio-wrap').forEach(w => w.classList.remove('checked'));
     document.getElementById('wrap-' + mode).classList.add('checked');
-    document.querySelector('.stats-bar').style.display = (mode === 'event' || mode === 'blog' || mode === 'press' || mode === 'stats') ? 'none' : 'flex';
+    document.querySelector('.stats-bar').style.display = (mode === 'event' || mode === 'blog' || mode === 'press' || mode === 'stats' || mode === 'reviews') ? 'none' : 'flex';
     document.getElementById('blogKeywords').style.display = (mode === 'blog') ? 'flex' : 'none';
     document.getElementById('newsKeywords').style.display = (mode === 'all') ? 'flex' : 'none';
     if (mode === 'blog') { blogItems = []; blogStart = 1; blogEnd = false; blogPrefetch = null; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { showEvents(); }
     else if (mode === 'referral') { showReferral(); }
+    else if (mode === 'reviews') { showReviews(); }
     else if (mode === 'press') { showPress(); }
     else if (mode === 'stats') { showStats(); }
     else { // 뉴스 검색 탭 — 키워드 칩을 '자녀 증여'로 초기화
@@ -834,8 +847,7 @@
 
     const note = document.createElement('div');
     note.className = 'event-note';
-    note.innerHTML = `<b>친구 초대·추천 이벤트</b>${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`
-      + `<span class="event-note-brokers">증권사는 자본시장법상 재산상 이익 제공 제한이 있어 이 유형 자체가 드뭅니다. 조사 ${referral.length + refPending.length}개사 중 ${referral.length}곳에서 확인.</span>`;
+    note.innerHTML = `<b>친구 초대·추천 이벤트</b>${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`;
     grid.appendChild(note);
 
     if (!referral.length && !refPending.length) {
@@ -858,20 +870,74 @@
       grid.appendChild(el);
     });
 
-    if (refPending.length) {
-      const dv = document.createElement('div');
-      dv.className = 'divider-label'; dv.textContent = '확인 필요';
-      grid.appendChild(dv);
-      refPending.forEach(p => {
-        const el = document.createElement(p.link ? 'a' : 'div');
-        el.className = 'event-pending';
-        if (p.link) { el.href = p.link; el.target = '_blank'; el.rel = 'noopener'; }
-        el.innerHTML = `<div class="card-meta"><span class="event-broker-sm">${esc(p.broker)}</span>` +
-          `<span class="event-period">${esc(p.status)}</span></div>` +
-          `<div class="event-pending-note">${esc(p.note)}</div>`;
-        grid.appendChild(el);
-      });
+  }
+
+  // 앱스토어 리뷰 — 파이 앱(구글 플레이 + 애플 앱스토어)
+  let reviewsLoaded = false, reviewsData = null;
+  async function showReviews() {
+    resetGrid('앱 리뷰를 불러오는 중...');
+    document.querySelector('.stats-bar').style.display = 'none';
+    if (!reviewsLoaded) {
+      try {
+        const res = await fetch('/api/reviews');
+        reviewsData = await res.json();
+        reviewsLoaded = true;
+      } catch(e) { document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">리뷰를 불러오지 못했습니다.</p>'; return; }
     }
+    if (currentMode !== 'reviews') return;
+    document.getElementById('initLoader').style.display = 'none';
+    document.getElementById('endMsg').style.display = 'none';
+    renderReviews(reviewsData || {});
+  }
+
+  function renderReviews(d) {
+    const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
+    const stores = d.stores || [], reviews = d.reviews || [];
+
+    const note = document.createElement('div');
+    note.className = 'event-note';
+    note.innerHTML = `<b>${esc(d.app || '파이')} 앱 리뷰</b> · 구글 플레이 · 애플 앱스토어`
+      + (d.note ? `<span class="event-note-brokers">${esc(d.note)}</span>` : '');
+    grid.appendChild(note);
+
+    if (stores.length) {
+      const box = document.createElement('div');
+      box.className = 'stat-group';
+      box.innerHTML = `<div class="sg-title">스토어 평점</div><div class="sg-tiles">` +
+        stores.map(s => `<div class="s-tile"><div class="st-label">${esc(s.name)}</div>` +
+          `<div class="st-value">${s.rating != null ? esc(s.rating) + '★' : '—'}</div>` +
+          `<div class="st-delta">${s.ok ? `별점 ${s.count != null ? esc(s.count) : '?'}개 · 글 리뷰 ${esc(s.written)}건` : '수집 실패'}</div></div>`).join('') +
+        `</div>`;
+      grid.appendChild(box);
+    }
+
+    if (!reviews.length) {
+      grid.insertAdjacentHTML('beforeend', '<p style="color:var(--muted);text-align:center;padding:40px">등록된 글 리뷰가 없습니다.</p>');
+      return;
+    }
+
+    const dv = document.createElement('div');
+    dv.className = 'divider-label'; dv.textContent = `리뷰 ${reviews.length}건 · 최신순`;
+    grid.appendChild(dv);
+
+    const linkOf = k => (stores.find(s => s.key === k) || {}).link || '#';
+    reviews.forEach((r, i) => {
+      const el = document.createElement('a');
+      el.className = 'news-card'; el.href = linkOf(r.store); el.target = '_blank'; el.rel = 'noopener';
+      el.style.animationDelay = `${Math.min(i*0.05,0.5)}s`;
+      const stars = '★'.repeat(r.rating) + '☆'.repeat(Math.max(0, 5 - r.rating));
+      el.innerHTML = `
+        <div class="card-meta">
+          <span class="rv-stars rv-${r.rating >= 4 ? 'good' : r.rating >= 3 ? 'mid' : 'bad'}">${stars}</span>
+          <span class="rv-store">${r.store === 'play' ? 'Google Play' : 'App Store'}</span>
+          <span class="card-date">${esc(r.date)}</span>
+        </div>
+        ${r.title ? `<div class="event-title">${esc(r.title)}</div>` : ''}
+        <div class="card-desc" style="-webkit-line-clamp:unset">${esc(r.text)}</div>
+        <div class="rv-foot">${esc(r.author)}${r.version ? ` · v${esc(r.version)}` : ''}${r.thumbsUp ? ` · 도움됨 ${esc(r.thumbsUp)}` : ''}</div>
+        ${r.reply ? `<div class="rv-reply"><b>개발사 답변</b> ${esc(r.reply)}</div>` : ''}`;
+      grid.appendChild(el);
+    });
   }
 
   // 세무사회 보도자료 — 증여/상속 관련은 '연관도 높음'으로 상단 분류
@@ -1052,6 +1118,7 @@
     else if (currentMode === 'cafe') showCafe().catch(()=>{});
     else if (currentMode === 'event') showEvents().catch(()=>{});
     else if (currentMode === 'referral') showReferral().catch(()=>{});
+    else if (currentMode === 'reviews') { reviewsLoaded = false; showReviews().catch(()=>{}); }
     else if (currentMode === 'press') { pressLoaded = false; showPress().catch(()=>{}); }
     else if (currentMode === 'stats') { statsLoaded = false; showStats().catch(()=>{}); }
     else { resetNews(); startLoad().catch(()=>{}); }
@@ -1127,7 +1194,8 @@
     }, str);
   }
 
-  function esc(str) { return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+  // 숫자를 넘겨도 죽지 않도록 문자열로 변환한다 ((str||'')는 숫자에서 .replace가 없어 터진다)
+  function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
   startLoad();
   setInterval(resetAndFetch, 10*60*1000);
