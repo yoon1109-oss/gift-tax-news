@@ -89,6 +89,35 @@ const EVENTS = [
   },
 ];
 
+// 일반(성인) 계좌 대상 친구 초대·추천 이벤트 — 자녀계좌와 별개 영역.
+// 증권사는 자본시장법상 재산상 이익 제공 제한이 있어 이 유형 자체가 드물다.
+// 확정 건만 REFERRAL에, 확인 안 된 건 REFERRAL_PENDING에 둔다.
+const REFERRAL = [
+  {
+    broker: '신한투자증권',
+    title: '신한 슈퍼SOL 신규 가입·친구 초대 이벤트',
+    period: '2026.07.01 ~ 2026.09.30',
+    benefits: [
+      '친구 초대 후 친구가 신규 가입 시 — 초대한 사람 네이버페이 포인트 1,000원',
+      '초대받은 친구 네이버페이 포인트 2,000원 (신규 가입 혜택과 중복 수령)',
+      '신규 가입 혜택: 계좌 보유자 국내주식쿠폰 5,000원 / 미보유자 네이버페이 포인트 5,000원',
+      '초대 실적 상위 20명 아이패드 1대',
+    ],
+    link: 'https://m.shinhansec.com/mweb/anev/evnt/aevnt0001',
+  },
+];
+
+// 친구 초대 이벤트 조사 결과 미확정·미발견
+const REFERRAL_PENDING = [
+  { broker: '키움증권', status: '확인필요', note: '신규고객 이벤트(~2026.08.27)에 ‘친구에게 공유 시 혜택 상향’ 언급이 블로그에 있으나 공식 페이지에서 확인되지 않음', link: 'https://www.kiwoom.com/e/m/common/event/VIngEventView' },
+  { broker: '미래에셋증권', status: '미발견', note: '진행중 이벤트 목록에 친구 초대·추천 항목 없음 (2026-08-10 확인)', link: 'https://securities.miraeasset.com/mw/mki/mki7000/r01.do' },
+  { broker: '한국투자증권', status: '미발견', note: '진행중 이벤트 목록에 친구 초대·추천 항목 없음 (2026-08-10 확인)', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
+  { broker: 'KB증권', status: '미발견', note: '진행중 이벤트 목록에 친구 초대·추천 항목 없음 (2026-08-10 확인)', link: 'https://www.kbsec.com/cs/notice/jsp/CUST_09_0003.jsp' },
+  { broker: '삼성증권', status: '확인필요', note: '이벤트 목록이 비로그인 상태에서 조회되지 않아 판독 불가', link: 'https://www.samsungpop.com/customer/event.do' },
+  { broker: '토스증권', status: '미발견', note: '신규 고객 대상 별도 친구 초대 이벤트 없음', link: 'https://tossinvest.com' },
+  { broker: '카카오페이증권', status: '미발견', note: '신규 고객 대상 별도 친구 초대 이벤트 없음', link: 'https://www.kakaopaysec.com' },
+];
+
 // 추가 조사 대상 — 현재 진행 여부 미확정 (status: 확인필요 | 미발견 | 해당없음)
 const PENDING = [
   { broker: '대신증권', status: '확인필요', note: '2024.03 미성년 비대면 계좌 이벤트(종료). 현재는 일반 신규고객 대상만', link: 'https://www.daishin.com/g.ds?m=1109&p=12931&v=12831' },
@@ -114,5 +143,9 @@ export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-  res.status(200).json({ updatedAt: UPDATED_AT, checkedAt: CHECKED_AT, events: EVENTS, pending: PENDING, changes: CHANGES });
+  res.status(200).json({
+    updatedAt: UPDATED_AT, checkedAt: CHECKED_AT,
+    events: EVENTS, pending: PENDING, changes: CHANGES,
+    referral: REFERRAL, referralPending: REFERRAL_PENDING,
+  });
 }
