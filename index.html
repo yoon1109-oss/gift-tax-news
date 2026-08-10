@@ -911,7 +911,7 @@
 
     const note = document.createElement('div');
     note.className = 'event-note';
-    note.innerHTML = `<b>${esc(d.app || '파이')} 앱 리뷰</b> · 구글 플레이 · 애플 앱스토어`
+    note.innerHTML = `<b>${esc(d.app || '파이')} 앱 리뷰</b> · 구글 플레이 · 애플 앱스토어 · 최대 30분마다 갱신`
       + (d.note ? `<span class="event-note-brokers">${esc(d.note)}</span>` : '');
     grid.appendChild(note);
 
