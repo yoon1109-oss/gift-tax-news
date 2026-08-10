@@ -1,11 +1,12 @@
 // 증권사 자녀계좌 개설 이벤트 — 수기 큐레이션 데이터.
 // 대부분 증권사 이벤트 페이지가 봇 차단/동적렌더/EUC-KR/앱전용이라 자동 수집이 불가하여
 // 여기 배열을 직접 갱신한다. (매주 월요일 10시 스케줄 갱신 대상)
-const UPDATED_AT = '2026-08-03'; // 데이터가 실제 바뀐 날 (정리 기준)
-const CHECKED_AT = '2026-08-03'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
+const UPDATED_AT = '2026-08-10'; // 데이터가 실제 바뀐 날 (정리 기준)
+const CHECKED_AT = '2026-08-10'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
 
 // 업데이트 메모 — 이벤트 '내용이 실제로 바뀐 것'만 최신순으로 기록 (배치가 변경 시 맨 앞에 추가)
 const CHANGES = [
+  { date: '2026-08-10', text: 'SK증권 이벤트에 국내주식 1억원 이상 거래 시 받는 5만원 혜택이 빠져 있어 추가했어요 (합쳐서 최대 10만원)' },
   { date: '2026-08-03', text: '키움증권 미성년자계좌개설 이벤트(~9/30)가 확인되어 새로 추가했어요' },
   { date: '2026-08-03', text: 'SK증권 이벤트가 8월분(8/1~8/31, 최대 5만원)으로 갱신되었어요' },
   { date: '2026-08-03', text: '우리투자증권 이벤트가 종료되어 목록에서 내렸어요' },
@@ -79,6 +80,7 @@ const EVENTS = [
     period: '2026.08.01 ~ 2026.08.31',
     benefits: [
       '스마트금융센터(비대면) 신규 미성년 계좌 개설 + 순입금 시 최대 5만원 현금',
+      '순입금 조건 충족 후 국내주식 1억원 이상 거래 시 5만원 추가 (합산 최대 10만원)',
       '부모 명의 SK증권 계좌 보유 필수',
     ],
     domesticFee: '',
@@ -95,15 +97,15 @@ const PENDING = [
   { broker: '신영증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
   { broker: '메리츠증권', status: '해당없음', note: '슈퍼365는 만 19세 이상. 미성년 특화 이벤트 없음', link: '' },
   { broker: 'DB증권 (구 DB금융투자)', status: '확인필요', note: '‘우리아이 비대면 계좌 만들기’(미국주식 소수점 최대 5만원) — 기간 미확인', link: 'https://www.dbsec.co.kr/custcenter/notices/cu_NoticesEvent_lst.do' },
-  { broker: '하나증권', status: '확인필요', note: '2026.05.07~08.31 신규 계좌개설 이벤트 진행 중 (미성년 특화 여부 확인 필요)', link: 'https://www.hanaw.com' },
+  { broker: '하나증권', status: '해당없음', note: '2026.05.07~08.31 신규 계좌개설 이벤트는 신규·휴면 고객 대상 일반 이벤트로 미성년 특화 아님 (2026-08-10 확인)', link: 'https://www.hanaw.com' },
   { broker: 'IBK투자증권', status: '미발견', note: '미성년은 영업점 개설, 특화 이벤트 없음', link: '' },
   { broker: '한화투자증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
-  { broker: '신한투자증권', status: '확인필요', note: '2024 미성년 이벤트 다수(종료). 자녀계좌 개설 상시 운영', link: 'https://m.shinhansec.com/mweb/acct/cact/amact0015' },
+  { broker: '신한투자증권', status: '확인필요', note: '자녀계좌 개설 안내만 있고 진행 이벤트 없음 (2026-08-10 확인). 2024 미성년 이벤트는 모두 종료', link: 'https://m.shinhansec.com/mweb/acct/cact/amact0015' },
   { broker: '현대차증권', status: '미발견', note: '현대차 제휴 신규계좌(7/10~10/9)는 미성년 특화 아님', link: '' },
   { broker: '유진투자증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
   { broker: '교보증권', status: '미발견', note: '미성년 특화 이벤트 정보 없음', link: '' },
   { broker: '우리투자증권', status: '확인필요', note: '우리아이 계좌개설 이벤트(2026.06.12~07.31) 종료. 후속 이벤트 미확인', link: 'https://fundsupermarket.wooriib.com/fmg/FMG4030002/main.do?articleNo=274' },
-  { broker: 'NH투자증권 (나무)', status: '확인필요', note: '자녀 주식모으기 이벤트 이력(2026.06.30 종료). 현행 여부 재확인 필요', link: 'https://www.mynamuhbegin.com/children' },
+  { broker: 'NH투자증권 (나무)', status: '확인필요', note: '우리아이 계좌개설 상시 안내만 있고 이벤트 없음. 8월 진행 이벤트는 타사 주식 이전 건으로 미성년 특화 아님 (2026-08-10 확인)', link: 'https://www.mynamuhbegin.com/children' },
 ];
 
 export default function handler(req, res) {
