@@ -74,6 +74,13 @@ api/stats.js    증여세 통계 — 국세통계 6.3.1 (2025년 신고분) 하�
 
 **주간 자동 갱신**: scheduled task `weekly-brokerage-event-refresh` (매주 월 10시 KST)
 
+- 무인 실행이라 임의 셸 명령은 권한 승인에 걸려 즉시 멈춘다 (2026-08-10 실패 원인).
+  git·검증·커밋·푸시는 **`scripts/event-sync.sh {pull|check|commit|verify}`** 로만 한다.
+  이 스크립트 경로만 `~/.claude/settings.local.json` 허용 목록에 등록돼 있다.
+- 증권사 도메인 WebFetch와 브라우저 판독 도구도 같은 파일에 등록해 뒀다. 조사 대상 사이트가
+  늘면 `WebFetch(domain:...)` 를 추가해야 무인 실행이 막히지 않는다.
+- `event-sync.sh check`는 전체 증권사가 19개 미만이면 실패한다 (완전 삭제 방지 가드).
+
 ## 외부 사이트 수집 제약
 
 | 유형 | 대상 | 대응 |
