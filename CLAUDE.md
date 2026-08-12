@@ -21,6 +21,7 @@ api/kacta.js    한국세무사회 보도자료 목록 파싱(EUC-KR)
 api/taxnews.js  세법 뉴스 — 조세 전문지 4곳 기사만 서버에서 모아 캐시
 api/stats.js    증여세 통계 — 국세통계 6.3.1 (2025년 신고분) 하드코딩
 api/reviews.js  파이 앱 리뷰 (구글 플레이 batchexecute + 애플 스토어 페이지)
+api/review-alert.js  새 앱 리뷰 메일 알림 (Vercel Cron 매일 09시 KST)
 ```
 
 ## 탭 구조
@@ -137,6 +138,19 @@ api/reviews.js  파이 앱 리뷰 (구글 플레이 batchexecute + 애플 스토
 - 매칭은 `h === d || h.endsWith('.' + d)` — `fake-taxtimes.co.kr.evil.com` 같은 위장 도메인 배제
 - 파이 앱과의 직접 관련도는 낮다(국세청 인사·세무조사·업계 동향 중심). 세정 업계 동향 파악용
 
+## 앱 리뷰 메일 알림 (api/review-alert.js)
+
+Vercel Cron이 매일 09:00 KST(`0 0 * * *` UTC)에 호출해, **어제 등록분 리뷰**가 있으면 메일을 보낸다.
+
+- 서버리스라 '이미 보낸 리뷰'를 저장할 곳이 없다. 상태를 두는 대신 **날짜가 어제인 리뷰만**
+  고른다 — 날짜별로 정확히 한 번씩만 발송돼 중복이 없다(7일 시뮬레이션으로 확인).
+  대신 오늘 올라온 리뷰는 내일 메일에 담긴다
+- 공개 URL이므로 `CRON_SECRET`이 설정돼 있으면 `Authorization: Bearer` 검사를 통과해야만 동작
+- `?dry=1`로 발송 없이 본문만 확인 가능
+- 메일 발송은 Resend REST API를 `fetch`로 직접 호출한다. 이 저장소는 package.json이 없어
+  의존성을 못 넣으므로 SMTP 라이브러리(nodemailer 등)는 쓸 수 없다
+- 받는 주소는 **환경변수 `ALERT_EMAIL`** 에 둔다. 저장소가 공개라 소스에 박지 않는다
+
 ## 외부 사이트 수집 제약
 
 | 유형 | 대상 | 대응 |
@@ -150,6 +164,8 @@ api/reviews.js  파이 앱 리뷰 (구글 플레이 batchexecute + 애플 스토
 ## 환경변수 (Vercel)
 
 `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` / `KOSIS_KEY`
+
+메일 알림용: `RESEND_API_KEY` / `ALERT_EMAIL` / `ALERT_FROM`(선택) / `CRON_SECRET`
 
 - 로컬에 키 파일 두지 않음. KOSIS 개발 시 Vercel 키로 라이브 임시 debug 엔드포인트를 붙였다가 **작업 후 반드시 제거**
 - KOSIS 호출 시 `objL` 에러 → `objL1=ALL&objL2=ALL` 둘 다 지정하면 해결. 통계표 검색은 `statisticsSearch.do`
