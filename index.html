@@ -268,7 +268,7 @@
   </label>
   <label class="radio-wrap" id="wrap-taxnews">
     <input type="radio" name="newsFilter" value="taxnews" onchange="onModeChange('taxnews')">
-    <span>세법</span>
+    <span>세무</span>
   </label>
   <label class="radio-wrap" id="wrap-stats">
     <input type="radio" name="newsFilter" value="stats" onchange="onModeChange('stats')">
@@ -1080,8 +1080,11 @@
   // 이 매체들은 국세청 인사·세무조사 기사가 많아, 증여·상속 계열을 상단으로 분류한다.
   // '공제' 단독은 '장특공제'·'자체감사와 공제'처럼 증여와 무관한 기사까지 끌어와 제외했다.
   const TAX_REL_KW = [
+    // 증여·상속 계열
     '증여','상속','유산','가업승계','물려','세대생략','자산 이전','대물림',
     '미성년','자녀','혼인','출산',
+    // 세무대리 시장 이슈 (스크래핑 제한·개보법 시행령·세무플랫폼 계열)
+    '세무대리','세무사법','세무플랫폼','오인광고','스크래핑',
   ];
   let taxLoaded = false, taxData = null;
   async function showTaxNews() {
@@ -1136,7 +1139,7 @@
     if (rel.length) {
       const sec = document.createElement('div');
       sec.className = 'related-section';
-      sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">증여·상속·가업승계 관련 기사</span></div>`;
+      sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">증여·상속·세무플랫폼 관련 기사</span></div>`;
       grid.appendChild(sec);
       rel.forEach((n, i) => card(n, 'related-card', i));
       const divider = document.createElement('div');
