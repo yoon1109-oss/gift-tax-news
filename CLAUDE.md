@@ -147,8 +147,9 @@ Vercel Cron이 매일 09:00 KST(`0 0 * * *` UTC)에 호출해, **어제 등록�
   대신 오늘 올라온 리뷰는 내일 메일에 담긴다
 - 공개 URL이므로 `CRON_SECRET`이 설정돼 있으면 `Authorization: Bearer` 검사를 통과해야만 동작
 - `?dry=1`로 발송 없이 본문만 확인 가능
-- 메일 발송은 Resend REST API를 `fetch`로 직접 호출한다. 이 저장소는 package.json이 없어
-  의존성을 못 넣으므로 SMTP 라이브러리(nodemailer 등)는 쓸 수 없다
+- 메일 발송은 **Brevo 트랜잭셔널 API**(`POST api.brevo.com/v3/smtp/email`, 헤더 `api-key`)를
+  `fetch`로 직접 호출한다. 이 저장소는 package.json이 없어 SMTP 라이브러리를 쓸 수 없다.
+  Brevo는 **발신자 이메일만 인증하면 수신자를 가리지 않아** 도메인 인증 없이 회사 주소로 보낼 수 있다
 - 받는 주소는 **환경변수 `ALERT_EMAIL`** 에 둔다. 저장소가 공개라 소스에 박지 않는다
 
 ## 외부 사이트 수집 제약
@@ -165,7 +166,7 @@ Vercel Cron이 매일 09:00 KST(`0 0 * * *` UTC)에 호출해, **어제 등록�
 
 `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` / `KOSIS_KEY`
 
-메일 알림용: `RESEND_API_KEY` / `ALERT_EMAIL` / `ALERT_FROM`(선택) / `CRON_SECRET`
+메일 알림용: `BREVO_API_KEY` / `ALERT_EMAIL` / `ALERT_FROM`(인증된 발신자) / `ALERT_FROM_NAME`(선택) / `CRON_SECRET`
 
 - 로컬에 키 파일 두지 않음. KOSIS 개발 시 Vercel 키로 라이브 임시 debug 엔드포인트를 붙였다가 **작업 후 반드시 제거**
 - KOSIS 호출 시 `objL` 에러 → `objL1=ALL&objL2=ALL` 둘 다 지정하면 해결. 통계표 검색은 `statisticsSearch.do`

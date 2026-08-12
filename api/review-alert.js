@@ -4,10 +4,15 @@
 // **어제 날짜 리뷰만** 골라 보낸다 — 날짜별로 정확히 한 번씩만 발송되므로 중복이 없다.
 // (오늘 올라온 리뷰는 내일 메일에 담긴다. 최대 하루 남짓 늦는 대신 중복이 없다.)
 //
+// 메일 발송은 Brevo 트랜잭셔널 API를 fetch로 직접 호출한다. 이 저장소는 package.json이
+// 없어 SMTP 라이브러리를 넣을 수 없고, Brevo는 발신자 이메일만 인증하면 수신자를 가리지
+// 않아(도메인 인증 불필요) 회사 주소로 바로 보낼 수 있다.
+//
 // 필요한 환경변수 (Vercel):
-//   RESEND_API_KEY  메일 발송 API 키
+//   BREVO_API_KEY   Brevo API 키
 //   ALERT_EMAIL     받는 주소
-//   ALERT_FROM      보내는 주소 (미설정 시 Resend 기본 발신 주소)
+//   ALERT_FROM      보내는 주소 — Brevo에 '인증된 발신자'로 등록된 주소여야 한다
+//   ALERT_FROM_NAME 보내는 이름 (선택, 기본 '파이 모니터링')
 //   CRON_SECRET     Vercel Cron이 Authorization 헤더로 보내는 값 (외부 호출 차단용)
 const REVIEWS_URL = '/api/reviews';
 const STORE_NAME = { play: 'Google Play', apple: 'App Store' };
@@ -79,20 +84,23 @@ export default async function handler(req, res) {
   const mail = buildEmail(list, day);
   if (dry) { res.status(200).json({ day, found: list.length, sent: false, dryRun: mail }); return; }
 
-  const key = process.env.RESEND_API_KEY, to = process.env.ALERT_EMAIL;
-  if (!key || !to) {
-    res.status(500).json({ error: 'RESEND_API_KEY 또는 ALERT_EMAIL 미설정', day, found: list.length });
+  const key = process.env.BREVO_API_KEY;
+  const to = process.env.ALERT_EMAIL;
+  const from = process.env.ALERT_FROM;
+  const missing = [!key && 'BREVO_API_KEY', !to && 'ALERT_EMAIL', !from && 'ALERT_FROM'].filter(Boolean);
+  if (missing.length) {
+    res.status(500).json({ error: '환경변수 미설정', missing, day, found: list.length });
     return;
   }
 
-  const send = await fetch('https://api.resend.com/emails', {
+  const send = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
-    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    headers: { 'api-key': key, 'Content-Type': 'application/json', accept: 'application/json' },
     body: JSON.stringify({
-      from: process.env.ALERT_FROM || 'onboarding@resend.dev',
-      to: [to],
+      sender: { email: from, name: process.env.ALERT_FROM_NAME || '파이 모니터링' },
+      to: [{ email: to }],
       subject: mail.subject,
-      html: mail.html,
+      htmlContent: mail.html,
     }),
   });
   const body = await send.json().catch(() => ({}));
