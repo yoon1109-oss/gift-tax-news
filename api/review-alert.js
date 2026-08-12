@@ -10,7 +10,8 @@
 //
 // 필요한 환경변수 (Vercel):
 //   BREVO_API_KEY   Brevo API 키
-//   ALERT_EMAIL     받는 주소
+//   ALERT_EMAIL     받는 주소. 쉼표(또는 세미콜론)로 여러 명을 넣을 수 있다.
+//                   저장소가 공개라 주소는 소스에 두지 않고 전부 여기서만 관리한다
 //   ALERT_FROM      보내는 주소 — Brevo에 '인증된 발신자'로 등록된 주소여야 한다
 //   ALERT_FROM_NAME 보내는 이름 (선택, 기본 '파이 모니터링')
 //   CRON_SECRET     Vercel Cron이 Authorization 헤더로 보내는 값 (외부 호출 차단용)
@@ -85,9 +86,10 @@ export default async function handler(req, res) {
   if (dry) { res.status(200).json({ day, found: list.length, sent: false, dryRun: mail }); return; }
 
   const key = process.env.BREVO_API_KEY;
-  const to = process.env.ALERT_EMAIL;
   const from = process.env.ALERT_FROM;
-  const missing = [!key && 'BREVO_API_KEY', !to && 'ALERT_EMAIL', !from && 'ALERT_FROM'].filter(Boolean);
+  const to = String(process.env.ALERT_EMAIL || '')
+    .split(/[,;]/).map(s => s.trim()).filter(Boolean);
+  const missing = [!key && 'BREVO_API_KEY', !to.length && 'ALERT_EMAIL', !from && 'ALERT_FROM'].filter(Boolean);
   if (missing.length) {
     res.status(500).json({ error: '환경변수 미설정', missing, day, found: list.length });
     return;
@@ -98,11 +100,13 @@ export default async function handler(req, res) {
     headers: { 'api-key': key, 'Content-Type': 'application/json', accept: 'application/json' },
     body: JSON.stringify({
       sender: { email: from, name: process.env.ALERT_FROM_NAME || '파이 모니터링' },
-      to: [{ email: to }],
+      to: to.map(email => ({ email })),
       subject: mail.subject,
       htmlContent: mail.html,
     }),
   });
   const body = await send.json().catch(() => ({}));
-  res.status(send.ok ? 200 : 502).json({ day, found: list.length, sent: send.ok, provider: body });
+  res.status(send.ok ? 200 : 502).json({
+    day, found: list.length, sent: send.ok, recipients: to.length, provider: body,
+  });
 }
