@@ -19,9 +19,10 @@ summary() {
   node -e "
 import('./api/events.js').then(m => {
   let o; m.default({method:'GET',query:{}}, {setHeader(){}, status(){return this;}, json(x){o=x;}});
-  const all = [...o.events.map(e=>e.broker), ...o.pending.map(p=>p.broker)];
+  // 한 증권사가 이벤트를 여러 개 운영할 수 있으므로 개사 수는 중복을 제거해 센다
+  const all = [...new Set([...o.events.map(e=>e.broker), ...o.pending.map(p=>p.broker)])];
   console.log('확인일:', o.checkedAt, '/ 변경일:', o.updatedAt);
-  console.log('진행중:', o.events.length, '개 / 확인대상:', o.pending.length, '개 / 전체:', all.length, '개사');
+  console.log('진행중:', o.events.length, '건 / 확인대상:', o.pending.length, '개 / 조사 대상:', all.length, '개사');
   console.log('진행중 목록:', o.events.map(e=>e.broker).join(', '));
   console.log('최신 메모:', o.changes[0].date, o.changes[0].text);
   if (all.length < 19) { console.error('✗ 증권사가 19개 미만입니다 — 완전 삭제가 발생했는지 확인하세요'); process.exit(1); }

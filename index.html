@@ -817,7 +817,8 @@
   function renderEvents(data) {
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
     const events = data.events || [], pending = data.pending || [], updatedAt = data.updatedAt || '', checkedAt = data.checkedAt || '', changes = data.changes || [];
-    const allBrokers = [...events.map(e => e.broker), ...pending.map(p => p.broker)];
+    // 한 증권사가 이벤트를 여러 개 운영할 수 있어 개사 수는 중복을 제거해 센다
+    const allBrokers = [...new Set([...events.map(e => e.broker), ...pending.map(p => p.broker)])];
 
     const note = document.createElement('div');
     note.className = 'event-note';
