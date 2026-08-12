@@ -279,6 +279,7 @@
   <span class="filter-label">키워드</span>
   <span class="kw-chip active" data-mode="all" onclick="selectNewsKeyword('all', this)">자녀 증여</span>
   <span class="kw-chip" data-mode="family" onclick="selectNewsKeyword('family', this)">가족 자산 관리</span>
+  <span class="kw-chip" data-mode="childfin" onclick="selectNewsKeyword('childfin', this)">자녀 금융</span>
   <span class="kw-chip" data-mode="platform" onclick="selectNewsKeyword('platform', this)">금융 플랫폼</span>
   <span class="kw-chip" data-mode="hanwha" onclick="selectNewsKeyword('hanwha', this)">한화생명 파이</span>
 </div>
@@ -332,7 +333,8 @@
   const OWNER_KW = ['오너','총수','창업주','창업자','일가','블록딜','대주주','최대주주','경영권','지분','株','2세','3세','4세','오너가','가업승계','기업승계'];
   // 부동산 증여·편법증여·근저당·정치성 노이즈 제외 (예: '대통령도 쓴 근저당 매매…', 아파트/주택 증여 류)
   const NOISE_KW = ['근저당','편법증여','편법 증여','셀러 파이낸싱','셀러파이낸싱','집주인 대출','대통령','이재명',
-    '부동산','아파트','주택','빌딩','상가','토지','오피스텔','건물'];
+    '부동산','아파트','주택','빌딩','상가','토지','오피스텔','건물',
+  '보이스피싱','메신저피싱','스미싱'];
   function isOwnerNews(t) {
     const s = t || '';
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
@@ -355,6 +357,7 @@
   function getKeyword() {
     if (currentMode === 'all') return '자녀 증여';
     if (currentMode === 'family') return '가족 자산 관리';
+    if (currentMode === 'childfin') return '자녀 금융';
     if (currentMode === 'platform') return '금융 플랫폼';
     return '한화생명 파이 증여';
   }
@@ -445,10 +448,16 @@
   // 가족 자산관리 모드: 주제어(가족·자산관리)에만 가중. 증여·신탁까지 가중하면
   // 신탁 상품 기사가 상위를 독식해 '가족 자산관리' 본래 기사(세미나·설계 등)가 밀림.
   const REL_FAMILY = ['가족','자산관리','자산 관리'];
-  // 자녀 대상 여부. '아이'는 넓게 잡되 아이디어·아이폰 등 무관한 단어는 배제한다.
-  const REL_FAMILY_KID = [/자녀/, /손주/, /미성년/, /아동/, /어린이/, /아이(?!디|돌|폰|패드|맥|워치|템|콘|러니)/];
-  // 자녀 대상 '금융상품'이 제목의 주제인 기사 — 파이와 같은 영역이라 따로 가산한다.
-  const REL_FAMILY_PROD = /통장|계좌|적금|펀드|신탁|보험|카드/;
+
+  // 자녀 금융 모드: '자녀 대상'과 '금융 수단'이 제목에서 만나는 기사를 축으로 본다.
+  // 검색어가 넓어 'KB금융 소방공무원 지원' 같은 금융사 사회공헌 기사가 다수 섞이는데,
+  // 자녀 신호가 없으면 점수가 거의 오르지 않아 자연히 걸러진다.
+  // '아이'는 넓게 잡되 아이디어·아이폰 등 무관한 단어는 배제한다.
+  const REL_KID = [/자녀/, /미성년/, /아동/, /어린이/, /손주/, /청소년/, /아이(?!디|돌|폰|패드|맥|워치|템|콘|러니)/];
+  const REL_FIN = [/통장/, /계좌/, /적금/, /예금/, /펀드/, /신탁/, /보험/, /카드/, /투자/, /주식/, /ETF/, /연금/, /저축/, /증여/, /자산관리/, /자산 관리/, /용돈/, /금융교육/];
+  // 파이와 같은 영역(증여·투자·계좌)은 따로 가산해 동점을 가른다. 금융교육은 인접이라 약하게.
+  const REL_KID_CORE = [/증여/, /계좌/, /통장/, /투자/, /주식/, /ETF/, /적금/, /자산관리/, /자산 관리/, /저축/];
+  const REL_KID_EDU  = [/금융교육/, /경제교육/, /용돈/];
   // 금융 플랫폼 모드: 검색어가 넓어 카카오 실적·AI 플랫폼 같은 비금융 기사가 다수 섞인다.
   // 그래서 '금융 서비스 플랫폼의 동향'(제목 +3 / 본문 +2)을 축으로 잡고,
   // 파이와 같은 영역(자녀·증여·자산관리)을 다루면 함께 가산되도록 했다.
@@ -457,15 +466,19 @@
   function relatedScore(n) {
     const t = n.title || '', d = n.desc || '';
     if (currentMode === 'family') {
-      // 주제어·자녀 여부를 각각 '개념 1회'로만 센다. 키워드마다 더하면 '손주·자녀'처럼
-      // 동의어를 나열한 제목이 같은 내용으로 점수를 배로 얻어 상위를 독식한다.
+      return REL_FAMILY.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 1 : 0), 0);
+    }
+    if (currentMode === 'childfin') {
+      // 각 묶음은 '개념당 1회'만 센다. 키워드마다 더하면 동의어를 나열한 제목이 점수를 배로 얻는다.
       let s = 0;
-      if (REL_FAMILY.some(k => t.includes(k))) s += 3;
-      if (REL_FAMILY.some(k => d.includes(k))) s += 1;
-      const kidTitle = REL_FAMILY_KID.some(r => r.test(t));
-      if (kidTitle) s += 5;
-      if (REL_FAMILY_KID.some(r => r.test(d))) s += 2;
-      if (kidTitle && REL_FAMILY_PROD.test(t)) s += 4;
+      const kidT = REL_KID.some(r => r.test(t)), finT = REL_FIN.some(r => r.test(t));
+      if (kidT) s += 5;
+      if (REL_KID.some(r => r.test(d))) s += 2;
+      if (finT) s += 3;
+      if (REL_FIN.some(r => r.test(d))) s += 1;
+      if (kidT && finT) s += 4;                                    // 자녀 × 금융이 제목에서 만나는 기사
+      if (kidT && REL_KID_CORE.some(r => r.test(t))) s += 3;       // 증여·투자·계좌 = 파이 핵심
+      if (kidT && REL_KID_EDU.some(r => r.test(t))) s += 1;
       return s;
     }
     if (currentMode === 'platform') {
@@ -501,6 +514,7 @@
     const sec = document.createElement('div');
     sec.className = 'related-section';
     const relLabel = currentMode === 'family' ? '가족 자산 관리 관련 기사'
+                   : currentMode === 'childfin' ? '자녀 금융 관련 기사'
                    : currentMode === 'platform' ? '금융 플랫폼 관련 기사'
                    : currentMode === 'hanwha' ? '한화생명 파이 관련 기사'
                    : '자녀 증여 관련 기사';
@@ -533,11 +547,12 @@
     const grid = document.getElementById('newsGrid');
     const kw = currentMode === 'all' ? ['자녀','증여']
              : currentMode === 'family' ? ['가족','자산관리']
+             : currentMode === 'childfin' ? ['자녀','금융']
              : currentMode === 'platform' ? ['금융','플랫폼']
              : '파이';
 
     // 첫 렌더시에만 연관 기사 섹션 삽입
-    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family' || currentMode === 'platform')) {
+    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family' || currentMode === 'childfin' || currentMode === 'platform')) {
       renderRelated(grid, allNews, kw);
     }
 
