@@ -37,6 +37,14 @@ api/reviews.js  파이 앱 리뷰 (구글 플레이 batchexecute + 애플 스토
 
 - 카페 탭은 삭제됨 (`api/cafe.js`는 미사용 잔존)
 
+**주소로 탭 지정**: 해시에 mode 이름을 담는다 — `#reviews`, `#event`, `#referral`,
+`#childfin`, `#press`, `#stats` 등. 기본 화면(`all`=자녀 증여)만 해시 없이 둔다.
+탭·칩을 누르면 `setHash()`가 `replaceState`로 주소를 갱신하고, 진입 시 `routeFromHash()`가
+주소를 먼저 확인한다. 이미 열린 화면에서 주소만 바뀌는 경우는 `hashchange`로 따라간다
+(`replaceState`는 hashchange를 발생시키지 않아 되돌이 호출 없음).
+뉴스 키워드 모드는 `onModeChange`를 거치면 검색이 두 번 도므로 `routeFromHash`에서
+`currentMode`를 직접 세팅한다.
+
 ## 통계 탭 (api/stats.js)
 
 **2025년 신고분 단일 기준.** 연도가 섞이면 안 되므로 KOSIS 자동 연동(2024년 관계별·연령별)은 제거함.

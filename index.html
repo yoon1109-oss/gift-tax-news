@@ -614,8 +614,61 @@
   }, { rootMargin: '400px' });
   observer.observe(document.getElementById('sentinel'));
 
+  // ── 주소로 탭 지정 ──────────────────────────────────────────
+  // #reviews 처럼 mode 이름을 해시에 담아, 특정 탭을 연 상태의 주소를 공유할 수 있게 한다.
+  // 뉴스 키워드(#childfin)와 이벤트 서브탭(#referral)도 같은 방식으로 지정된다.
+  const NEWS_MODES = ['all','family','childfin','platform','hanwha'];
+  const TAB_MODES  = ['blog','event','reviews','press','stats'];
+
+  function setHash(mode) {
+    // 기본 화면(자녀 증여)은 해시 없이 둔다
+    const want = (mode === 'all') ? '' : '#' + mode;
+    const cur = location.hash || '';
+    if (cur === want) return;
+    history.replaceState(null, '', want || (location.pathname + location.search));
+  }
+
+  // 주소에 지정된 탭이 있으면 그대로 열고 true를 돌려준다. 없으면 false (기본 화면 진행).
+  function routeFromHash() {
+    const m = (location.hash || '').replace(/^#\/?/, '');
+    if (!m) return false;
+
+    if (NEWS_MODES.includes(m)) {
+      if (m === 'all') return false;                       // 기본 화면과 같다
+      document.querySelector('input[value="all"]').checked = true;
+      currentMode = m;                                     // onModeChange를 거치면 검색이 두 번 돈다
+      document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === m));
+      resetNews(); startLoad();
+      return true;
+    }
+    if (m === 'referral') {                                // 이벤트 탭의 서브탭
+      document.querySelector('input[value="event"]').checked = true;
+      onModeChange('event');
+      const chip = document.querySelector('#eventTabs .kw-chip[data-mode="referral"]');
+      if (chip) selectEventTab('referral', chip);
+      return true;
+    }
+    if (TAB_MODES.includes(m)) {
+      const input = document.querySelector('input[value="' + m + '"]');
+      if (!input) return false;
+      input.checked = true;
+      onModeChange(m);
+      return true;
+    }
+    return false;
+  }
+
+  // 이미 열려 있는 화면에서 주소만 바뀌는 경우(주소창 수정, 뒤로가기)도 따라간다.
+  // setHash는 replaceState라 hashchange를 발생시키지 않으므로 되돌이 호출은 없다.
+  window.addEventListener('hashchange', function () {
+    if (routeFromHash()) return;
+    const input = document.querySelector('input[value="all"]');
+    if (input && !input.checked) { input.checked = true; onModeChange('all'); }
+  });
+
   function onModeChange(mode) {
     currentMode = mode;
+    setHash(mode);
     document.querySelectorAll('.radio-wrap').forEach(w => w.classList.remove('checked'));
     document.getElementById('wrap-' + mode).classList.add('checked');
     document.querySelector('.stats-bar').style.display = (mode === 'event' || mode === 'blog' || mode === 'press' || mode === 'stats' || mode === 'reviews') ? 'none' : 'flex';
@@ -721,6 +774,7 @@
     document.querySelectorAll('#eventTabs .kw-chip').forEach(c => c.classList.remove('active'));
     if (el) el.classList.add('active');
     currentMode = mode;
+    setHash(mode);
     if (mode === 'referral') showReferral(); else showEvents();
   }
 
@@ -729,6 +783,7 @@
     document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.remove('active'));
     if (el) el.classList.add('active');
     currentMode = mode; // 'all'=자녀 증여, 'hanwha'=한화생명 파이
+    setHash(mode);
     resetNews(); startLoad();
   }
 
@@ -1320,7 +1375,7 @@
   // 숫자를 넘겨도 죽지 않도록 문자열로 변환한다 ((str||'')는 숫자에서 .replace가 없어 터진다)
   function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  startLoad();
+  if (!routeFromHash()) startLoad();
   initEventBadge();
   initReviewBadge();
   setInterval(resetAndFetch, 10*60*1000);
