@@ -445,6 +445,10 @@
   // 가족 자산관리 모드: 주제어(가족·자산관리)에만 가중. 증여·신탁까지 가중하면
   // 신탁 상품 기사가 상위를 독식해 '가족 자산관리' 본래 기사(세미나·설계 등)가 밀림.
   const REL_FAMILY = ['가족','자산관리','자산 관리'];
+  // 자녀 대상 여부. '아이'는 넓게 잡되 아이디어·아이폰 등 무관한 단어는 배제한다.
+  const REL_FAMILY_KID = [/자녀/, /손주/, /미성년/, /아동/, /어린이/, /아이(?!디|돌|폰|패드|맥|워치|템|콘|러니)/];
+  // 자녀 대상 '금융상품'이 제목의 주제인 기사 — 파이와 같은 영역이라 따로 가산한다.
+  const REL_FAMILY_PROD = /통장|계좌|적금|펀드|신탁|보험|카드/;
   // 금융 플랫폼 모드: 검색어가 넓어 카카오 실적·AI 플랫폼 같은 비금융 기사가 다수 섞인다.
   // 그래서 '금융 서비스 플랫폼의 동향'(제목 +3 / 본문 +2)을 축으로 잡고,
   // 파이와 같은 영역(자녀·증여·자산관리)을 다루면 함께 가산되도록 했다.
@@ -453,7 +457,16 @@
   function relatedScore(n) {
     const t = n.title || '', d = n.desc || '';
     if (currentMode === 'family') {
-      return REL_FAMILY.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 1 : 0), 0);
+      // 주제어·자녀 여부를 각각 '개념 1회'로만 센다. 키워드마다 더하면 '손주·자녀'처럼
+      // 동의어를 나열한 제목이 같은 내용으로 점수를 배로 얻어 상위를 독식한다.
+      let s = 0;
+      if (REL_FAMILY.some(k => t.includes(k))) s += 3;
+      if (REL_FAMILY.some(k => d.includes(k))) s += 1;
+      const kidTitle = REL_FAMILY_KID.some(r => r.test(t));
+      if (kidTitle) s += 5;
+      if (REL_FAMILY_KID.some(r => r.test(d))) s += 2;
+      if (kidTitle && REL_FAMILY_PROD.test(t)) s += 4;
+      return s;
     }
     if (currentMode === 'platform') {
       return REL_PLAT_HIGH.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
