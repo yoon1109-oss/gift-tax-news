@@ -111,6 +111,13 @@
       display: flex; align-items: center; gap: 8px;
     }
     .divider-label::after { content:''; flex: 1; height: 1px; background: var(--border); }
+    /* 탭 미확인 배지 — 이벤트 데이터가 갱신됐는데 아직 열어보지 않았을 때 */
+    .tab-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      min-width: 16px; height: 16px; margin-left: 5px; padding: 0 4px;
+      font-size: 10px; font-weight: 700; line-height: 1;
+      color: #fff; background: #f87171; border-radius: 999px; vertical-align: middle;
+    }
     /* 앱스토어 리뷰 카드 */
     .rv-stars { font-size: 13px; letter-spacing: 1px; }
     .rv-good { color: #4ade80; } .rv-mid { color: #f9a26c; } .rv-bad { color: #f87171; }
@@ -253,7 +260,7 @@
   </label>
   <label class="radio-wrap" id="wrap-event">
     <input type="radio" name="newsFilter" value="event" onchange="onModeChange('event')">
-    <span>이벤트</span>
+    <span>이벤트<span class="tab-badge" id="eventBadge" style="display:none"></span></span>
   </label>
   <label class="radio-wrap" id="wrap-reviews">
     <input type="radio" name="newsFilter" value="reviews" onchange="onModeChange('reviews')">
@@ -619,7 +626,7 @@
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { // 이벤트 탭 — 서브탭을 '계좌 이벤트'로 초기화
       document.querySelectorAll('#eventTabs .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === 'event'));
-      showEvents();
+      showEvents().then(markEventChangesSeen).catch(() => {});
     }
     else if (mode === 'reviews') { showReviews(); }
     else if (mode === 'press') { showPress(); }
@@ -916,6 +923,46 @@
 
   }
 
+  // ── 이벤트 탭 미확인 배지 ────────────────────────────────────
+  // 이벤트 데이터가 갱신됐는데 아직 열어보지 않았으면 탭에 숫자를 띄운다.
+  // 확인 여부는 localStorage에 두므로 기기(브라우저)별로 따로 관리된다 — 서버에 남지 않는다.
+  const SEEN_KEY = 'giftTax.eventChangesSeen';
+  function lsGet(k) { try { return localStorage.getItem(k); } catch(e) { return null; } }   // 시크릿 모드 등에서 막힐 수 있다
+  function lsSet(k, v) { try { localStorage.setItem(k, v); } catch(e) {} }
+
+  // 갱신 '날짜' 단위로 센다. 같은 날 여러 건이 바뀌어도 한 번의 갱신으로 본다.
+  function unseenChangeCount(changes) {
+    const dates = [...new Set((changes || []).map(c => c.date))].sort().reverse();
+    if (!dates.length) return 0;
+    const seen = lsGet(SEEN_KEY);
+    if (!seen) return 1;                       // 처음 방문: 가장 최근 갱신 1건만 알린다
+    return dates.filter(d => d > seen).length;
+  }
+
+  function renderEventBadge() {
+    const el = document.getElementById('eventBadge');
+    const n = unseenChangeCount((eventsData || {}).changes);
+    el.textContent = n;
+    el.style.display = n > 0 ? 'inline-flex' : 'none';
+  }
+
+  function markEventChangesSeen() {
+    const dates = [...new Set(((eventsData || {}).changes || []).map(c => c.date))].sort().reverse();
+    if (dates.length) lsSet(SEEN_KEY, dates[0]);
+    renderEventBadge();
+  }
+
+  // 배지를 띄우려면 탭을 열기 전에 데이터가 있어야 하므로 시작할 때 한 번 받아 둔다.
+  // 받아 둔 데이터는 이벤트 탭에서 그대로 재사용돼 첫 진입도 빨라진다.
+  async function initEventBadge() {
+    try {
+      const res = await fetch('/api/events');
+      eventsData = await res.json();
+      eventsLoaded = true;
+      renderEventBadge();
+    } catch(e) { /* 배지는 부가 기능이라 실패해도 넘어간다 */ }
+  }
+
   // 앱스토어 리뷰 — 파이 앱(구글 플레이 + 애플 앱스토어)
   let reviewsLoaded = false, reviewsData = null;
   async function showReviews() {
@@ -1158,9 +1205,10 @@
   function resetAndFetch() {
     document.getElementById('refreshBtn').classList.add('loading');
     blogLoaded = false; cafeLoaded = false; blogItems = []; cafeItems = []; eventsLoaded = false; blogStart = 1; blogEnd = false; blogPrefetch = null;
+    if (currentMode !== 'event') initEventBadge();   // 다른 탭에 있어도 배지는 최신으로
     if (currentMode === 'blog') showBlog().catch(()=>{});
     else if (currentMode === 'cafe') showCafe().catch(()=>{});
-    else if (currentMode === 'event') showEvents().catch(()=>{});
+    else if (currentMode === 'event') showEvents().then(markEventChangesSeen).catch(()=>{});
     else if (currentMode === 'referral') showReferral().catch(()=>{});
     else if (currentMode === 'reviews') { reviewsLoaded = false; showReviews().catch(()=>{}); }
     else if (currentMode === 'press') { pressLoaded = false; showPress().catch(()=>{}); }
@@ -1242,6 +1290,7 @@
   function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
   startLoad();
+  initEventBadge();
   setInterval(resetAndFetch, 10*60*1000);
 </script>
 </body>
