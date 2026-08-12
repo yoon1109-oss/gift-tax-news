@@ -28,13 +28,27 @@ async function fetchDecoded(url, timeoutMs = 0) {
   } finally { if (timer) clearTimeout(timer); }
 }
 
-// 상세에서 전체 제목을 가져오되, 2.5초 넘으면 목록의 (잘린) 제목으로 폴백
+// 상세에서 전체 제목을 가져오되, 2.5초 넘으면 목록의 (잘린) 제목으로 폴백.
+//
+// 상세 페이지의 '제 목' 칸도 세무사회 DB에서 잘려 오는 경우가 있다(15건 중 4~5건).
+// 그때는 본문 첫 줄(.kacta-publish-body 안의 제목 스타일 div)에 전체 제목이 남아 있어
+// 그쪽을 쓴다. 제목이 잘리면 '세무플랫폼' 같은 뒷부분 단어가 사라져 연관도 분류에서도
+// 빠지므로, 표시뿐 아니라 분류 정확도에도 영향이 있다.
 async function fullTitle(key, fallback) {
   try {
     const html = await fetchDecoded(`${BASE}?mode=view&GotoPage=1&bbs_key=${key}`, 2500);
     const m = html.match(/<td[^>]*colspan="4"[^>]*align="left"[^>]*>([\s\S]*?)<\/td>/i);
-    const t = m ? stripTag(clean(m[1])) : '';
-    return t || fallback;
+    const field = m ? stripTag(clean(m[1])) : '';
+    // 잘린 제목은 점 2개 이상 또는 …으로 끝난다 ('대법원판결..' 같은 사례가 있어 3개로 보면 놓친다)
+    if (field && !/\.{2,}$|…$/.test(field)) return field;
+
+    const b = html.match(/class="kacta-publish-body"[\s\S]{0,200}?>([\s\S]*?)<\/div>/i);
+    const body = b ? stripTag(clean(b[1])) : '';
+    // 본문 첫 줄이 정말 이 글의 제목인지 확인한다 — 잘린 앞부분으로 시작해야 한다.
+    // 다른 문장으로 바꿔치기되는 것을 막기 위함.
+    const head = field.replace(/\.{2,}$|…$/, '').trim();
+    if (body && head && body.startsWith(head.slice(0, Math.min(head.length, 20)))) return body;
+    return field || fallback;
   } catch { return fallback; }
 }
 
