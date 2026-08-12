@@ -28,7 +28,7 @@ api/reviews.js  파이 앱 리뷰 (구글 플레이 batchexecute + 애플 스토
 
 | 탭 | mode | 내용 |
 |----|------|------|
-| 뉴스 검색 | `all` / `family` / `childfin` / `platform` / `hanwha` | 키워드 칩 5종 (`자녀 증여` / `가족 자산 관리` / `자녀 금융` / `금융 플랫폼` / `한화생명 파이 증여`) |
+| 뉴스 검색 | `all` / `childfin` / `family` / `platform` / `hanwha` | 키워드 칩 5종 (`자녀 증여` / `자녀 금융` / `가족 자산 관리` / `금융 플랫폼` / `한화생명 파이 증여`) |
 | 블로그 검색 | `blog` | 키워드 칩 3종, 30개씩 무한스크롤, 공감수(♥) 표시 |
 | 이벤트 | `event` / `referral` | 서브탭 2종 — 계좌 이벤트 / 친구 초대 이벤트. 둘 다 `api/events.js` |
 | 앱 리뷰 | `reviews` | `api/reviews.js` — 파이 앱 구글 플레이 + 애플 앱스토어 |
