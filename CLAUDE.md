@@ -125,6 +125,9 @@ scripts/apps-script-review-alert.gs  ← 실제 운영: 30분마다 새 리뷰 �
   평점·별점 수는 `itunes.apple.com/lookup`으로 따로 받아 항상 표시된다
 - 스토어별로 독립 처리해 한쪽이 실패해도 다른 쪽은 표시된다 (`stores[].ok`)
 - 별점만 남긴 이용자는 리뷰 목록에 안 잡히므로 `count`(별점 수) > `written`(글 리뷰)가 정상
+- `stores[].link`는 앱 소개, `stores[].reviewsLink`는 '평가 및 리뷰' 화면.
+  리뷰를 눌렀을 때는 후자로 보낸다 (플레이 `&showAllReviews=true`, 애플 `?see-all=reviews`).
+  **개별 리뷰의 고유 주소는 두 스토어 모두 제공하지 않아** 리뷰 목록까지가 최선이다
 
 ## 세무 탭 — 세법 뉴스 (api/taxnews.js)
 

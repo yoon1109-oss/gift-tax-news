@@ -9,6 +9,10 @@ const PLAY_ID = 'hw.dp.plus';
 const APPLE_ID = '6755743981';
 const PLAY_URL = `https://play.google.com/store/apps/details?id=${PLAY_ID}&hl=ko&gl=KR`;
 const APPLE_URL = `https://apps.apple.com/kr/app/id${APPLE_ID}`;
+// 리뷰를 눌렀을 때 갈 곳 — 앱 소개가 아니라 '평가 및 리뷰' 화면으로 바로 보낸다.
+// 개별 리뷰 고유 주소는 두 스토어 모두 제공하지 않아 리뷰 목록까지가 최선이다.
+const PLAY_REVIEWS_URL = `${PLAY_URL}&showAllReviews=true`;
+const APPLE_REVIEWS_URL = `${APPLE_URL}?see-all=reviews`;
 
 const UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 const TIMEOUT = 8000;
@@ -187,12 +191,12 @@ export default async function handler(req, res) {
 
   const stores = [
     {
-      key: 'play', name: 'Google Play', link: PLAY_URL,
+      key: 'play', name: 'Google Play', link: PLAY_URL, reviewsLink: PLAY_REVIEWS_URL,
       rating: ok(ps) ? ps.rating : null, count: ok(ps) ? ps.count : null,
       written: ok(pr) ? pr.length : 0, ok: ok(pr),
     },
     {
-      key: 'apple', name: 'App Store', link: APPLE_URL,
+      key: 'apple', name: 'App Store', link: APPLE_URL, reviewsLink: APPLE_REVIEWS_URL,
       rating: ok(as) ? as.rating : null, count: ok(as) ? as.count : null,
       version: ok(as) ? as.version : '',
       written: ok(ar) ? ar.length : 0, ok: ok(ar),

@@ -1197,7 +1197,8 @@
     dv.className = 'divider-label'; dv.textContent = `리뷰 ${reviews.length}건 · 최신순`;
     grid.appendChild(dv);
 
-    const linkOf = k => (stores.find(s => s.key === k) || {}).link || '#';
+    // 리뷰 카드는 앱 소개가 아니라 스토어의 '평가 및 리뷰' 화면으로 보낸다
+    const linkOf = k => { const s = stores.find(x => x.key === k) || {}; return s.reviewsLink || s.link || '#'; };
     reviews.forEach((r, i) => {
       const el = document.createElement('a');
       el.className = 'news-card'; el.href = linkOf(r.store); el.target = '_blank'; el.rel = 'noopener';

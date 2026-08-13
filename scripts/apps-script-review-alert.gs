@@ -40,6 +40,12 @@ var PROP_KEY = 'sentReviewIds';
 var KEEP = 200;   // 기록해 둘 리뷰 수. 저장소 한도(9KB)를 넘지 않게 제한한다
 
 var STORE_NAME = { play: 'Google Play', apple: 'App Store' };
+// 리뷰를 누르면 갈 곳. 개별 리뷰 고유 주소는 두 스토어 모두 제공하지 않아
+// 각 스토어의 '평가 및 리뷰' 화면까지가 최선이다.
+var STORE_LINK = {
+  play:  'https://play.google.com/store/apps/details?id=hw.dp.plus&hl=ko&gl=KR&showAllReviews=true',
+  apple: 'https://apps.apple.com/kr/app/id6755743981?see-all=reviews',
+};
 
 /** 리뷰 하나를 짧은 문자열로 식별한다. 저장 용량을 아끼려고 해시를 쓴다. */
 function reviewId(r) {
@@ -103,17 +109,22 @@ function esc(s) {
 }
 
 function buildBody(list) {
+  // 리뷰 한 건 전체를 링크로 감싼다 — 메일에서 바로 스토어 리뷰 화면으로 갈 수 있게.
+  // 메일 클라이언트가 링크에 파란 밑줄을 강제하는 경우가 있어 색·장식을 명시한다.
   var rows = list.map(function (r) {
     var stars = repeat('★', r.rating) + repeat('☆', Math.max(0, 5 - r.rating));
-    return '<tr><td style="padding:14px 0;border-bottom:1px solid #e4e8f0">'
+    var href = STORE_LINK[r.store] || APP_URL;
+    return '<tr><td style="padding:0;border-bottom:1px solid #e4e8f0">'
+      + '<a href="' + href + '" style="display:block;padding:14px 0;text-decoration:none;color:inherit">'
       + '<div style="font-size:13px;color:#8992a4">' + stars
       + ' &nbsp;·&nbsp; ' + esc(STORE_NAME[r.store] || r.store)
       + (r.version ? ' &nbsp;·&nbsp; v' + esc(r.version) : '')
       + ' &nbsp;·&nbsp; ' + esc(r.date) + '</div>'
-      + (r.title ? '<div style="font-size:15px;font-weight:700;margin:4px 0 2px">' + esc(r.title) + '</div>' : '')
+      + (r.title ? '<div style="font-size:15px;font-weight:700;margin:4px 0 2px;color:#161b27">' + esc(r.title) + '</div>' : '')
       + '<div style="font-size:14px;line-height:1.65;color:#161b27;margin-top:4px">' + esc(r.text) + '</div>'
-      + '<div style="font-size:12px;color:#8992a4;margin-top:6px">' + esc(r.author) + '</div>'
-      + '</td></tr>';
+      + '<div style="font-size:12px;color:#8992a4;margin-top:6px">' + esc(r.author)
+      + ' &nbsp;·&nbsp; <span style="color:#2f6fd0">' + esc(STORE_NAME[r.store] || r.store) + '에서 보기 →</span></div>'
+      + '</a></td></tr>';
   }).join('');
 
   return '<div style="max-width:640px;margin:0 auto;padding:24px;'
