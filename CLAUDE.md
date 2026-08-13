@@ -21,7 +21,8 @@ api/kacta.js    한국세무사회 보도자료 목록 파싱(EUC-KR)
 api/taxnews.js  세법 뉴스 — 조세 전문지 4곳 기사만 서버에서 모아 캐시
 api/stats.js    증여세 통계 — 국세통계 6.3.1 (2025년 신고분) 하드코딩
 api/reviews.js  파이 앱 리뷰 (구글 플레이 batchexecute + 애플 스토어 페이지)
-api/review-alert.js  새 앱 리뷰 메일 알림 (Vercel Cron 매일 09시 KST)
+api/review-alert.js  새 앱 리뷰 메일 알림 — Brevo 경로(보조). 운영은 Apps Script
+scripts/apps-script-review-alert.gs  ← 실제 운영: 30분마다 새 리뷰 메일 (Google Apps Script)
 ```
 
 ## 탭 구조
@@ -147,9 +148,23 @@ api/review-alert.js  새 앱 리뷰 메일 알림 (Vercel Cron 매일 09시 KST)
 - 상위 탭 이름은 **세무**. 서브탭이 '세법 뉴스'라 상위를 '세법'으로 두면 이름이 겹치고,
   실제 내용도 세무조사·세제개편·업계 동향까지라 '세법'보다 넓다
 
-## 앱 리뷰 메일 알림 (api/review-alert.js)
+## 앱 리뷰 메일 알림
 
-Vercel Cron이 매일 09:00 KST(`0 0 * * *` UTC)에 호출해, **어제 등록분 리뷰**가 있으면 메일을 보낸다.
+**운영 방식은 `scripts/apps-script-review-alert.gs` (Google Apps Script, 30분 주기)다.**
+
+- Vercel 크론은 **쓰지 않는다**. Hobby 플랜은 크론이 하루 1회가 최대라 `*/30 * * * *`는
+  배포 자체가 실패한다(`Hobby accounts are limited to daily cron jobs`). 30분 주기가
+  필요해 Apps Script로 옮겼고, vercel.json의 `crons`도 제거했다(이중 발송 방지)
+- 30분 주기는 '이미 보낸 리뷰' 기록이 필요한데 서버리스에는 저장소가 없다.
+  Apps Script의 `PropertiesService`에 리뷰 해시를 최근 200건까지 보관해 중복을 막는다
+  (해시라 저장 크기 100바이트 안팎, 한도 9KB에 여유)
+- 첫 실행은 기존 리뷰를 기준선으로 기록만 하고 메일을 보내지 않는다
+- 본인 Gmail로 나가 회사 메일함 도달률이 가장 높다. API 키·발신자 인증 불필요
+
+### api/review-alert.js (보조 — Brevo 경로)
+
+Apps Script를 쓰지 않고 서버에서 직접 보내고 싶을 때만 쓴다. **날짜 기준(어제 등록분)이라
+하루 1회 호출 전제**이므로 30분 주기에는 맞지 않는다.
 
 - 서버리스라 '이미 보낸 리뷰'를 저장할 곳이 없다. 상태를 두는 대신 **날짜가 어제인 리뷰만**
   고른다 — 날짜별로 정확히 한 번씩만 발송돼 중복이 없다(7일 시뮬레이션으로 확인).
