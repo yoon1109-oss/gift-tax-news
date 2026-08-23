@@ -722,11 +722,26 @@
     updateBlogStats();
   }
 
+  // '한화생명 파이'는 네이버 블로그 검색이 '한화생명'과 '파이'를 따로 찾는다.
+  // 그래서 지역화폐 가맹점 목록·업체 리스트처럼 두 단어가 우연히 같이 든 긴 글이
+  // 대량으로 섞여 들어온다(실측: 상위 50건 중 관련 7건). 두 단계로 걸러낸다.
+  //   ① 검색어에 '증여'를 더해 모집단을 좁힌다 (7,332건 → 368건)
+  //   ② 받아온 뒤 '한화생명 파이' 인접 표기나 '파이(Pi)·파이 앱'이 있는 글만 남긴다
+  // ②가 없으면 '파이낸셜타임스'·'파이브 아이즈'·'ROAD FC 파이터' 같은 글이 통과한다.
+  const BLOG_PI_CHIP = '한화생명 파이';
+  const BLOG_PI_QUERY = '한화생명 파이 증여';
+  const BLOG_PI_RE = /한화생명\s*파이|파이\s*\(\s*[Pp]i\s*\)|파이\s*앱|파이앱/;
+  const blogQuery = () => (blogKeyword === BLOG_PI_CHIP ? BLOG_PI_QUERY : blogKeyword);
+  function blogRelevant(b) {
+    if (blogKeyword !== BLOG_PI_CHIP) return true;   // 다른 키워드는 결과가 깨끗해 거르지 않는다
+    return BLOG_PI_RE.test(`${b.title} ${b.desc}`);
+  }
+
   // 다음 30개 블로그 글을 start 파라미터로 이어서 불러와 그리드에 추가
   // 다음 페이지를 미리 받아두는 버퍼 (스크롤 시 대기 없이 즉시 렌더)
   let blogPrefetch = null, blogPrefetchStart = 0;
   function blogUrl(start) {
-    return `/api/blog?keyword=${encodeURIComponent(blogKeyword)}&display=${BLOG_PAGE}&start=${start}&sort=sim`;
+    return `/api/blog?keyword=${encodeURIComponent(blogQuery())}&display=${BLOG_PAGE}&start=${start}&sort=sim`;
   }
   function prefetchBlogPage(start) {
     if (blogEnd || start > 1000) return;
@@ -734,7 +749,7 @@
     blogPrefetch = fetch(blogUrl(start)).then(r => r.ok ? r.json() : null).catch(() => null);
   }
 
-  async function loadBlogPage() {
+  async function loadBlogPage(depth = 0) {
     if (blogEnd || blogLoading) return false;
     blogLoading = true;
     try {
@@ -750,13 +765,22 @@
       const fetched = (data.items||[]).map(item => ({ title: cleanHtml(item.title), desc: cleanHtml(item.description), link: item.link, source: item.bloggername||'블로그', postdate: item.postdate||'', likeId: naverBlogId(item.link), likes: null }));
       const seen = new Set(blogItems.map(b => b.link));
       const fresh = [];
-      fetched.forEach(b => { if (b.link && !seen.has(b.link)) { seen.add(b.link); fresh.push(b); blogItems.push(b); } });
+      fetched.filter(blogRelevant).forEach(b => { if (b.link && !seen.has(b.link)) { seen.add(b.link); fresh.push(b); blogItems.push(b); } });
       blogStart += BLOG_PAGE;
+      // 페이지 소진 판단은 '거르기 전' 수신 건수로 한다 (걸러진 수로 보면 조기 종료된다)
       if (fetched.length < BLOG_PAGE || blogStart > 1000) blogEnd = true;
       if (currentMode === 'blog') { appendBlogItems(fresh); loadBlogLikes(fresh); }
       blogLoading = false;
       updateBlogStats();
       if (!blogEnd) prefetchBlogPage(blogStart); // 다음 페이지 미리 받아두기
+      // 필터를 거치면 한 페이지에서 남는 글이 적어 화면이 스크롤되지 않을 수 있다.
+      // 그러면 무한스크롤 관찰자가 다시 깨어나지 못해 목록이 거기서 멈춘다.
+      // 스크롤이 생기거나 더 받을 게 없을 때까지 이어서 받는다 (한 호출에 최대 8페이지).
+      if (!blogEnd && currentMode === 'blog' && depth < 8) {
+        const thin = blogItems.length < BLOG_PAGE;   // 한 페이지 분량도 못 채웠다
+        const notScrollable = document.documentElement.scrollHeight <= window.innerHeight + 500;
+        if (!fresh.length || thin || notScrollable) return loadBlogPage(depth + 1);
+      }
       return true;
     } catch(e) {
       blogLoading = false;
