@@ -159,6 +159,19 @@
     .sn-row { font-size: 12px; color: var(--muted2); line-height: 1.7; word-break: keep-all; padding: 3px 0 3px 12px; position: relative; }
     .sn-row::before { content: '·'; position: absolute; left: 2px; color: #f9a26c; font-weight: 700; }
     .sn-row b { color: var(--text); font-weight: 600; }
+    .related-card .card-desc b { color: var(--text); font-weight: 600; }
+
+    /* 규모별 분포 막대 */
+    .dist-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
+    .dist-title { font-size: 13px; font-weight: 700; color: var(--text); }
+    .dist-note { font-size: 11px; color: var(--muted); margin-top: 3px; margin-bottom: 10px; }
+    .dist-row { display: grid; grid-template-columns: 62px 1fr 92px; align-items: center; gap: 8px; padding: 3px 0; }
+    .dist-label { font-size: 11px; color: var(--muted2); white-space: nowrap; }
+    .dist-track { background: var(--border); border-radius: 3px; height: 14px; overflow: hidden; }
+    .dist-fill { height: 100%; background: var(--muted2); border-radius: 3px; min-width: 2px; }
+    .dist-box.hl .dist-fill { background: #f9a26c; }
+    .dist-val { font-size: 11px; color: var(--text); text-align: right; white-space: nowrap; }
+    .dist-val span { color: var(--muted); margin-left: 4px; }
 
     /* 로우 데이터 테이블 */
     .raw-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
@@ -1338,14 +1351,37 @@
         const el = document.createElement('div');
         el.className = 'related-card';
         el.innerHTML = `<div class="card-meta"><span class="event-broker">${esc(a.group)}</span>${a.tag ? `<span class="dup-badge">${esc(a.tag)}</span>` : ''}</div>` +
-          (a.lines||[]).map(l => `<div class="card-desc" style="-webkit-line-clamp:unset">${esc(l)}</div>`).join('');
+          // lines는 서버 상수(api/stats.js)라 <b> 등 간단한 서식을 그대로 허용한다 (notice와 동일)
+          (a.lines||[]).map(l => `<div class="card-desc" style="-webkit-line-clamp:unset">${l}</div>`).join('');
         grid.appendChild(el);
       });
-      const dv = document.createElement('div');
-      dv.className = 'divider-label'; dv.textContent = '요약 지표';
-      grid.appendChild(dv);
     }
 
+    // 규모별 분포 막대
+    if ((d.dist || []).length) {
+      const dv = document.createElement('div');
+      dv.className = 'divider-label'; dv.textContent = '규모별 분포';
+      grid.appendChild(dv);
+      d.dist.forEach(t => {
+        const max = Math.max(...(t.rows || []).map(r => Number(r.pct) || 0), 1);
+        const box = document.createElement('div');
+        box.className = 'dist-box' + (t.hl ? ' hl' : '');
+        box.innerHTML = `<div class="dist-title">${esc(t.title)}</div>` +
+          (t.note ? `<div class="dist-note">${esc(t.note)}</div>` : '') +
+          (t.rows || []).map(r => `<div class="dist-row">` +
+            `<div class="dist-label">${esc(r.label)}</div>` +
+            `<div class="dist-track"><div class="dist-fill" style="width:${(Number(r.pct) / max * 100).toFixed(1)}%"></div></div>` +
+            `<div class="dist-val">${esc(r.value)}<span>${esc(r.pct)}%</span></div>` +
+          `</div>`).join('');
+        grid.appendChild(box);
+      });
+    }
+
+    if ((d.metrics || []).length) {
+      const dv3 = document.createElement('div');
+      dv3.className = 'divider-label'; dv3.textContent = '요약 지표';
+      grid.appendChild(dv3);
+    }
     (d.metrics || []).forEach(g => {
       const box = document.createElement('div');
       box.className = 'stat-group';
