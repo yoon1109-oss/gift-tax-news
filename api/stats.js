@@ -134,6 +134,19 @@ const DIST = [
     rows: BANDS.map((b, i) => ({ label: b, value: nf(MINOR_BAND[i]), pct: (MINOR_BAND[i] / MINOR_TOTAL * 100).toFixed(1) })) },
 ];
 
+// 로우 데이터 표의 컬럼 이름을 그대로 풀어주는 용어 설명
+const TERMS = {
+  title: '용어 풀이',
+  items: [
+    `<b>증여재산가액</b> — 이번 증여로 받은 재산의 <b>세법상 평가액</b>. 신고한 증여금액이 맞지만, 현금은 액면 그대로인 반면 부동산·비상장주식은 시가(매매사례가·감정가액, 없으면 기준시가)로 평가한 값이 들어갑니다. <b>이번 증여 건만</b> 담깁니다.`,
+    `<b>증여재산가산액</b> — 이번 증여 전 10년 이내에 같은 사람(직계존속이면 그 배우자 포함)에게 받은 증여재산의 합계(1천만원 이상일 때). 2025년 ${jo(Y.가산액)}으로 증여재산가액 ${jo(Y.증여재산가액)}의 <b>${pct(Y.가산액, Y.증여재산가액)}</b>에 이릅니다 — 이미 받아본 사람이 또 받는 경우가 그만큼 많습니다.`,
+    `<b>증여세과세가액</b> — 증여재산가액 − 비과세 − 과세가액불산입 − 채무(부담부증여로 떠안은 빚) + 가산액. 2025년 ${jo(Y.과세가액)}.`,
+    `<b>증여재산공제</b> — 관계별로 세금을 매기지 않고 빼주는 금액(10년 합산 한도). 배우자 6억, 직계존비속 5천만(미성년 2천만), 그 밖의 친족 1천만, 혼인·출산 각 1억. <b>실제 증여한 금액이 아닙니다.</b>`,
+    `<b>과세표준</b> — 과세가액에서 증여재산공제 등을 뺀 금액. 여기에 세율 10~50%를 곱해 <b>산출세액</b>이 나옵니다.`,
+    `<b>자진납부할세액</b> — 산출세액에서 징수유예·감면과 세액공제(기납부세액공제, 신고세액공제 3% 등)를 뺀, 실제로 내는 돈. 2025년 ${jo(Y.자진납부세액)}.`,
+  ],
+};
+
 const METRICS = [
   { group: '누적 분포 (전국 · 이하 누계 비중)', items: [
     { label: '1천만 이하', value: pct(cum(ALL, 0), TOTAL), delta: `${nf(cum(ALL, 0))}명` },
@@ -196,6 +209,6 @@ export default function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   res.status(200).json({
     updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE, notice: NOTICE,
-    age: PI_POINTS, dist: DIST, metrics: METRICS, raw: RAW, sources: SOURCES,
+    age: PI_POINTS, dist: DIST, metrics: METRICS, terms: TERMS, raw: RAW, sources: SOURCES,
   });
 }

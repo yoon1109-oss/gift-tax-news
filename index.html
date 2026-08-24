@@ -159,6 +159,9 @@
     .sn-row { font-size: 12px; color: var(--muted2); line-height: 1.7; word-break: keep-all; padding: 3px 0 3px 12px; position: relative; }
     .sn-row::before { content: '·'; position: absolute; left: 2px; color: #f9a26c; font-weight: 700; }
     .sn-row b { color: var(--text); font-weight: 600; }
+    .stat-notice.terms { background: var(--card); border-color: var(--border); }
+    .stat-notice.terms .sn-head { color: var(--muted); }
+    .stat-notice.terms .sn-row::before { color: var(--muted2); }
     .related-card .card-desc b { color: var(--text); font-weight: 600; }
 
     /* 규모별 분포 막대 */
@@ -1390,6 +1393,15 @@
         `</div>`;
       grid.appendChild(box);
     });
+
+    // 용어 풀이 — 아래 로우 데이터 표의 컬럼 이름을 설명한다
+    if (d.terms && (d.terms.items || []).length) {
+      const tb = document.createElement('div');
+      tb.className = 'stat-notice terms';
+      tb.innerHTML = `<div class="sn-head">${esc(d.terms.title || '용어 풀이')}</div>` +
+        d.terms.items.map(t => `<div class="sn-row">${t}</div>`).join('');
+      grid.appendChild(tb);
+    }
 
     // 로우 데이터 테이블
     if ((d.raw || []).length) {
