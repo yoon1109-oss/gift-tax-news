@@ -231,6 +231,9 @@ Apps Script를 쓰지 않고 서버에서 직접 보내고 싶을 때만 쓴다.
   대신 오늘 올라온 리뷰는 내일 메일에 담긴다
 - 공개 URL이므로 `CRON_SECRET`이 설정돼 있으면 `Authorization: Bearer` 검사를 통과해야만 동작
 - `?dry=1`로 발송 없이 본문만 확인 가능
+- 리뷰 한 건 전체를 `<a>`로 감싸 각 스토어의 '평가 및 리뷰' 화면으로 보낸다.
+  개별 리뷰 고유 주소는 두 스토어 모두 제공하지 않으므로 이게 최선이다.
+  `STORE_LINK`는 `scripts/apps-script-review-alert.gs`의 같은 이름 상수와 **값을 맞춰 둘 것**
 - 메일 발송은 **Brevo 트랜잭셔널 API**(`POST api.brevo.com/v3/smtp/email`, 헤더 `api-key`)를
   `fetch`로 직접 호출한다. 이 저장소는 package.json이 없어 SMTP 라이브러리를 쓸 수 없다.
   Brevo는 **발신자 이메일만 인증하면 수신자를 가리지 않아** 도메인 인증 없이 회사 주소로 보낼 수 있다

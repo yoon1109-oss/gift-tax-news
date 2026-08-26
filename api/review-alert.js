@@ -17,6 +17,15 @@
 //   CRON_SECRET     Vercel Cron이 Authorization 헤더로 보내는 값 (외부 호출 차단용)
 const REVIEWS_URL = '/api/reviews';
 const STORE_NAME = { play: 'Google Play', apple: 'App Store' };
+const APP_URL = 'https://gift-tax-news.vercel.app/#reviews';
+
+// 리뷰를 누르면 갈 곳. 개별 리뷰 고유 주소는 두 스토어 모두 제공하지 않아
+// 각 스토어의 '평가 및 리뷰' 화면까지가 최선이다.
+// (scripts/apps-script-review-alert.gs 의 STORE_LINK 와 같은 값을 유지할 것)
+const STORE_LINK = {
+  play: 'https://play.google.com/store/apps/details?id=hw.dp.plus&hl=ko&gl=KR&showAllReviews=true',
+  apple: 'https://apps.apple.com/kr/app/id6755743981?see-all=reviews',
+};
 
 // KST 기준 날짜 문자열 (스토어가 주는 date도 날짜 단위라 맞춰야 한다)
 function kstDate(offsetDays = 0) {
@@ -27,17 +36,27 @@ function kstDate(offsetDays = 0) {
 const esc = s => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 function buildEmail(list, day) {
-  const rows = list.map(r => `
-    <tr><td style="padding:14px 0;border-bottom:1px solid #e4e8f0">
-      <div style="font-size:13px;color:#8992a4">
-        ${'★'.repeat(r.rating)}${'☆'.repeat(Math.max(0, 5 - r.rating))}
-        &nbsp;·&nbsp;${esc(STORE_NAME[r.store] || r.store)}
-        ${r.version ? '&nbsp;·&nbsp;v' + esc(r.version) : ''}
-      </div>
-      ${r.title ? `<div style="font-size:15px;font-weight:700;margin:4px 0 2px">${esc(r.title)}</div>` : ''}
-      <div style="font-size:14px;line-height:1.65;color:#161b27;margin-top:4px">${esc(r.text)}</div>
-      <div style="font-size:12px;color:#8992a4;margin-top:6px">${esc(r.author)}</div>
-    </td></tr>`).join('');
+  // 리뷰 한 건 전체를 링크로 감싼다 — 메일에서 바로 해당 스토어의 리뷰 화면으로 갈 수 있게.
+  // 메일 클라이언트가 링크에 파란 밑줄을 강제하는 경우가 있어 색·장식을 명시한다.
+  const rows = list.map(r => {
+    const store = esc(STORE_NAME[r.store] || r.store);
+    const href = STORE_LINK[r.store] || APP_URL;
+    return `
+    <tr><td style="padding:0;border-bottom:1px solid #e4e8f0">
+      <a href="${href}" style="display:block;padding:14px 0;text-decoration:none;color:inherit">
+        <div style="font-size:13px;color:#8992a4">
+          ${'★'.repeat(r.rating)}${'☆'.repeat(Math.max(0, 5 - r.rating))}
+          &nbsp;·&nbsp;${store}
+          ${r.version ? '&nbsp;·&nbsp;v' + esc(r.version) : ''}
+          ${r.date ? '&nbsp;·&nbsp;' + esc(r.date) : ''}
+        </div>
+        ${r.title ? `<div style="font-size:15px;font-weight:700;margin:4px 0 2px;color:#161b27">${esc(r.title)}</div>` : ''}
+        <div style="font-size:14px;line-height:1.65;color:#161b27;margin-top:4px">${esc(r.text)}</div>
+        <div style="font-size:12px;color:#8992a4;margin-top:6px">${esc(r.author)}
+          &nbsp;·&nbsp;<span style="color:#2f6fd0">${store}에서 보기 →</span></div>
+      </a>
+    </td></tr>`;
+  }).join('');
 
   const low = list.filter(r => r.rating <= 2).length;
   return {
@@ -48,7 +67,7 @@ function buildEmail(list, day) {
       <div style="font-size:13px;color:#586074">${day} 등록분 · 구글 플레이 · 애플 앱스토어</div>
       <table style="width:100%;border-collapse:collapse;margin-top:12px">${rows}</table>
       <div style="margin-top:22px;font-size:13px">
-        <a href="https://gift-tax-news.vercel.app/#reviews" style="color:#2f6fd0">모니터링에서 전체 보기 →</a>
+        <a href="${APP_URL}" style="color:#2f6fd0">모니터링에서 전체 보기 →</a>
       </div>
     </div>`,
   };
