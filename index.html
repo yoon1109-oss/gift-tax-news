@@ -102,8 +102,10 @@
       border: 1px solid var(--border-strong); padding: 4px 12px; border-radius: 14px;
       transition: all 0.15s; user-select: none;
     }
-    .kw-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
-    .kw-chip.active { border-color: var(--accent); color: var(--on-accent); background: var(--accent); font-weight: 600; }
+    /* 선택 상태를 강조색 단색으로 채우면 네이비 화면에서 형광 민트 덩어리로 튄다.
+       탭 바와 같은 어법으로 — 밝기와 굵기로 고른 것을 표시하고 색은 쓰지 않는다. */
+    .kw-chip:hover { border-color: var(--border-strong); color: var(--text); }
+    .kw-chip.active { border-color: var(--border-strong); color: var(--text); background: #33415e; font-weight: 600; }
 
     .stats-bar {
       padding: 9px 48px; display: flex; gap: 18px; align-items: center;
@@ -156,18 +158,19 @@
     .rv-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
     /* 타일은 스토어별 필터 버튼이다 — 누르면 아래 목록이 그 스토어만 남는다 */
     .rv-tile {
-      background: var(--accent-dim); border: 1px solid var(--accent-line);
+      background: var(--card-hover); border: 1px solid var(--border);
       border-radius: 10px; padding: 16px 18px;
       font-family: inherit; text-align: left; width: 100%;
       cursor: pointer; transition: background .15s, border-color .15s;
     }
-    .rv-tile:hover { background: rgba(11,216,182,.20); }
-    .rv-tile[aria-pressed="true"] { background: rgba(11,216,182,.22); border-color: var(--accent); }
-    .rv-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .rv-tile-pick { font-size: 11.5px; color: var(--accent); font-weight: 600; margin-top: 8px; }
+    .rv-tile:hover { border-color: var(--border-strong); }
+    .rv-tile[aria-pressed="true"] { background: #26334d; border-color: var(--text); }
+    .rv-tile:focus-visible { outline: 2px solid var(--text); outline-offset: 2px; }
+    .rv-tile-pick { font-size: 11.5px; color: var(--muted2); font-weight: 600; margin-top: 8px; }
+    .rv-tile[aria-pressed="true"] .rv-tile-pick { color: var(--text); }
     .rv-tile-store { font-size: 12px; font-weight: 600; color: var(--muted2); margin-bottom: 6px; }
     .rv-tile-score {
-      font-size: 38px; font-weight: 700; line-height: 1.05; color: var(--accent);
+      font-size: 38px; font-weight: 700; line-height: 1.05; color: var(--text);
       font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 4px;
     }
     .rv-tile-score span { font-size: 20px; }
