@@ -39,6 +39,13 @@ const YOUTH = { name: '청년(19~34세)', total: 43554, band: [3253, 4788, 11107
 const MINOR_BAND = AGES[0].band.map((v, i) => v + AGES[1].band[i]);
 const MINOR_TOTAL = AGES[0].total + AGES[1].total;   // 18,236명
 
+// 20~40세 = 20세 이상(20대) + 30세 이상(30대)
+const A2040_BAND = AGES[2].band.map((v, i) => v + AGES[3].band[i]);
+const A2040_TOTAL = AGES[2].total + AGES[3].total;   // 60,410명
+
+// 최다 구간의 인덱스 — 눈으로 고르지 않고 계산한다
+const topIdx = arr => arr.indexOf(Math.max(...arr));
+
 const sum = a => a.reduce((x, y) => x + y, 0);
 const cum = (arr, upto) => sum(arr.slice(0, upto + 1));
 
@@ -99,46 +106,6 @@ const NOTICE = [
   `<b>단위는 '명'입니다.</b> 한 사람이 여러 번 받으면 각각 셉니다.`,
 ];
 
-const PI_POINTS = {
-  title: '주요 지표',
-  items: [
-    { group: '미성년 자녀 증여 (20세 미만)', tag: '파이 타깃', lines: [
-      `${nf(MINOR_TOTAL)}명 — 전체 신고인원 ${nf(TOTAL)}명의 ${pct(MINOR_TOTAL, TOTAL)}`,
-      `이 중 ${pct(cum(MINOR_BAND, 2), MINOR_TOTAL)}(${nf(cum(MINOR_BAND, 2))}명)가 <b>1억 이하</b> 소액 증여`,
-      `가장 두꺼운 구간은 <b>5천만 이하</b> ${nf(MINOR_BAND[1])}명 (${pct(MINOR_BAND[1], MINOR_TOTAL)})`,
-      `<b>쉽게 말하면</b> — 미성년 증여 10명 중 7명은 1억원 이하입니다.`,
-    ]},
-    { group: '10세 미만 — 가장 이른 증여', tag: '', lines: [
-      `${nf(AGES[0].total)}명 중 ${nf(AGES[0].band[1])}명(${pct(AGES[0].band[1], AGES[0].total)})이 <b>5천만 이하</b> 구간에 몰려 있음`,
-      `전국 평균 ${pct(ALL[1], TOTAL)} 대비 약 ${((AGES[0].band[1] / AGES[0].total) / (ALL[1] / TOTAL)).toFixed(1)}배 — 어릴수록 소액·정기 증여 성향`,
-      `<b>쉽게 말하면</b> — 어린 자녀일수록 조금씩 나눠 줍니다. 2천만원까지는 세금이 없어서, 그 선을 살짝 넘긴 금액이 이 구간에 모입니다.`,
-    ]},
-    { group: '증여의 절반 이상이 소액', tag: '', lines: [
-      `<b>1억 이하</b> 누계 ${nf(cum(ALL, 2))}명 — 전체의 ${pct(cum(ALL, 2), TOTAL)}`,
-      `<b>5천만 이하</b> 누계 ${nf(cum(ALL, 1))}명 (${pct(cum(ALL, 1), TOTAL)}), <b>3억 이하</b>까지 넓히면 ${pct(cum(ALL, 3), TOTAL)}`,
-      '건수 기준으로는 대형 자산가가 아니라 생활형 증여가 다수',
-      '<b>쉽게 말하면</b> — 뉴스에 나오는 수십억 증여는 드물고, 실제로는 1억 안팎이 대부분입니다.',
-    ]},
-    { group: '고액 증여는 소수', tag: '', lines: [
-      `<b>10억 초과</b> ${nf(TOTAL - cum(ALL, 5))}명 — 전체의 ${pct(TOTAL - cum(ALL, 5), TOTAL)}`,
-      `<b>50억 초과</b>는 ${nf(ALL[9])}명 (${pct(ALL[9], TOTAL)})`,
-      `반면 금액 기준 증여재산가액은 ${jo(Y.증여재산가액)}, 건당 평균 ${perCase(Y.증여재산가액, Y.건수)}`,
-      '<b>쉽게 말하면</b> — 사람 수로는 3%지만, 전체 금액은 이들이 끌어올립니다.',
-    ]},
-  ],
-};
-
-// 분포 막대 — 전국 / 미성년 두 계열
-const DIST = [
-  { title: `얼마를 받았나 — 전국 ${nf(TOTAL)}명`,
-    note: `2025년 신고분 · 단위 명 · 국세통계 6.3.3 '증여재산가액 등 규모별 신고인원'`,
-    rows: BANDS.map((b, i) => ({ label: b, value: nf(ALL[i]), pct: (ALL[i] / TOTAL * 100).toFixed(1) })) },
-  { title: '같은 그림, 미성년(20세 미만)만 따로',
-    note: `${nf(MINOR_TOTAL)}명 · 전체의 ${pct(MINOR_TOTAL, TOTAL)} · 단위 명`,
-    hl: true,
-    rows: BANDS.map((b, i) => ({ label: b, value: nf(MINOR_BAND[i]), pct: (MINOR_BAND[i] / MINOR_TOTAL * 100).toFixed(1) })) },
-];
-
 // ── 연령대별 신고인원 추이 (2021~2025 신고분) ──
 // 출처: 6.3.3 시계열 조회 (TASIS wqAction ATWEPEAA001R03, 발간연도 2022~2026 = 신고연도 2021~2025)
 // 각 연도 연령 합계가 총계와 일치하는 것을 확인함.
@@ -156,14 +123,71 @@ const TREND_U40 = TREND_YEARS.map((_, i) => TREND.reduce((a, s) => a + s.v[i], 0
 const yoy = (arr, i) => i === 0 ? null : (arr[i] / arr[i - 1] - 1) * 100;
 const signed = n => (n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%');
 
-// 통계를 처음 보는 사람이 맨 먼저 읽을 4줄. 전문용어를 쓰지 않는다.
+// 연령 구간 상세 — 수치와 그 수치가 뜻하는 정의만 적는다.
+// 해석·추측('~하는 성향', '~때문에', '뉴스에 나오는')은 넣지 않는다.
+const bandDetail = (band, total, label) => [
+  `최다 구간 <b>${BANDS[topIdx(band)]}</b> ${nf(band[topIdx(band)])}명 (${pct(band[topIdx(band)], total)}). `
+    + `같은 구간 전국 비중 ${pct(ALL[topIdx(band)], TOTAL)}.`,
+  `누계 — 5천만 이하 <b>${pct(cum(band, 1), total)}</b> · 1억 이하 <b>${pct(cum(band, 2), total)}</b> · `
+    + `3억 이하 <b>${pct(cum(band, 3), total)}</b> (전국 각 ${pct(cum(ALL, 1), TOTAL)} / ${pct(cum(ALL, 2), TOTAL)} / ${pct(cum(ALL, 3), TOTAL)}).`,
+  `10억 초과 ${nf(total - cum(band, 5))}명 (${pct(total - cum(band, 5), total)}). 전국 ${pct(TOTAL - cum(ALL, 5), TOTAL)}.`,
+  `구간별 인원 — ${BANDS.map((b, i) => `${b} ${nf(band[i])}`).join(' · ')}.`,
+];
+
+// 연도별 인원 (2021~2025) — TREND에서 같은 연령대를 합산
+const MINOR_YEARS = TREND_YEARS.map((_, i) => TREND[0].v[i] + TREND[1].v[i]);
+const A2040_YEARS = TREND_YEARS.map((_, i) => TREND[2].v[i] + TREND[3].v[i]);
+
+const PI_POINTS = {
+  title: '연령 구간 상세',
+  items: [
+    { group: '미성년 — 20세 미만', tag: `${nf(MINOR_TOTAL)}명 · 전체의 ${pct(MINOR_TOTAL, TOTAL)}`, lines: [
+      `10세 미만 ${nf(AGES[0].total)}명 (이 구간의 ${pct(AGES[0].total, MINOR_TOTAL)}) · `
+        + `10대 ${nf(AGES[1].total)}명 (${pct(AGES[1].total, MINOR_TOTAL)}).`,
+      ...bandDetail(MINOR_BAND, MINOR_TOTAL),
+      `연도별 — ${TREND_YEARS.map((y, i) => `${y}년 ${nf(MINOR_YEARS[i])}`).join(' · ')}명. `
+        + `2021→2025 ${signed((MINOR_YEARS[4] / MINOR_YEARS[0] - 1) * 100)}, 전년 대비 ${signed(yoy(MINOR_YEARS, 4))}.`,
+      `<b>구간 정의</b> — 통계표의 연령 구간이 '10세 미만 / 10세 이상 / 20세 이상'이라 여기서 말하는 미성년은 <b>20세 미만</b>입니다. `
+        + `민법상 미성년(19세 미만)·증여재산공제 미성년 한도(2천만원)의 기준과 한 살 차이가 나며, 19세는 이 집계에 포함됩니다.`,
+    ]},
+    { group: '20~40세 — 20대·30대', tag: `${nf(A2040_TOTAL)}명 · 전체의 ${pct(A2040_TOTAL, TOTAL)}`, lines: [
+      `20대 ${nf(AGES[2].total)}명 (이 구간의 ${pct(AGES[2].total, A2040_TOTAL)}) · `
+        + `30대 ${nf(AGES[3].total)}명 (${pct(AGES[3].total, A2040_TOTAL)}). `
+        + `연령 8개 구간 중 30대가 ${nf(AGES[3].total)}명으로 가장 많습니다.`,
+      ...bandDetail(A2040_BAND, A2040_TOTAL),
+      `연도별 — ${TREND_YEARS.map((y, i) => `${y}년 ${nf(A2040_YEARS[i])}`).join(' · ')}명. `
+        + `2021→2025 ${signed((A2040_YEARS[4] / A2040_YEARS[0] - 1) * 100)}, 전년 대비 ${signed(yoy(A2040_YEARS, 4))}.`,
+      `<b>겹치는 항목</b> — 청년(19~34세) ${nf(YOUTH.total)}명은 연령 구간을 가로질러 다시 묶은 항목이라 이 수치와 겹치며, 합계에는 더해지지 않습니다.`,
+    ]},
+  ],
+};
+
+// 분포 막대 — 연령 구간이 주(主), 전국은 비교 기준으로 마지막에 둔다
+const distRows = (band, total) =>
+  BANDS.map((b, i) => ({ label: b, value: nf(band[i]), pct: (band[i] / total * 100).toFixed(1) }));
+
+const DIST = [
+  { title: '미성년(20세 미만) — 얼마를 받았나',
+    note: `${nf(MINOR_TOTAL)}명 · 전체의 ${pct(MINOR_TOTAL, TOTAL)} · 단위 명`,
+    hl: true,
+    rows: distRows(MINOR_BAND, MINOR_TOTAL) },
+  { title: '20~40세 — 얼마를 받았나',
+    note: `${nf(A2040_TOTAL)}명 · 전체의 ${pct(A2040_TOTAL, TOTAL)} · 단위 명`,
+    hl: true,
+    rows: distRows(A2040_BAND, A2040_TOTAL) },
+  { title: `전국 ${nf(TOTAL)}명 — 비교 기준`,
+    note: `2025년 신고분 · 단위 명 · 국세통계 6.3.3 '증여재산가액 등 규모별 신고인원'`,
+    rows: distRows(ALL, TOTAL) },
+];
+
+// 맨 먼저 읽는 줄. 수치와 그 정의만 적고 해석은 붙이지 않는다.
 const SUMMARY = {
   title: '한눈에 보기',
   items: [
-    `2025년에 증여세를 신고한 사람은 <b>${nf(TOTAL)}명</b>입니다.`,
-    `이 중 <b>절반 이상(${pct(cum(ALL, 2), TOTAL)})이 1억원 이하</b>를 받았습니다. 증여가 자산가만의 일은 아니라는 뜻입니다.`,
-    `<b>20세 미만 미성년자가 ${nf(MINOR_TOTAL)}명</b>, 열 명 중 한 명꼴입니다. 그중 ${pct(cum(MINOR_BAND, 2), MINOR_TOTAL)}는 1억원 이하였습니다.`,
-    `신고 인원은 2021년이 가장 많았고 3년 연속 줄다가 <b>2025년에 다시 늘었습니다(${signed(yoy(TREND_ALL, 4))})</b>.`,
+    `2025년 증여세 신고인원 <b>${nf(TOTAL)}명</b>.`,
+    `<b>미성년(20세 미만) ${nf(MINOR_TOTAL)}명</b> — 전체의 ${pct(MINOR_TOTAL, TOTAL)}. 이 중 1억 이하 ${pct(cum(MINOR_BAND, 2), MINOR_TOTAL)}, 최다 구간은 5천만 이하 ${pct(MINOR_BAND[1], MINOR_TOTAL)}.`,
+    `<b>20~40세 ${nf(A2040_TOTAL)}명</b> — 전체의 ${pct(A2040_TOTAL, TOTAL)}. 이 중 1억 이하 ${pct(cum(A2040_BAND, 2), A2040_TOTAL)}, 최다 구간은 3억 이하 ${pct(A2040_BAND[3], A2040_TOTAL)}.`,
+    `신고인원 추이 — 2021년 ${nf(TREND_ALL[0])}명에서 3년 연속 감소 후 2025년 ${nf(TREND_ALL[4])}명 (전년 대비 ${signed(yoy(TREND_ALL, 4))}).`,
   ],
 };
 
@@ -182,15 +206,24 @@ const TERMS = {
   ],
 };
 
+// '얼마 이하가 몇 %' — 전국이 아니라 연령 구간 기준으로 낸다.
+// 전국 값은 비교용으로 각 타일 밑줄(delta)에 같이 적는다.
+const CUM_STEPS = [0, 1, 2, 3, 5];
+const cumGroup = (name, band, total) => [{
+  group: `얼마 이하가 몇 % — ${name}`,
+  items: [
+    ...CUM_STEPS.map(i => ({
+      label: BANDS[i], value: pct(cum(band, i), total),
+      delta: `${nf(cum(band, i))}명 · 전국 ${pct(cum(ALL, i), TOTAL)}`,
+    })),
+    { label: '10억 초과', value: pct(total - cum(band, 5), total),
+      delta: `${nf(total - cum(band, 5))}명 · 전국 ${pct(TOTAL - cum(ALL, 5), TOTAL)}` },
+  ],
+}];
+
 const METRICS = [
-  { group: '얼마 이하가 몇 %인가 (전국)', items: [
-    { label: '1천만 이하', value: pct(cum(ALL, 0), TOTAL), delta: `${nf(cum(ALL, 0))}명` },
-    { label: '5천만 이하', value: pct(cum(ALL, 1), TOTAL), delta: `${nf(cum(ALL, 1))}명` },
-    { label: '1억 이하', value: pct(cum(ALL, 2), TOTAL), delta: `${nf(cum(ALL, 2))}명` },
-    { label: '3억 이하', value: pct(cum(ALL, 3), TOTAL), delta: `${nf(cum(ALL, 3))}명` },
-    { label: '10억 이하', value: pct(cum(ALL, 5), TOTAL), delta: `${nf(cum(ALL, 5))}명` },
-    { label: '10억 초과', value: pct(TOTAL - cum(ALL, 5), TOTAL), delta: `${nf(TOTAL - cum(ALL, 5))}명` },
-  ]},
+  ...cumGroup('미성년(20세 미만)', MINOR_BAND, MINOR_TOTAL),
+  ...cumGroup('20~40세', A2040_BAND, A2040_TOTAL),
   { group: '받은 사람 나이별', items: [
     ...AGES.map(a => ({ label: a.name, value: `${nf(a.total)}명`, delta: `${pct(a.total, TOTAL)} · 1억 이하 ${pct(cum(a.band, 2), a.total)}` })),
     { label: YOUTH.name, value: `${nf(YOUTH.total)}명`, delta: `${pct(YOUTH.total, TOTAL)} · 합계에 미포함` },
@@ -259,6 +292,7 @@ const RAW = [
     rows: [
       ...AGES.map(a => [a.name, nf(a.total), ...a.band.map(nf)]),
       ['미성년 계(20세 미만)', nf(MINOR_TOTAL), ...MINOR_BAND.map(nf)],
+      ['20~40세 계', nf(A2040_TOTAL), ...A2040_BAND.map(nf)],
       [YOUTH.name, nf(YOUTH.total), ...YOUTH.band.map(nf)],
       ['전국 합계', nf(TOTAL), ...ALL.map(nf)],
     ] },
