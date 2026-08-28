@@ -124,41 +124,54 @@ const yoy = (arr, i) => i === 0 ? null : (arr[i] / arr[i - 1] - 1) * 100;
 const signed = n => (n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%');
 
 // 연령 구간 상세 — 수치와 그 수치가 뜻하는 정의만 적는다.
-// 해석·추측('~하는 성향', '~때문에', '뉴스에 나오는')은 넣지 않는다.
-const bandDetail = (band, total, label) => [
-  `최다 구간 <b>${BANDS[topIdx(band)]}</b> ${nf(band[topIdx(band)])}명 (${pct(band[topIdx(band)], total)}). `
-    + `같은 구간 전국 비중 ${pct(ALL[topIdx(band)], TOTAL)}.`,
-  `누계 — 5천만 이하 <b>${pct(cum(band, 1), total)}</b> · 1억 이하 <b>${pct(cum(band, 2), total)}</b> · `
-    + `3억 이하 <b>${pct(cum(band, 3), total)}</b> (전국 각 ${pct(cum(ALL, 1), TOTAL)} / ${pct(cum(ALL, 2), TOTAL)} / ${pct(cum(ALL, 3), TOTAL)}).`,
-  `10억 초과 ${nf(total - cum(band, 5))}명 (${pct(total - cum(band, 5), total)}). 전국 ${pct(TOTAL - cum(ALL, 5), TOTAL)}.`,
-  `구간별 인원 — ${BANDS.map((b, i) => `${b} ${nf(band[i])}`).join(' · ')}.`,
-];
-
-// 연도별 인원 (2021~2025) — TREND에서 같은 연령대를 합산
+// 해석·추측('~하는 성향', '~때문에')은 넣지 않는다.
+// 문장으로 늘어놓으면 눈에 안 들어와, 핵심 3개는 타일로 뽑고 나머지는 줄을 맞춘다.
+// 구간별 인원 전체는 아래 '규모별 분포' 막대가 이미 보여주므로 여기서 반복하지 않는다.
 const MINOR_YEARS = TREND_YEARS.map((_, i) => TREND[0].v[i] + TREND[1].v[i]);
 const A2040_YEARS = TREND_YEARS.map((_, i) => TREND[2].v[i] + TREND[3].v[i]);
+
+const abFacts = (band, total) => {
+  const t = topIdx(band);
+  return [
+    { label: '최다 구간', value: BANDS[t], sub: `${nf(band[t])}명 · ${pct(band[t], total)} (전국 ${pct(ALL[t], TOTAL)})` },
+    { label: '1억 이하 누계', value: pct(cum(band, 2), total), sub: `${nf(cum(band, 2))}명 (전국 ${pct(cum(ALL, 2), TOTAL)})` },
+    { label: '10억 초과', value: pct(total - cum(band, 5), total), sub: `${nf(total - cum(band, 5))}명 (전국 ${pct(TOTAL - cum(ALL, 5), TOTAL)})` },
+  ];
+};
+
+const cumRow = (band, total) =>
+  [1, 2, 3].map(i => `${BANDS[i]} <b>${pct(cum(band, i), total)}</b>`).join('  ·  ')
+  + `<br><span style="opacity:.72">전국 ${[1, 2, 3].map(i => pct(cum(ALL, i), TOTAL)).join(' · ')}</span>`;
+
+const yearRow = years =>
+  TREND_YEARS.map((y, i) => `${String(y).slice(2)}년 <b>${nf(years[i])}</b>`).join('  ·  ')
+  + `<br><span style="opacity:.72">2021→2025 ${signed((years[4] / years[0] - 1) * 100)} · 전년 대비 ${signed(yoy(years, 4))}</span>`;
 
 const PI_POINTS = {
   title: '연령 구간 상세',
   items: [
-    { group: '미성년 — 20세 미만', tag: `${nf(MINOR_TOTAL)}명 · 전체의 ${pct(MINOR_TOTAL, TOTAL)}`, lines: [
-      `10세 미만 ${nf(AGES[0].total)}명 (이 구간의 ${pct(AGES[0].total, MINOR_TOTAL)}) · `
-        + `10대 ${nf(AGES[1].total)}명 (${pct(AGES[1].total, MINOR_TOTAL)}).`,
-      ...bandDetail(MINOR_BAND, MINOR_TOTAL),
-      `연도별 — ${TREND_YEARS.map((y, i) => `${y}년 ${nf(MINOR_YEARS[i])}`).join(' · ')}명. `
-        + `2021→2025 ${signed((MINOR_YEARS[4] / MINOR_YEARS[0] - 1) * 100)}, 전년 대비 ${signed(yoy(MINOR_YEARS, 4))}.`,
-      `<b>구간 정의</b> — 통계표의 연령 구간이 '10세 미만 / 10세 이상 / 20세 이상'이라 여기서 말하는 미성년은 <b>20세 미만</b>입니다. `
-        + `민법상 미성년(19세 미만)·증여재산공제 미성년 한도(2천만원)의 기준과 한 살 차이가 나며, 19세는 이 집계에 포함됩니다.`,
-    ]},
-    { group: '20~40세 — 20대·30대', tag: `${nf(A2040_TOTAL)}명 · 전체의 ${pct(A2040_TOTAL, TOTAL)}`, lines: [
-      `20대 ${nf(AGES[2].total)}명 (이 구간의 ${pct(AGES[2].total, A2040_TOTAL)}) · `
-        + `30대 ${nf(AGES[3].total)}명 (${pct(AGES[3].total, A2040_TOTAL)}). `
-        + `연령 8개 구간 중 30대가 ${nf(AGES[3].total)}명으로 가장 많습니다.`,
-      ...bandDetail(A2040_BAND, A2040_TOTAL),
-      `연도별 — ${TREND_YEARS.map((y, i) => `${y}년 ${nf(A2040_YEARS[i])}`).join(' · ')}명. `
-        + `2021→2025 ${signed((A2040_YEARS[4] / A2040_YEARS[0] - 1) * 100)}, 전년 대비 ${signed(yoy(A2040_YEARS, 4))}.`,
-      `<b>겹치는 항목</b> — 청년(19~34세) ${nf(YOUTH.total)}명은 연령 구간을 가로질러 다시 묶은 항목이라 이 수치와 겹치며, 합계에는 더해지지 않습니다.`,
-    ]},
+    {
+      group: '미성년 — 20세 미만',
+      tag: `${nf(MINOR_TOTAL)}명 · 전체의 ${pct(MINOR_TOTAL, TOTAL)}`,
+      facts: abFacts(MINOR_BAND, MINOR_TOTAL),
+      rows: [
+        { label: '구성', value: `10세 미만 <b>${nf(AGES[0].total)}</b> (${pct(AGES[0].total, MINOR_TOTAL)})  ·  10대 <b>${nf(AGES[1].total)}</b> (${pct(AGES[1].total, MINOR_TOTAL)})` },
+        { label: '이하 누계', value: cumRow(MINOR_BAND, MINOR_TOTAL) },
+        { label: '연도별', value: yearRow(MINOR_YEARS) },
+      ],
+      note: `<b>구간 기준</b> — 통계표의 연령 구간이 '10세 미만 / 10세 이상 / 20세 이상'이라 여기서 미성년은 <b>20세 미만</b>입니다. 민법상 미성년(19세 미만)·증여재산공제 미성년 한도(2천만원) 기준과 한 살 차이가 나며, 19세가 이 집계에 포함됩니다.`,
+    },
+    {
+      group: '20~40세 — 20대·30대',
+      tag: `${nf(A2040_TOTAL)}명 · 전체의 ${pct(A2040_TOTAL, TOTAL)}`,
+      facts: abFacts(A2040_BAND, A2040_TOTAL),
+      rows: [
+        { label: '구성', value: `20대 <b>${nf(AGES[2].total)}</b> (${pct(AGES[2].total, A2040_TOTAL)})  ·  30대 <b>${nf(AGES[3].total)}</b> (${pct(AGES[3].total, A2040_TOTAL)})` },
+        { label: '이하 누계', value: cumRow(A2040_BAND, A2040_TOTAL) },
+        { label: '연도별', value: yearRow(A2040_YEARS) },
+      ],
+      note: `<b>겹치는 항목</b> — 청년(19~34세) ${nf(YOUTH.total)}명은 연령 구간을 가로질러 다시 묶은 항목이라 이 수치와 겹치며, 합계에는 더해지지 않습니다.`,
+    },
   ],
 };
 
@@ -192,17 +205,18 @@ const SUMMARY = {
 };
 
 
-// 로우 데이터 표의 컬럼 이름을 그대로 풀어주는 용어 설명
+// 용어 풀이 — 로우 데이터 표의 컬럼 이름만 짧게 푼다.
+// 계산 순서 한 줄 + 항목당 한 문장. 자세한 배경은 국세통계 원문에 있다.
 const TERMS = {
   title: '용어 풀이',
   items: [
-    `<b>계산 순서</b> — 증여재산가액 → (− 비과세·불산입·채무 + 가산액) → 증여세과세가액 → (− <b>증여재산공제</b>) → 과세표준 → (× 세율 10~50%) → 산출세액 → (− 세액공제) → 자진납부할세액. <b>증여재산가액은 공제를 빼기 전</b> 금액이고, <b>공제를 뺀 뒤가 과세표준</b>입니다.`,
-    `<b>증여재산가액</b> — 이번 증여로 받은 재산의 <b>세법상 평가액</b>. <b>공제를 빼기 전</b> 금액입니다. 신고한 증여금액이 맞지만, 현금은 액면 그대로인 반면 부동산·비상장주식은 시가(매매사례가·감정가액, 없으면 기준시가)로 평가한 값이 들어갑니다. <b>이번 증여 건만</b> 담깁니다.`,
-    `<b>증여재산가산액</b> — 이번 증여 전 10년 이내에 같은 사람(직계존속이면 그 배우자 포함)에게 받은 증여재산의 합계(1천만원 이상일 때). 2025년 ${jo(Y.가산액)}으로 증여재산가액 ${jo(Y.증여재산가액)}의 <b>${pct(Y.가산액, Y.증여재산가액)}</b>에 이릅니다 — 이미 받아본 사람이 또 받는 경우가 그만큼 많습니다.`,
-    `<b>증여세과세가액</b> — 증여재산가액 − 비과세 − 과세가액불산입 − 채무(부담부증여로 떠안은 빚) + 가산액. 2025년 ${jo(Y.과세가액)}.`,
-    `<b>증여재산공제</b> — 관계별로 세금을 매기지 않고 빼주는 금액(10년 합산 한도). 배우자 6억, 직계존비속 5천만(미성년 2천만), 그 밖의 친족 1천만, 혼인·출산 각 1억. <b>실제 증여한 금액이 아닙니다.</b>`,
-    `<b>과세표준</b> — 과세가액에서 증여재산공제 등을 <b>뺀 뒤</b>의 금액. 여기에 세율 10~50%를 곱해 <b>산출세액</b>이 나옵니다. 예를 들어 <b>1억 이하</b> 구간은 건당 증여재산가액 ${perOne(TAXB[2][1], TAXB[2][0])}에서 공제 ${perOne(TAXB[2][3], TAXB[2][0])}을 빼 과세표준이 ${perOne(TAXB[2][4], TAXB[2][0])}이 됩니다.`,
-    `<b>자진납부할세액</b> — 산출세액에서 징수유예·감면과 세액공제(기납부세액공제, 신고세액공제 3% 등)를 뺀, 실제로 내는 돈. 2025년 ${jo(Y.자진납부세액)}.`,
+    `<b>계산 순서</b> — 증여재산가액 → (− 공제·채무 + 가산액) → 과세가액 → (− 증여재산공제) → 과세표준 → (× 세율) → 산출세액 → 자진납부할세액`,
+    `<b>증여재산가액</b> — 이번에 받은 재산의 세법상 평가액. <b>공제를 빼기 전</b> 금액입니다.`,
+    `<b>증여재산가산액</b> — 10년 이내에 같은 사람에게 이미 받은 증여재산의 합계(1천만원 이상일 때).`,
+    `<b>증여세과세가액</b> — 증여재산가액에서 비과세·채무를 빼고 가산액을 더한 금액.`,
+    `<b>증여재산공제</b> — 세금을 매기지 않고 빼주는 금액(10년 합산 한도). 직계존비속 5천만(미성년 2천만), 배우자 6억, 혼인·출산 각 1억. <b>실제 증여액이 아닙니다.</b>`,
+    `<b>과세표준</b> — 공제를 <b>뺀 뒤</b>의 금액. 여기에 세율 10~50%를 곱해 산출세액이 나옵니다.`,
+    `<b>자진납부할세액</b> — 산출세액에서 세액공제(신고세액공제 3% 등)를 뺀, 실제로 내는 돈.`,
   ],
 };
 

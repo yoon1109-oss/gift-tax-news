@@ -202,6 +202,24 @@
     .card-date { font-size: 12px; color: var(--muted); }
     .card-like { font-size: 12px; font-weight: 600; color: var(--mark); display: inline-flex; align-items: center; gap: 3px; }
 
+    /* 연령 구간 상세 — 문장 나열 대신 숫자를 세로로 줄 맞춰 읽게 한다 */
+    .ab-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 10px; }
+    .ab-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin-bottom: 4px; }
+    .ab-name { font-family: 'Noto Serif KR', serif; font-size: 16px; font-weight: 700; color: var(--text); }
+    .ab-tag { font-size: 12px; color: var(--muted); }
+    .ab-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 4px; }
+    .ab-fact { background: var(--bg); border-radius: 6px; padding: 10px 12px; }
+    .ab-fact-label { font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+    .ab-fact-value { font-size: 19px; font-weight: 700; color: var(--mark); line-height: 1.15; font-variant-numeric: tabular-nums; }
+    .ab-fact-sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+    .ab-rows { margin-top: 10px; }
+    .ab-row { display: grid; grid-template-columns: 86px 1fr; gap: 12px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--border); }
+    .ab-row-label { font-size: 12px; color: var(--muted); }
+    .ab-row-value { font-size: 13.5px; color: var(--muted2); line-height: 1.6; font-variant-numeric: tabular-nums; word-break: keep-all; }
+    .ab-row-value b { color: var(--text); font-weight: 600; }
+    .ab-note { font-size: 12px; color: var(--muted); line-height: 1.7; margin-top: 10px; padding-top: 9px; border-top: 1px solid var(--border); word-break: keep-all; }
+    .ab-note b { color: var(--muted2); font-weight: 600; }
+
     /* 통계 타일 */
     .stat-group { margin-bottom: 12px; }
     .sg-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 6px 0 8px; }
@@ -370,6 +388,15 @@
 
       .card-title { font-size: 17px; }
       .news-card, .related-card { padding: 16px 18px; }
+
+      /* 연령 상세 타일은 3열로 두면 375px에서 94px씩 눌려 값이 접힌다.
+         한 줄에 라벨-값을 좌우로 놓는 편이 좁은 화면에서 읽기 쉽다. */
+      .ab-facts { grid-template-columns: 1fr; gap: 6px; }
+      .ab-fact { display: grid; grid-template-columns: 1fr auto; align-items: baseline; column-gap: 10px; padding: 9px 12px; }
+      .ab-fact-label { margin-bottom: 0; }
+      .ab-fact-value { font-size: 16px; text-align: right; }
+      .ab-fact-sub { grid-column: 1 / -1; margin-top: 4px; }
+      .ab-row { grid-template-columns: 60px 1fr; gap: 10px; }
     }
   </style>
 </head>
@@ -1514,27 +1541,26 @@
       grid.appendChild(sb);
     }
 
-    // 통계 해석 유의사항
-    if ((d.notice || []).length) {
-      const nb = document.createElement('div');
-      nb.className = 'stat-notice';
-      nb.innerHTML = `<div class="sn-head">읽기 전 확인</div>` +
-        d.notice.map(t => `<div class="sn-row">${t}</div>`).join('');
-      grid.appendChild(nb);
-    }
-
     const age = d.age;
     if (age && (age.items||[]).length) {
-      const sec = document.createElement('div');
-      sec.className = 'related-section';
-      sec.innerHTML = `<div class="related-header"><span class="related-label">${esc(age.title||'주요 지표')}</span></div>`;
-      grid.appendChild(sec);
+      const dv0 = document.createElement('div');
+      dv0.className = 'divider-label'; dv0.textContent = age.title || '연령 구간 상세';
+      grid.appendChild(dv0);
       age.items.forEach(a => {
         const el = document.createElement('div');
-        el.className = 'related-card';
-        el.innerHTML = `<div class="card-meta"><span class="event-broker">${esc(a.group)}</span>${a.tag ? `<span class="dup-badge">${esc(a.tag)}</span>` : ''}</div>` +
-          // lines는 서버 상수(api/stats.js)라 <b> 등 간단한 서식을 그대로 허용한다 (notice와 동일)
-          (a.lines||[]).map(l => `<div class="card-desc" style="-webkit-line-clamp:unset">${l}</div>`).join('');
+        el.className = 'ab-card';
+        // facts/rows/notes는 서버 상수(api/stats.js)라 <b> 등 간단한 서식을 그대로 허용한다
+        el.innerHTML =
+          `<div class="ab-head"><span class="ab-name">${esc(a.group)}</span>` +
+            (a.tag ? `<span class="ab-tag">${esc(a.tag)}</span>` : '') + `</div>` +
+          ((a.facts||[]).length ? `<div class="ab-facts">` + a.facts.map(f =>
+            `<div class="ab-fact"><div class="ab-fact-label">${esc(f.label)}</div>` +
+            `<div class="ab-fact-value">${esc(f.value)}</div>` +
+            (f.sub ? `<div class="ab-fact-sub">${esc(f.sub)}</div>` : '') + `</div>`).join('') + `</div>` : '') +
+          ((a.rows||[]).length ? `<div class="ab-rows">` + a.rows.map(r =>
+            `<div class="ab-row"><div class="ab-row-label">${esc(r.label)}</div>` +
+            `<div class="ab-row-value">${r.value}</div></div>`).join('') + `</div>` : '') +
+          (a.note ? `<div class="ab-note">${a.note}</div>` : '');
         grid.appendChild(el);
       });
     }
@@ -1617,14 +1643,6 @@
       grid.appendChild(box);
     });
 
-    // 용어 풀이 — 아래 로우 데이터 표의 컬럼 이름을 설명한다
-    if (d.terms && (d.terms.items || []).length) {
-      const tb = document.createElement('div');
-      tb.className = 'stat-notice terms';
-      tb.innerHTML = `<div class="sn-head">${esc(d.terms.title || '용어 풀이')}</div>` +
-        d.terms.items.map(t => `<div class="sn-row">${t}</div>`).join('');
-      grid.appendChild(tb);
-    }
 
     // 로우 데이터 테이블
     if ((d.raw || []).length) {
@@ -1643,6 +1661,15 @@
           `</tbody></table></div>`;
         grid.appendChild(box);
       });
+    }
+
+    // 용어 풀이 — 위 로우 데이터 표의 컬럼 이름을 설명한다. 참고용이라 맨 아래 둔다
+    if (d.terms && (d.terms.items || []).length) {
+      const tb = document.createElement('div');
+      tb.className = 'stat-notice terms';
+      tb.innerHTML = `<div class="sn-head">${esc(d.terms.title || '용어 풀이')}</div>` +
+        d.terms.items.map(t => `<div class="sn-row">${t}</div>`).join('');
+      grid.appendChild(tb);
     }
 
     if ((d.sources || []).length) {
