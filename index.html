@@ -155,10 +155,17 @@
     }
     /* 스토어 평점 타일 — 숫자를 화면에서 가장 먼저 읽히게 만든다 */
     .rv-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+    /* 타일은 스토어별 필터 버튼이다 — 누르면 아래 목록이 그 스토어만 남는다 */
     .rv-tile {
       background: var(--accent-dim); border: 1px solid var(--accent-line);
       border-radius: 10px; padding: 16px 18px;
+      font-family: inherit; text-align: left; width: 100%;
+      cursor: pointer; transition: background .15s, border-color .15s;
     }
+    .rv-tile:hover { background: rgba(11,216,182,.20); }
+    .rv-tile[aria-pressed="true"] { background: rgba(11,216,182,.22); border-color: var(--accent); }
+    .rv-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .rv-tile-pick { font-size: 11.5px; color: var(--accent); font-weight: 600; margin-top: 8px; }
     .rv-tile-store { font-size: 12px; font-weight: 600; color: var(--muted2); margin-bottom: 6px; }
     .rv-tile-score {
       font-size: 38px; font-weight: 700; line-height: 1.05; color: var(--accent);
@@ -1392,6 +1399,8 @@
 
   // 앱스토어 리뷰 — 파이 앱(구글 플레이 + 애플 앱스토어)
   let reviewsLoaded = false, reviewsData = null;
+  // 상단 평점 타일로 고른 스토어. null이면 전체. 탭을 옮겼다 와도 유지된다.
+  let reviewStore = null;
   async function showReviews() {
     resetGrid('앱 리뷰를 불러오는 중...');
     document.querySelector('.stats-bar').style.display = 'none';
@@ -1415,26 +1424,42 @@
     if (stores.length) {
       const box = document.createElement('div');
       box.className = 'rv-tiles';
-      box.innerHTML = stores.map(s => `<div class="rv-tile">` +
+      box.innerHTML = stores.map(s => {
+        const on = reviewStore === s.key;
+        const n = reviews.filter(r => r.store === s.key).length;
+        return `<button type="button" class="rv-tile" data-store="${esc(s.key)}" aria-pressed="${on}">` +
           `<div class="rv-tile-store">${esc(s.name)}</div>` +
           `<div class="rv-tile-score">${s.rating != null ? esc(s.rating) : '—'}<span>★</span></div>` +
           `<div class="rv-tile-sub">${s.ok ? `별점 ${s.count != null ? esc(s.count) : '?'}개 · 글 리뷰 ${esc(s.written)}건` : '수집 실패'}</div>` +
-        `</div>`).join('');
+          `<div class="rv-tile-pick">${on ? '이 스토어만 보는 중 · 다시 눌러 전체' : `이 스토어 리뷰 ${n}건 보기`}</div>` +
+        `</button>`;
+      }).join('');
+      box.addEventListener('click', e => {
+        const b = e.target.closest('.rv-tile'); if (!b) return;
+        reviewStore = reviewStore === b.dataset.store ? null : b.dataset.store;   // 같은 걸 또 누르면 전체로
+        renderReviews(d);
+        document.querySelector('.rv-tiles').scrollIntoView({ block: 'nearest' });
+      });
       grid.appendChild(box);
     }
 
-    if (!reviews.length) {
-      grid.insertAdjacentHTML('beforeend', '<p style="color:var(--muted);text-align:center;padding:40px">등록된 글 리뷰가 없습니다.</p>');
+    const shown = reviewStore ? reviews.filter(r => r.store === reviewStore) : reviews;
+
+    if (!shown.length) {
+      grid.insertAdjacentHTML('beforeend',
+        `<p style="color:var(--muted);text-align:center;padding:40px">${reviewStore ? '이 스토어의 글 리뷰가 없습니다.' : '등록된 글 리뷰가 없습니다.'}</p>`);
       return;
     }
 
+    const storeName = reviewStore ? (stores.find(x => x.key === reviewStore) || {}).name : '';
     const dv = document.createElement('div');
-    dv.className = 'divider-label'; dv.textContent = `고객 리뷰 ${reviews.length}건 · 최신순`;
+    dv.className = 'divider-label';
+    dv.textContent = `고객 리뷰 ${shown.length}건${reviewStore ? ` · ${storeName}` : ''} · 최신순`;
     grid.appendChild(dv);
 
     // 리뷰 카드는 앱 소개가 아니라 스토어의 '평가 및 리뷰' 화면으로 보낸다
     const linkOf = k => { const s = stores.find(x => x.key === k) || {}; return s.reviewsLink || s.link || '#'; };
-    reviews.forEach((r, i) => {
+    shown.forEach((r, i) => {
       const el = document.createElement('a');
       el.className = 'news-card rv-card';
       el.href = linkOf(r.store); el.target = '_blank'; el.rel = 'noopener';
