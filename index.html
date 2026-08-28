@@ -45,6 +45,7 @@
       --pos-dim: rgba(95,211,155,.10);
       --pos-line: rgba(95,211,155,.34);
       --neg: #ff9db0;             /* 미확인 배지·나쁨 — Lc 64 */
+      --rv-text: #ffeadd;         /* 리뷰 본문 — 웜 크림. --text와 밝기는 같고(Lc 95) 색조만 다르다 */
       --on-neg: #2a0a12;
 
       /* 기존 코드의 쓰임을 그대로 따른다 —
@@ -175,20 +176,14 @@
     /* 강조색 틴트 위라 --muted는 Lc 58로 모자란다 — 한 단계 밝은 색으로 */
     .rv-tile-sub { font-size: 12px; color: var(--muted2); margin-top: 7px; }
 
-    /* 고객 리뷰 카드 — 별점 색으로 왼쪽을 물들여 좋은/나쁜 평이 한눈에 갈리게 한다 */
-    /* .news-card의 border 단축 속성이 뒤에 오므로 특이도를 한 단계 올려야 이긴다 */
-    .news-card.rv-card { border-left-width: 3px; border-left-style: solid; }
-    .news-card.rv-good { border-left-color: var(--pos); }
-    .news-card.rv-mid  { border-left-color: var(--mark); }
-    .news-card.rv-bad  { border-left-color: var(--neg); }
-    .rv-stars { font-size: 15px; letter-spacing: 1.5px; }
-    .rv-good .rv-stars, .rv-good .rv-score { color: var(--pos); }
-    .rv-mid  .rv-stars, .rv-mid  .rv-score { color: var(--mark); }
-    .rv-bad  .rv-stars, .rv-bad  .rv-score { color: var(--neg); }
-    .rv-score { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
-    .rv-title { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.5; word-break: keep-all; }
-    /* 리뷰 본문은 기사 요약과 달리 그 자체가 읽을거리다 — 크게, 자르지 않고 */
-    .rv-text { font-size: 15px; color: var(--text); line-height: 1.75; word-break: keep-all; overflow-wrap: anywhere; }
+    /* 고객 리뷰 카드 — 별점은 점수와 무관하게 한 색으로 통일한다.
+       좋고 나쁨은 별 개수와 옆의 숫자가 이미 말해 준다. */
+    .rv-stars { font-size: 15px; letter-spacing: 1.5px; color: var(--mark); }
+    .rv-score { font-size: 13px; font-weight: 700; color: var(--mark); font-variant-numeric: tabular-nums; }
+    .rv-title { font-size: 16px; font-weight: 600; color: var(--rv-text); line-height: 1.5; word-break: keep-all; }
+    /* 리뷰 본문은 기사 요약과 달리 그 자체가 읽을거리다 — 크게, 자르지 않고,
+       주변 UI 글자(중성 회색)와 색조를 달리해 눈에 먼저 들어오게 한다 */
+    .rv-text { font-size: 15px; color: var(--rv-text); line-height: 1.75; word-break: keep-all; overflow-wrap: anywhere; }
     .rv-store { font-size: 12px; color: var(--muted2); font-weight: 600; }
     .rv-foot { font-size: 13px; color: var(--muted); margin-top: 8px; }
     .rv-reply { font-size: 13px; color: var(--muted2); line-height: 1.6; margin-top: 8px;
@@ -1419,7 +1414,7 @@
     const linkOf = k => { const s = stores.find(x => x.key === k) || {}; return s.reviewsLink || s.link || '#'; };
     reviews.forEach((r, i) => {
       const el = document.createElement('a');
-      el.className = 'news-card rv-card rv-' + (r.rating >= 4 ? 'good' : r.rating >= 3 ? 'mid' : 'bad');
+      el.className = 'news-card rv-card';
       el.href = linkOf(r.store); el.target = '_blank'; el.rel = 'noopener';
       el.style.animationDelay = `${Math.min(i*0.05,0.5)}s`;
       const stars = '★'.repeat(r.rating) + '☆'.repeat(Math.max(0, 5 - r.rating));
