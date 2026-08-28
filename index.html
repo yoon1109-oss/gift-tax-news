@@ -770,16 +770,21 @@
     grid.appendChild(p);
   }
 
-  // '한화생명 파이'는 네이버 블로그 검색이 '한화생명'과 '파이'를 따로 찾는다.
-  // 그래서 지역화폐 가맹점 목록·업체 리스트처럼 두 단어가 우연히 같이 든 긴 글이
-  // 대량으로 섞여 들어온다(실측: 상위 50건 중 관련 7건). 두 단계로 걸러낸다.
-  //   ① 검색어에 '증여'를 더해 모집단을 좁힌다 (7,332건 → 368건)
-  //   ② 받아온 뒤 '한화생명 파이' 인접 표기나 '파이(Pi)·파이 앱'이 있는 글만 남긴다
-  // ②가 없으면 '파이낸셜타임스'·'파이브 아이즈'·'ROAD FC 파이터' 같은 글이 통과한다.
+  // '한화생명 파이'는 네이버 블로그 검색이 '한화생명'과 '파이'를 따로 찾아
+  // 주식 시황·와이파이 글처럼 두 단어가 우연히 든 글이 대량으로 섞여 들어온다.
+  //   ① 정렬을 date로 바꾼다. sim은 7,358건이 잡히는데 상위 150건에 관련 글이 0건인
+  //      반면, date는 44건만 잡히고 그중 27건이 관련 글이다 (실측 2026-08-28).
+  //      ※ 다른 키워드는 sim이 더 낫다. 이 칩에만 date를 쓴다.
+  //   ② 받아온 뒤 아래 정규식으로 한 번 더 거른다.
+  //      '한화생명 … 파이'(사이에 쉼표 등 한글 아닌 문자 6자까지 허용),
+  //      '파이(Pi)', '파이 앱', 따옴표로 묶인 '파이' 를 통과시킨다.
+  //      한글이 끼면 막으므로 '한화생명볼파크'는 걸러진다.
+  //      ②가 없으면 '파이낸셜타임스'·'와이파이'·'스틱파이' 같은 글이 통과한다.
+  // 검색어에 '증여'를 더하지 말 것 — 모집단이 44건→22건으로 줄어 관련 글을 잃는다.
   const BLOG_PI_CHIP = '한화생명 파이';
-  const BLOG_PI_QUERY = '한화생명 파이 증여';
-  const BLOG_PI_RE = /한화생명\s*파이|파이\s*\(\s*[Pp]i\s*\)|파이\s*앱|파이앱/;
-  const blogQuery = () => (blogKeyword === BLOG_PI_CHIP ? BLOG_PI_QUERY : blogKeyword);
+  const BLOG_PI_RE = /한화생명[^가-힣]{0,6}파이|파이\s*\(\s*[Pp]i\s*\)|파이\s*앱|파이앱|['"“”‘’]파이['"“”‘’]/;
+  const blogQuery = () => blogKeyword;
+  const blogSort = () => (blogKeyword === BLOG_PI_CHIP ? 'date' : 'sim');
   function blogRelevant(b) {
     if (blogKeyword !== BLOG_PI_CHIP) return true;   // 다른 키워드는 결과가 깨끗해 거르지 않는다
     return BLOG_PI_RE.test(`${b.title} ${b.desc}`);
@@ -789,7 +794,7 @@
   // 다음 페이지를 미리 받아두는 버퍼 (스크롤 시 대기 없이 즉시 렌더)
   let blogPrefetch = null, blogPrefetchStart = 0;
   function blogUrl(start) {
-    return `/api/blog?keyword=${encodeURIComponent(blogQuery())}&display=${BLOG_PAGE}&start=${start}&sort=sim`;
+    return `/api/blog?keyword=${encodeURIComponent(blogQuery())}&display=${BLOG_PAGE}&start=${start}&sort=${blogSort()}`;
   }
   function prefetchBlogPage(start) {
     if (blogEnd || start > 1000) return;
