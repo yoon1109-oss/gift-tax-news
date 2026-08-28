@@ -10,49 +10,48 @@
        색은 두 갈래로만 쓴다 — accent = 누를 수 있는 것, mark = 중요 표시.
        회색은 muted(본문 보조) / muted2(메타)로 두 단계뿐이고 둘 다 AA 4.5:1을 넘는다.
        되돌리려면: git checkout ui-dark-v1 -- index.html */
-    /* 다크 테마 (N2 · 샌드 나이트)
-       Radix Colors 다크 sand 스케일 위에 세웠다. 단계 대응:
+    /* 다크 테마 (네이비)
+       Radix 다크 스케일과 같은 방식으로 단계를 잡았다:
          1단계 배경 / 2단계 카드 / 6단계 테두리 / 7단계 강한 테두리 / 12단계 제목
-       다크에서는 카드를 밝히지 않는다 — 면이 밝아진 만큼 글자 대비를 잃기 때문에,
-       카드는 배경 바로 윗단계에 두고 테두리로 정의한다 (그래서 그림자를 쓰지 않는다).
+       카드를 밝히지 않는다 — 면이 밝아진 만큼 글자 대비를 잃으므로, 배경 바로
+       윗단계에 두고 테두리로 정의한다(그래서 그림자를 쓰지 않는다).
 
-       채점은 WCAG2가 아니라 APCA로 했다. WCAG2는 어두운 배경 위 밝은 글자의 대비를
-       과대평가한다 — 배포 전 다크는 WCAG 5.25로 통과처럼 보였지만 APCA로는 Lc 42였다.
-       여기 값은 본문 Lc 75 / 메타 Lc 60 / 강조 Lc 60 이상이다.
+       채점은 WCAG2가 아니라 APCA다. WCAG2는 어두운 배경 위 밝은 글자의 대비를
+       과대평가한다. 여기 값은 본문 Lc 78 / 메타 Lc 63 / 강조 Lc 60 이상이다.
 
-       되돌리려면: git checkout ui-dark-v1 -- index.html (예전 다크)
-                   git checkout 8dcb5c2 -- index.html (라이트) */
+       되돌리기: git checkout <샌드 커밋> -- index.html
+                 ui-light-v1(라이트) / ui-dark-v1(배포 전 다크, 대비 문제 있음) */
     :root {
-      --bg: #111110;              /* sand 1 */
-      --surface: #191918;         /* sand 2 */
-      --card: #191918;
-      --card-hover: #222221;      /* sand 3 */
-      --border: #3b3a37;          /* sand 6 — 카드를 정의하는 선 */
-      --border-strong: #494844;   /* sand 7 */
+      --bg: #0d1220;              /* 네이비 잉크 */
+      --surface: #151d2e;
+      --card: #151d2e;
+      --card-hover: #1c2740;
+      --border: #2c3a55;          /* 카드를 정의하는 선 */
+      --border-strong: #3b4b6a;
       --shadow: none;
       --shadow-hover: none;
 
-      --accent: #0bd8b6;          /* 누를 수 있는 것에만 — Lc 68 */
+      --accent: #0bd8b6;          /* 누를 수 있는 것에만 — Lc 67 */
       --accent-dim: rgba(11,216,182,.12);
       --accent-line: rgba(11,216,182,.45);
-      --on-accent: #0a1c19;       /* 밝은 강조색 위에는 어두운 글자 */
+      --on-accent: #06201c;       /* 밝은 강조색 위에는 어두운 글자 */
 
-      --mark: #ffb088;            /* 중요 표시에만 — 연관도 높음. Lc 69 */
+      --mark: #ffb088;            /* 중요 표시에만 — Lc 68 */
       --mark-dim: rgba(255,176,136,.10);
       --mark-line: rgba(255,176,136,.34);
 
       --pos: #5fd39b;             /* 진행중·좋음 — Lc 66 */
       --pos-dim: rgba(95,211,155,.10);
       --pos-line: rgba(95,211,155,.34);
-      --neg: #ff9db0;             /* 미확인 배지·나쁨 — Lc 64 */
-      --rv-text: #ffc39a;         /* 리뷰 본문 — 주황. 본문 기준(Lc 75)을 넘는 선에서 가장 진한 값이 Lc 77이다 */
+      --neg: #ff9db0;             /* 미확인 배지·나쁨 — Lc 63 */
       --on-neg: #2a0a12;
+      --rv-text: #ffc39a;         /* 리뷰 본문 — 주황. 네이비 위에서 Lc 76 */
 
       /* 기존 코드의 쓰임을 그대로 따른다 —
          muted = 날짜·라벨 같은 메타(약함), muted2 = 본문 요약(강함) */
-      --text: #eeeeec;            /* sand 12 — Lc 95 */
-      --muted: #b4b4ab;           /* 메타 — Lc 60 */
-      --muted2: #cfcdc6;          /* 본문 — Lc 75 */
+      --text: #eceff5;            /* Lc 96 */
+      --muted: #afbacf;           /* 메타 — Lc 63 */
+      --muted2: #cbd4e4;          /* 본문 — Lc 78 */
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; }
@@ -61,7 +60,7 @@
       padding: 0 48px; height: 56px;
       display: flex; align-items: center; justify-content: space-between;
       border-bottom: 1px solid var(--border);
-      background: rgba(17,17,16,0.94); backdrop-filter: blur(12px);
+      background: rgba(13,18,32,0.94); backdrop-filter: blur(12px);
       position: sticky; top: 0; z-index: 100;
     }
     .logo { font-family: 'Noto Serif KR', serif; font-size: 19px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 9px; letter-spacing: -0.01em; }
@@ -1597,8 +1596,10 @@
       dv.className = 'divider-label'; dv.textContent = '연도별 추이';
       grid.appendChild(dv);
 
-      // 어두운 배경용 — 명도 낮은 색은 검은 면에서 선이 묻히므로 밝은 쪽으로 쓴다
-      const PAL = ['#ffb088', '#0bd8b6', '#8fa6ff', '#e0a3f0', '#ffd28a', '#b4b4ab'];
+      // 어두운 배경용 — 명도 낮은 색은 검은 면에서 선이 묻히므로 밝은 쪽으로 쓴다.
+      // 6색 모두 색상환에서 40° 이상 벌려 인접 계열끼리 안 헷갈리게 했다
+      // (마지막 회색은 채도 12%라 파랑 계열로 읽히지 않는다).
+      const PAL = ['#ffb088', '#0bd8b6', '#8fa6ff', '#ef9ed6', '#d7d972', '#b6bcc6'];
       const W = 640, H = 300, ML = 40, MR = 12, MT = 14, MB = 30;
       const xs = i => ML + (W - ML - MR) * (i / Math.max(1, t.years.length - 1));
       const all = t.series.flatMap(s => s.index);
