@@ -18,7 +18,11 @@ const BANDS = ['1천만 이하', '5천만 이하', '1억 이하', '3억 이하',
 const TOTAL = 180260;
 const ALL = [22168, 33884, 42894, 49700, 13073, 12697, 3873, 845, 508, 618];
 
-// 수증인 연령별 × 규모별 (단위: 명). 기타=연령 미상. 청년은 별도 재분류(합계에 중복).
+// 수증인 연령별 × 규모별 (단위: 명).
+// TASIS 6.3.3 주석 원문:
+//   [D] 기타 = 수증자가 비영리법인 등인 경우  ← '연령 미상'이 아니다
+//   [E] 청년 = 청년기본법 제3조의 19세 이상 34세 이하. 합계구간에 추가 합산되지 않음
+// (연령 8개 구간 합 = 180,260 총계와 일치. 청년은 여기에 더해지지 않는다)
 const AGES = [
   { name: '10세 미만', total: 8278,  band: [1087, 3803, 1400, 1419, 291, 192, 68, 9, 2, 7] },
   { name: '10세 이상', total: 9958,  band: [738, 3708, 2268, 2205, 507, 345, 111, 32, 24, 20] },
@@ -27,9 +31,9 @@ const AGES = [
   { name: '40세 이상', total: 35748, band: [3863, 5183, 8694, 10472, 3017, 2945, 1023, 229, 142, 180] },
   { name: '50세 이상', total: 35628, band: [4797, 6774, 9341, 9277, 2175, 2272, 635, 149, 82, 126] },
   { name: '60세 이상', total: 28130, band: [5628, 7460, 6533, 5027, 945, 1912, 489, 71, 30, 35] },
-  { name: '기타(연령 미상)', total: 2108, band: [1114, 341, 242, 231, 77, 52, 19, 15, 8, 9] },
+  { name: '기타(비영리법인 등)', total: 2108, band: [1114, 341, 242, 231, 77, 52, 19, 15, 8, 9] },
 ];
-const YOUTH = { name: '청년(재분류)', total: 43554, band: [3253, 4788, 11107, 15378, 4249, 3267, 979, 230, 151, 152] };
+const YOUTH = { name: '청년(19~34세)', total: 43554, band: [3253, 4788, 11107, 15378, 4249, 3267, 979, 230, 151, 152] };
 
 // 미성년(20세 미만) = 10세 미만 + 10세 이상 두 구간의 합
 const MINOR_BAND = AGES[0].band.map((v, i) => v + AGES[1].band[i]);
@@ -94,7 +98,7 @@ const NOTICE = [
   `다만 <b>소액 구간에서는 사실상 이번에 받은 금액</b>과 같습니다 — 가산액이 증여재산가액의 <b>1천만 이하 ${addRate(0)}, 5천만 이하 ${addRate(1)}, 1억 이하 ${addRate(2)}</b>에 그칩니다. 반대로 고액일수록 사전증여 합산이 커져 <b>50억 초과는 ${addRate(9)}</b>에 이릅니다.`,
   '각 구간은 "직전 구간 초과 ~ 표기 금액 이하"입니다. (예: <b>5천만 이하</b> = 1천만 초과 ~ 5천만 이하)',
   '단위는 <b>명(신고인원)</b>입니다. 같은 사람이 여러 번 증여받으면 각각 집계됩니다.',
-  '<b>청년</b>은 연령 구간과 별도로 재분류한 항목이라 연령별 합계에 중복 포함됩니다. <b>기타</b>는 연령 미상입니다.',
+  '<b>청년</b>(19~34세)은 연령 구간과 겹치는 별도 재분류 항목이라 <b>합계에는 더해지지 않습니다</b>. <b>기타</b>는 연령 미상이 아니라 <b>수증자가 비영리법인 등</b>인 경우입니다.',
 ];
 
 const PI_POINTS = {
@@ -134,6 +138,23 @@ const DIST = [
     rows: BANDS.map((b, i) => ({ label: b, value: nf(MINOR_BAND[i]), pct: (MINOR_BAND[i] / MINOR_TOTAL * 100).toFixed(1) })) },
 ];
 
+// ── 연령대별 신고인원 추이 (2021~2025 신고분) ──
+// 출처: 6.3.3 시계열 조회 (TASIS wqAction ATWEPEAA001R03, 발간연도 2022~2026 = 신고연도 2021~2025)
+// 각 연도 연령 합계가 총계와 일치하는 것을 확인함.
+const TREND_YEARS = [2021, 2022, 2023, 2024, 2025];
+const TREND = [
+  { name: '10세 미만', hl: true, v: [9990, 7528, 5415, 6231, 8278] },
+  { name: '10대',      hl: true, v: [14383, 11022, 8222, 7947, 9958] },
+  { name: '20대',      v: [46074, 31966, 21445, 19110, 21892] },
+  { name: '30대',      v: [55701, 41075, 31199, 32036, 38518] },
+];
+const TREND_ALL = [264274, 215640, 164230, 153557, 180260];   // 전체 연령 총계
+// 40세 미만 소계
+const TREND_U40 = TREND_YEARS.map((_, i) => TREND.reduce((a, s) => a + s.v[i], 0));
+
+const yoy = (arr, i) => i === 0 ? null : (arr[i] / arr[i - 1] - 1) * 100;
+const signed = n => (n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%');
+
 // 로우 데이터 표의 컬럼 이름을 그대로 풀어주는 용어 설명
 const TERMS = {
   title: '용어 풀이',
@@ -159,7 +180,7 @@ const METRICS = [
   ]},
   { group: '수증인 연령별 신고인원', items: [
     ...AGES.map(a => ({ label: a.name, value: `${nf(a.total)}명`, delta: `${pct(a.total, TOTAL)} · 1억 이하 ${pct(cum(a.band, 2), a.total)}` })),
-    { label: YOUTH.name, value: `${nf(YOUTH.total)}명`, delta: `${pct(YOUTH.total, TOTAL)} · 연령 구간과 중복` },
+    { label: YOUTH.name, value: `${nf(YOUTH.total)}명`, delta: `${pct(YOUTH.total, TOTAL)} · 합계에 미포함` },
   ]},
   { group: '증여 금액 지표 (보조 · 국세통계 6.3.1)', items: [
     { label: '증여재산가액', value: jo(Y.증여재산가액), delta: `건당 평균 ${perCase(Y.증여재산가액, Y.건수)}` },
@@ -171,7 +192,40 @@ const METRICS = [
   ]},
 ];
 
+// 증감 추이 차트 — 2021년을 100으로 둔 지수. 연령대별 규모 차이가 커서
+// 절대값을 그대로 겹치면 작은 계열이 눌린다.
+const TREND_CHART = {
+  title: '연령대별 증여세 신고인원 추이',
+  note: `2021년을 100으로 본 지수 · 신고분 기준 · 출처 국세통계 6.3.3`,
+  years: TREND_YEARS,
+  series: [
+    ...TREND.map(t => ({
+      name: t.name, hl: !!t.hl,
+      index: t.v.map(v => +(v / t.v[0] * 100).toFixed(1)),
+      values: t.v.map(nf),
+    })),
+    { name: '40세 미만 계', sub: true,
+      index: TREND_U40.map(v => +(v / TREND_U40[0] * 100).toFixed(1)), values: TREND_U40.map(nf) },
+    { name: '전체 연령', sub: true,
+      index: TREND_ALL.map(v => +(v / TREND_ALL[0] * 100).toFixed(1)), values: TREND_ALL.map(nf) },
+  ],
+};
+
 const RAW = [
+  { title: '2021~2025년 연령대별 증여세 신고인원과 증감율',
+    note: '단위: 명 · 괄호는 전년 대비 증감율 · 출처 국세통계 6.3.3',
+    columns: ['연령', ...TREND_YEARS.map(y => `${y}년`), '2021→2025'],
+    rows: [
+      ...TREND.map(t => [t.name,
+        ...t.v.map((v, i) => i === 0 ? nf(v) : `${nf(v)} (${signed(yoy(t.v, i))})`),
+        signed((t.v[4] / t.v[0] - 1) * 100)]),
+      ['40세 미만 계',
+        ...TREND_U40.map((v, i) => i === 0 ? nf(v) : `${nf(v)} (${signed(yoy(TREND_U40, i))})`),
+        signed((TREND_U40[4] / TREND_U40[0] - 1) * 100)],
+      ['전체 연령',
+        ...TREND_ALL.map((v, i) => i === 0 ? nf(v) : `${nf(v)} (${signed(yoy(TREND_ALL, i))})`),
+        signed((TREND_ALL[4] / TREND_ALL[0] - 1) * 100)],
+    ] },
   { title: '2025년 증여재산가액 등 규모별 신고인원 — 전국',
     note: '단위: 명 · 출처 국세통계 6.3.3',
     columns: ['구간', '인원', '비중', '이하 누계 비중'],
@@ -185,7 +239,7 @@ const RAW = [
       return [b, nf(cnt), nf(amt), perOne(amt, cnt), nf(add), addRate(i), perOne(ded, cnt), nf(tax), perOne(tax, cnt)];
     }) },
   { title: '2025년 수증인 연령별 × 규모별 신고인원',
-    note: '단위: 명 · 청년은 연령 구간과 중복되는 재분류 항목 · 출처 국세통계 6.3.3',
+    note: '단위: 명 · 청년(19~34세)은 연령 구간과 겹치는 재분류 항목으로 합계에 미포함 · 출처 국세통계 6.3.3',
     columns: ['연령', '합계', ...BANDS],
     rows: [
       ...AGES.map(a => [a.name, nf(a.total), ...a.band.map(nf)]),
@@ -210,6 +264,6 @@ export default function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   res.status(200).json({
     updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE, notice: NOTICE,
-    age: PI_POINTS, dist: DIST, metrics: METRICS, terms: TERMS, raw: RAW, sources: SOURCES,
+    age: PI_POINTS, dist: DIST, trend: TREND_CHART, metrics: METRICS, terms: TERMS, raw: RAW, sources: SOURCES,
   });
 }
