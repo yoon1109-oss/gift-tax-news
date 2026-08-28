@@ -746,10 +746,28 @@
     if (currentMode !== 'blog') return;            // 로딩 중 다른 탭으로 전환됨
     if (!ok) return;                               // 에러 메시지는 loadBlogPage가 표시
     document.getElementById('initLoader').style.display = 'none';
-    if (!blogItems.length) {
-      document.getElementById('newsGrid').innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">검색 결과가 없습니다.</p>';
-    }
+    setBlogPlaceholder();
     updateBlogStats();
+  }
+
+  // 결과가 0건일 때만 안내를 띄운다. 아직 더 받을 페이지가 남았으면
+  // '없음'이라고 단정하지 말 것 — 한화생명 파이처럼 걸러내는 키워드는
+  // 앞쪽 페이지가 통째로 걸러져 뒤늦게 첫 글이 나온다.
+  function setBlogPlaceholder() {
+    const loader = document.getElementById('initLoader');
+    if (loader && loader.style.display !== 'none') return;   // 첫 로딩 스피너와 겹치지 않게
+    const grid = document.getElementById('newsGrid');
+    const ph = grid.querySelector('.blog-placeholder');
+    if (blogItems.length) { if (ph) ph.remove(); return; }
+    const msg = blogEnd
+      ? '검색 결과가 없습니다.'
+      : '관련 글을 계속 찾는 중입니다…';
+    if (ph) { ph.textContent = msg; return; }
+    const p = document.createElement('p');
+    p.className = 'blog-placeholder';
+    p.style.cssText = 'color:var(--muted);text-align:center;padding:40px';
+    p.textContent = msg;
+    grid.appendChild(p);
   }
 
   // '한화생명 파이'는 네이버 블로그 검색이 '한화생명'과 '파이'를 따로 찾는다.
@@ -802,11 +820,13 @@
       if (currentMode === 'blog') { appendBlogItems(fresh); loadBlogLikes(fresh); }
       blogLoading = false;
       updateBlogStats();
+      if (currentMode === 'blog') setBlogPlaceholder();
       if (!blogEnd) prefetchBlogPage(blogStart); // 다음 페이지 미리 받아두기
       // 필터를 거치면 한 페이지에서 남는 글이 적어 화면이 스크롤되지 않을 수 있다.
       // 그러면 무한스크롤 관찰자가 다시 깨어나지 못해 목록이 거기서 멈춘다.
       // 스크롤이 생기거나 더 받을 게 없을 때까지 이어서 받는다 (한 호출에 최대 8페이지).
-      if (!blogEnd && currentMode === 'blog' && depth < 8) {
+      const maxDepth = (blogKeyword === BLOG_PI_CHIP) ? 14 : 8;   // 거르는 키워드는 더 깊이
+      if (!blogEnd && currentMode === 'blog' && depth < maxDepth) {
         const thin = blogItems.length < BLOG_PAGE;   // 한 페이지 분량도 못 채웠다
         const notScrollable = document.documentElement.scrollHeight <= window.innerHeight + 500;
         if (!fresh.length || thin || notScrollable) return loadBlogPage(depth + 1);
@@ -822,6 +842,10 @@
   function appendBlogItems(items) {
     if (!items.length) return;
     const grid = document.getElementById('newsGrid');
+    // 먼저 떠 있던 '검색 결과가 없습니다' 안내를 지운다.
+    // (이게 없으면 뒤늦게 도착한 글이 안내문 아래에 붙어 둘 다 보인다)
+    const ph = grid.querySelector('.blog-placeholder');
+    if (ph) ph.remove();
     items.forEach((item, i) => {
       const el = document.createElement('a');
       el.className = 'news-card'; el.href = item.link; el.target = '_blank'; el.rel = 'noopener';
@@ -1494,7 +1518,7 @@
 
   function renderSecondaryItems(items, type) {
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
-    if (!items.length) { grid.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">검색 결과가 없습니다.</p>'; return; }
+    if (!items.length) { grid.innerHTML = '<p class="blog-placeholder" style="color:var(--muted);text-align:center;padding:40px">검색 결과가 없습니다.</p>'; return; }
     const sourceClass = type === 'blog' ? 'card-source-blog' : 'card-source-cafe';
     items.forEach((item, i) => {
       const el = document.createElement('a');
