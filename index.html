@@ -170,8 +170,11 @@
 
     /* 고객 리뷰 카드 — 별점은 점수와 무관하게 한 색으로 통일한다.
        좋고 나쁨은 별 개수와 옆의 숫자가 이미 말해 준다. */
-    .rv-stars { font-size: 15px; letter-spacing: 1.5px; color: var(--pos); }
-    .rv-score { font-size: 13px; font-weight: 700; color: var(--pos); font-variant-numeric: tabular-nums; }
+    /* 별점은 흰색. 카드에서 가장 밝은 값(Lc 95)이라 색을 넣는 것보다 더 잘 보이고,
+       강조색을 리뷰 본문 주황 하나로 몰아줄 수 있다.
+       초록은 링크 색(--accent 틸)과 색상환에서 19°밖에 안 떨어져 누를 수 있는 것으로 읽혔다. */
+    .rv-stars { font-size: 15px; letter-spacing: 1.5px; color: var(--text); }
+    .rv-score { font-size: 13px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
     .rv-title { font-size: 16px; font-weight: 600; color: var(--rv-text); line-height: 1.5; word-break: keep-all; }
     /* 리뷰 본문은 기사 요약과 달리 그 자체가 읽을거리다 — 크게, 자르지 않고,
        주변 UI 글자(중성 회색)와 색조를 달리해 눈에 먼저 들어오게 한다 */
