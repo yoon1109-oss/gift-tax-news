@@ -5,7 +5,7 @@
 // 두 표 모두 2025년 신고분이며 총계(180,260)가 일치한다. 다른 연도 통계는 섞지 않는다.
 const UPDATED_AT = '2026-08-24';
 const BASIS = '2025년 신고분';
-const SOURCE = '국세통계 6.3.3 증여재산가액 등 규모별 신고인원 현황 · TASIS';
+const SOURCE = '국세청 국세통계';   // 상세 표 이름은 각 표 설명줄과 하단 바로가기에 남긴다
 
 // ── 6.3.3 규모 구간 ──
 // 공식 작성기준: "증여재산가액 등 규모"는 증여재산가액 + 증여재산가산액(10년 내 동일인 사전증여 합계,
@@ -94,11 +94,9 @@ const perOne = (mw, cnt) => {
 
 // 수치를 잘못 읽지 않도록 하는 해석 유의사항
 const NOTICE = [
-  `구간 기준은 <b>증여재산가액 + 증여재산가산액</b>이며, 둘 다 <b>공제를 빼기 전</b> 금액입니다 — 공제를 뺀 것은 과세표준입니다. (가산액 = 증여 전 10년 이내 동일인에게 받은 증여재산 합계가 1천만원 이상인 경우 그 금액)`,
-  `다만 <b>소액 구간에서는 사실상 이번에 받은 금액</b>과 같습니다 — 가산액이 증여재산가액의 <b>1천만 이하 ${addRate(0)}, 5천만 이하 ${addRate(1)}, 1억 이하 ${addRate(2)}</b>에 그칩니다. 반대로 고액일수록 사전증여 합산이 커져 <b>50억 초과는 ${addRate(9)}</b>에 이릅니다.`,
-  '각 구간은 "직전 구간 초과 ~ 표기 금액 이하"입니다. (예: <b>5천만 이하</b> = 1천만 초과 ~ 5천만 이하)',
-  '단위는 <b>명(신고인원)</b>입니다. 같은 사람이 여러 번 증여받으면 각각 집계됩니다.',
-  '<b>청년</b>(19~34세)은 연령 구간과 겹치는 별도 재분류 항목이라 <b>합계에는 더해지지 않습니다</b>. <b>기타</b>는 연령 미상이 아니라 <b>수증자가 비영리법인 등</b>인 경우입니다.',
+  `<b>금액은 '받은 돈' 기준입니다.</b> 세금에서 빼주는 공제를 적용하기 전, 받은 재산 그대로의 금액으로 줄을 세웠습니다. 10년 안에 같은 사람에게 이미 받은 게 있으면 합쳐서 봅니다 — 다만 소액일수록 합쳐지는 금액이 거의 없어(1천만 이하 ${addRate(0)}, 5천만 이하 ${addRate(1)}) 대체로 이번에 받은 금액으로 보시면 됩니다.`,
+  `<b>'5천만 이하'는 "1천만 초과 ~ 5천만 이하"라는 뜻입니다.</b> 앞 구간에 든 사람은 빠집니다.`,
+  `<b>단위는 '명'입니다.</b> 한 사람이 여러 번 받으면 각각 셉니다.`,
 ];
 
 const PI_POINTS = {
@@ -108,31 +106,34 @@ const PI_POINTS = {
       `${nf(MINOR_TOTAL)}명 — 전체 신고인원 ${nf(TOTAL)}명의 ${pct(MINOR_TOTAL, TOTAL)}`,
       `이 중 ${pct(cum(MINOR_BAND, 2), MINOR_TOTAL)}(${nf(cum(MINOR_BAND, 2))}명)가 <b>1억 이하</b> 소액 증여`,
       `가장 두꺼운 구간은 <b>5천만 이하</b> ${nf(MINOR_BAND[1])}명 (${pct(MINOR_BAND[1], MINOR_TOTAL)})`,
+      `<b>쉽게 말하면</b> — 미성년 증여 10명 중 7명은 1억원 이하입니다.`,
     ]},
     { group: '10세 미만 — 가장 이른 증여', tag: '', lines: [
       `${nf(AGES[0].total)}명 중 ${nf(AGES[0].band[1])}명(${pct(AGES[0].band[1], AGES[0].total)})이 <b>5천만 이하</b> 구간에 몰려 있음`,
       `전국 평균 ${pct(ALL[1], TOTAL)} 대비 약 ${((AGES[0].band[1] / AGES[0].total) / (ALL[1] / TOTAL)).toFixed(1)}배 — 어릴수록 소액·정기 증여 성향`,
-      `이 구간은 가산액이 증여재산가액의 ${addRate(1)}뿐이라 대부분 <b>이번에 받은 금액</b>입니다 — 미성년 공제한도(10년 2천만원)를 갓 넘긴 증여가 여기 모입니다`,
+      `<b>쉽게 말하면</b> — 어린 자녀일수록 조금씩 나눠 줍니다. 2천만원까지는 세금이 없어서, 그 선을 살짝 넘긴 금액이 이 구간에 모입니다.`,
     ]},
     { group: '증여의 절반 이상이 소액', tag: '', lines: [
       `<b>1억 이하</b> 누계 ${nf(cum(ALL, 2))}명 — 전체의 ${pct(cum(ALL, 2), TOTAL)}`,
       `<b>5천만 이하</b> 누계 ${nf(cum(ALL, 1))}명 (${pct(cum(ALL, 1), TOTAL)}), <b>3억 이하</b>까지 넓히면 ${pct(cum(ALL, 3), TOTAL)}`,
       '건수 기준으로는 대형 자산가가 아니라 생활형 증여가 다수',
+      '<b>쉽게 말하면</b> — 뉴스에 나오는 수십억 증여는 드물고, 실제로는 1억 안팎이 대부분입니다.',
     ]},
     { group: '고액 증여는 소수', tag: '', lines: [
       `<b>10억 초과</b> ${nf(TOTAL - cum(ALL, 5))}명 — 전체의 ${pct(TOTAL - cum(ALL, 5), TOTAL)}`,
       `<b>50억 초과</b>는 ${nf(ALL[9])}명 (${pct(ALL[9], TOTAL)})`,
-      `반면 금액 기준 증여재산가액은 ${jo(Y.증여재산가액)}, 건당 평균 ${perCase(Y.증여재산가액, Y.건수)} — 소수 고액 건이 금액을 끌어올림`,
+      `반면 금액 기준 증여재산가액은 ${jo(Y.증여재산가액)}, 건당 평균 ${perCase(Y.증여재산가액, Y.건수)}`,
+      '<b>쉽게 말하면</b> — 사람 수로는 3%지만, 전체 금액은 이들이 끌어올립니다.',
     ]},
   ],
 };
 
 // 분포 막대 — 전국 / 미성년 두 계열
 const DIST = [
-  { title: '증여재산가액 등 규모별 신고인원 — 전국',
-    note: `2025년 신고분 ${nf(TOTAL)}명 · 단위 명`,
+  { title: `얼마를 받았나 — 전국 ${nf(TOTAL)}명`,
+    note: `2025년 신고분 · 단위 명 · 국세통계 6.3.3 '증여재산가액 등 규모별 신고인원'`,
     rows: BANDS.map((b, i) => ({ label: b, value: nf(ALL[i]), pct: (ALL[i] / TOTAL * 100).toFixed(1) })) },
-  { title: '같은 분포 — 미성년(20세 미만) 수증인만',
+  { title: '같은 그림, 미성년(20세 미만)만 따로',
     note: `${nf(MINOR_TOTAL)}명 · 전체의 ${pct(MINOR_TOTAL, TOTAL)} · 단위 명`,
     hl: true,
     rows: BANDS.map((b, i) => ({ label: b, value: nf(MINOR_BAND[i]), pct: (MINOR_BAND[i] / MINOR_TOTAL * 100).toFixed(1) })) },
@@ -155,6 +156,18 @@ const TREND_U40 = TREND_YEARS.map((_, i) => TREND.reduce((a, s) => a + s.v[i], 0
 const yoy = (arr, i) => i === 0 ? null : (arr[i] / arr[i - 1] - 1) * 100;
 const signed = n => (n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%');
 
+// 통계를 처음 보는 사람이 맨 먼저 읽을 4줄. 전문용어를 쓰지 않는다.
+const SUMMARY = {
+  title: '한눈에 보기',
+  items: [
+    `2025년에 증여세를 신고한 사람은 <b>${nf(TOTAL)}명</b>입니다.`,
+    `이 중 <b>절반 이상(${pct(cum(ALL, 2), TOTAL)})이 1억원 이하</b>를 받았습니다. 증여가 자산가만의 일은 아니라는 뜻입니다.`,
+    `<b>20세 미만 미성년자가 ${nf(MINOR_TOTAL)}명</b>, 열 명 중 한 명꼴입니다. 그중 ${pct(cum(MINOR_BAND, 2), MINOR_TOTAL)}는 1억원 이하였습니다.`,
+    `신고 인원은 2021년이 가장 많았고 3년 연속 줄다가 <b>2025년에 다시 늘었습니다(${signed(yoy(TREND_ALL, 4))})</b>.`,
+  ],
+};
+
+
 // 로우 데이터 표의 컬럼 이름을 그대로 풀어주는 용어 설명
 const TERMS = {
   title: '용어 풀이',
@@ -170,7 +183,7 @@ const TERMS = {
 };
 
 const METRICS = [
-  { group: '누적 분포 (전국 · 이하 누계 비중)', items: [
+  { group: '얼마 이하가 몇 %인가 (전국)', items: [
     { label: '1천만 이하', value: pct(cum(ALL, 0), TOTAL), delta: `${nf(cum(ALL, 0))}명` },
     { label: '5천만 이하', value: pct(cum(ALL, 1), TOTAL), delta: `${nf(cum(ALL, 1))}명` },
     { label: '1억 이하', value: pct(cum(ALL, 2), TOTAL), delta: `${nf(cum(ALL, 2))}명` },
@@ -178,11 +191,11 @@ const METRICS = [
     { label: '10억 이하', value: pct(cum(ALL, 5), TOTAL), delta: `${nf(cum(ALL, 5))}명` },
     { label: '10억 초과', value: pct(TOTAL - cum(ALL, 5), TOTAL), delta: `${nf(TOTAL - cum(ALL, 5))}명` },
   ]},
-  { group: '수증인 연령별 신고인원', items: [
+  { group: '받은 사람 나이별', items: [
     ...AGES.map(a => ({ label: a.name, value: `${nf(a.total)}명`, delta: `${pct(a.total, TOTAL)} · 1억 이하 ${pct(cum(a.band, 2), a.total)}` })),
     { label: YOUTH.name, value: `${nf(YOUTH.total)}명`, delta: `${pct(YOUTH.total, TOTAL)} · 합계에 미포함` },
   ]},
-  { group: '증여 금액 지표 (보조 · 국세통계 6.3.1)', items: [
+  { group: '사람 수 말고 돈으로 보면 (국세통계 6.3.1)', items: [
     { label: '증여재산가액', value: jo(Y.증여재산가액), delta: `건당 평균 ${perCase(Y.증여재산가액, Y.건수)}` },
     { label: '증여재산공제 소계', value: jo(Y.공제_소계), delta: `직계존비속 ${pct(Y.공제_직계존비속, Y.공제_소계)}` },
     { label: '혼인·출산 공제', value: jo(Y.공제_혼인 + Y.공제_출산), delta: `공제의 ${pct(Y.공제_혼인 + Y.공제_출산, Y.공제_소계)}` },
@@ -196,7 +209,9 @@ const METRICS = [
 // 절대값을 그대로 겹치면 작은 계열이 눌린다.
 const TREND_CHART = {
   title: '연령대별 증여세 신고인원 추이',
-  note: `2021년을 100으로 본 지수 · 신고분 기준 · 출처 국세통계 6.3.3`,
+  note: `2021년을 100으로 놓고 이후 몇 %가 됐는지 그린 그래프입니다. 50이면 2021년의 절반이라는 뜻. `
+    + `연령대마다 인원 규모가 달라(30대 3.9만 명 vs 10세 미만 8천 명) 같은 눈금으로 비교하려고 지수로 그렸습니다. `
+    + `점에 마우스를 올리면 실제 인원이 나옵니다. · 출처 국세통계 6.3.3`,
   years: TREND_YEARS,
   series: [
     ...TREND.map(t => ({
@@ -226,19 +241,19 @@ const RAW = [
         ...TREND_ALL.map((v, i) => i === 0 ? nf(v) : `${nf(v)} (${signed(yoy(TREND_ALL, i))})`),
         signed((TREND_ALL[4] / TREND_ALL[0] - 1) * 100)],
     ] },
-  { title: '2025년 증여재산가액 등 규모별 신고인원 — 전국',
+  { title: '2025년 금액 구간별 신고인원 — 전국',
     note: '단위: 명 · 출처 국세통계 6.3.3',
     columns: ['구간', '인원', '비중', '이하 누계 비중'],
     rows: BANDS.map((b, i) => [b, nf(ALL[i]), pct(ALL[i], TOTAL), pct(cum(ALL, i), TOTAL)])
       .concat([['합계', nf(TOTAL), '100.0%', '100.0%']]) },
-  { title: '2025년 구간별 실제 증여액·가산액·세금',
+  { title: '2025년 구간별로 실제 얼마 받고 세금 얼마 냈나',
     note: '금액 단위: 백만원 · 출처 국세통계 6.3.2 증여세 신고 현황Ⅱ',
     columns: ['구간', '신고건수', '증여재산가액', '건당 증여액', '가산액', '가산액 비중', '건당 공제', '산출세액', '건당 세액'],
     rows: BANDS.map((b, i) => {
       const [cnt, amt, add, ded, , tax] = TAXB[i];
       return [b, nf(cnt), nf(amt), perOne(amt, cnt), nf(add), addRate(i), perOne(ded, cnt), nf(tax), perOne(tax, cnt)];
     }) },
-  { title: '2025년 수증인 연령별 × 규모별 신고인원',
+  { title: '2025년 나이 × 금액 구간 교차표',
     note: '단위: 명 · 청년(19~34세)은 연령 구간과 겹치는 재분류 항목으로 합계에 미포함 · 출처 국세통계 6.3.3',
     columns: ['연령', '합계', ...BANDS],
     rows: [
@@ -264,6 +279,6 @@ export default function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   res.status(200).json({
     updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE, notice: NOTICE,
-    age: PI_POINTS, dist: DIST, trend: TREND_CHART, metrics: METRICS, terms: TERMS, raw: RAW, sources: SOURCES,
+    summary: SUMMARY, age: PI_POINTS, dist: DIST, trend: TREND_CHART, metrics: METRICS, terms: TERMS, raw: RAW, sources: SOURCES,
   });
 }

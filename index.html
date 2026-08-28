@@ -153,6 +153,16 @@
     .st-value { font-size: 20px; font-weight: 700; color: var(--text); line-height: 1.15; }
     .st-delta { font-size: 11px; color: var(--muted2); margin-top: 4px; }
 
+    /* 통계 한눈에 보기 — 탭을 열면 맨 먼저 읽는 요약 */
+    .stat-summary { background: var(--card); border: 1px solid var(--border); border-left: 3px solid #f9a26c;
+      border-radius: 8px; padding: 14px 16px; margin-bottom: 12px; }
+    .ss-head { font-size: 12px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .ss-row { font-size: 13.5px; color: var(--muted2); line-height: 1.75; word-break: keep-all;
+      padding: 4px 0 4px 13px; position: relative; }
+    .ss-row::before { content: ''; position: absolute; left: 2px; top: 13px; width: 4px; height: 4px;
+      border-radius: 50%; background: #f9a26c; }
+    .ss-row b { color: var(--text); font-weight: 700; }
+
     /* 통계 유의사항 */
     .stat-notice { background: rgba(249,162,108,.06); border: 1px solid rgba(249,162,108,.25); border-radius: 8px; padding: 12px 15px; margin-bottom: 14px; }
     .sn-head { font-size: 11px; font-weight: 700; color: #f9a26c; letter-spacing: .3px; margin-bottom: 7px; }
@@ -1377,6 +1387,15 @@
     note.className = 'event-note';
     note.innerHTML = `<b>증여 통계</b> · ${esc(d.basis||'')} · 출처 ${esc(d.source||'')}`;
     grid.appendChild(note);
+
+    // 한눈에 보기 — 유의사항보다 먼저 보이게 한다
+    if (d.summary && (d.summary.items || []).length) {
+      const sb = document.createElement('div');
+      sb.className = 'stat-summary';
+      sb.innerHTML = `<div class="ss-head">${esc(d.summary.title || '한눈에 보기')}</div>` +
+        d.summary.items.map(t => `<div class="ss-row">${t}</div>`).join('');
+      grid.appendChild(sb);
+    }
 
     // 통계 해석 유의사항
     if ((d.notice || []).length) {
