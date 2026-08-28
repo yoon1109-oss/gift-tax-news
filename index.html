@@ -78,7 +78,7 @@
       display: flex; align-items: center; gap: 6px;
     }
     .refresh-btn:hover { background: #3ce6c8; border-color: #3ce6c8; }
-    .refresh-btn.loading svg { animation: spin 1s linear infinite; }
+    .refresh-btn.loading { opacity: .55; pointer-events: none; }
     @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
     /* 상위 탭 — 알약 대신 밑줄. 화면을 바꾸는 조작(탭)과 결과를 거르는 조작(칩)의
@@ -102,12 +102,12 @@
 
     /* 블로그 키워드 칩 (블로그 탭에서만 노출) */
     .blog-keywords {
-      padding: 10px 48px; display: none; align-items: center; gap: 7px;
+      padding: 7px 48px; display: none; align-items: center; gap: 6px;
       border-bottom: 1px solid var(--border); background: var(--surface); flex-wrap: wrap;
     }
     .kw-chip {
       font-size: 13px; font-weight: 500; color: var(--muted2); cursor: pointer;
-      border: 1px solid var(--border-strong); padding: 6px 14px; border-radius: 16px;
+      border: 1px solid var(--border-strong); padding: 4px 12px; border-radius: 14px;
       transition: all 0.15s; user-select: none;
     }
     .kw-chip:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
@@ -160,9 +160,35 @@
       font-size: 10px; font-weight: 700; line-height: 1;
       color: var(--on-neg); background: var(--neg); border-radius: 999px; vertical-align: middle;
     }
-    /* 앱스토어 리뷰 카드 */
-    .rv-stars { font-size: 13px; letter-spacing: 1px; }
-    .rv-good { color: var(--pos); } .rv-mid { color: var(--mark); } .rv-bad { color: var(--neg); }
+    /* 스토어 평점 타일 — 숫자를 화면에서 가장 먼저 읽히게 만든다 */
+    .rv-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 6px; }
+    .rv-tile {
+      background: var(--accent-dim); border: 1px solid var(--accent-line);
+      border-radius: 10px; padding: 16px 18px;
+    }
+    .rv-tile-store { font-size: 12px; font-weight: 600; color: var(--muted2); margin-bottom: 6px; }
+    .rv-tile-score {
+      font-size: 38px; font-weight: 700; line-height: 1.05; color: var(--accent);
+      font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 4px;
+    }
+    .rv-tile-score span { font-size: 20px; }
+    /* 강조색 틴트 위라 --muted는 Lc 58로 모자란다 — 한 단계 밝은 색으로 */
+    .rv-tile-sub { font-size: 12px; color: var(--muted2); margin-top: 7px; }
+
+    /* 고객 리뷰 카드 — 별점 색으로 왼쪽을 물들여 좋은/나쁜 평이 한눈에 갈리게 한다 */
+    /* .news-card의 border 단축 속성이 뒤에 오므로 특이도를 한 단계 올려야 이긴다 */
+    .news-card.rv-card { border-left-width: 3px; border-left-style: solid; }
+    .news-card.rv-good { border-left-color: var(--pos); }
+    .news-card.rv-mid  { border-left-color: var(--mark); }
+    .news-card.rv-bad  { border-left-color: var(--neg); }
+    .rv-stars { font-size: 15px; letter-spacing: 1.5px; }
+    .rv-good .rv-stars, .rv-good .rv-score { color: var(--pos); }
+    .rv-mid  .rv-stars, .rv-mid  .rv-score { color: var(--mark); }
+    .rv-bad  .rv-stars, .rv-bad  .rv-score { color: var(--neg); }
+    .rv-score { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .rv-title { font-size: 16px; font-weight: 600; color: var(--text); line-height: 1.5; word-break: keep-all; }
+    /* 리뷰 본문은 기사 요약과 달리 그 자체가 읽을거리다 — 크게, 자르지 않고 */
+    .rv-text { font-size: 15px; color: var(--text); line-height: 1.75; word-break: keep-all; overflow-wrap: anywhere; }
     .rv-store { font-size: 12px; color: var(--muted2); font-weight: 600; }
     .rv-foot { font-size: 13px; color: var(--muted); margin-top: 8px; }
     .rv-reply { font-size: 13px; color: var(--muted2); line-height: 1.6; margin-top: 8px;
@@ -273,8 +299,24 @@
     .eu-date { color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
     .eu-text { word-break: keep-all; }
     .event-title { font-size: 15px; font-weight: 600; color: var(--text); margin: 3px 0 3px; word-break: keep-all; }
-    .event-note-brokers { display: block; margin-top: 9px; font-size: 11px; color: var(--muted2); line-height: 1.9; }
-    .event-note-brokers b { color: var(--muted); font-weight: 600; }
+    /* 조사 대상 — 기본은 닫아두고 필요할 때만 편다 */
+    .surveyed { margin-top: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); }
+    .surveyed > summary {
+      list-style: none; cursor: pointer; user-select: none;
+      padding: 8px 12px; font-size: 12px; color: var(--muted2);
+      display: flex; align-items: center; gap: 7px;
+    }
+    .surveyed > summary::-webkit-details-marker { display: none; }
+    .surveyed > summary:hover { color: var(--text); }
+    .surveyed > summary b { color: var(--text); font-weight: 600; }
+    .sv-caret { flex: none; transition: transform .15s; }
+    .surveyed[open] .sv-caret { transform: rotate(90deg); }
+    .sv-body { padding: 2px 12px 10px; }
+    .sv-row { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
+    .sv-name { font-size: 12.5px; font-weight: 600; color: var(--text); }
+    .sv-note { flex: 1 1 100%; font-size: 12px; color: var(--muted); line-height: 1.65; word-break: keep-all; }
+    .sv-note a { color: var(--accent); }
+    .sv-plain { font-size: 12px; color: var(--muted); line-height: 1.9; word-break: keep-all; }
     .event-pending { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; margin-bottom: 8px; transition: all .15s; }
     a.event-pending:hover { border-color: var(--accent); box-shadow: var(--shadow); }
     .event-broker-sm { font-size: 13px; font-weight: 600; color: var(--muted2); }
@@ -319,13 +361,22 @@
          가로 스크롤로 두고, 손가락 목표 크기(44px)를 맞춘다. */
       .filters, .blog-keywords {
         flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+        /* overflow-x를 주면 overflow-y가 visible에서 auto로 승격된다. 탭의 margin-bottom:-1px가
+           세로로 1px 넘침을 만들어, 가로로 쓸어넘길 때 위아래로 1px 흔들렸다.
+           padding-bottom으로 그 1px을 흡수하고(밑줄은 안 잘린다) 세로 스크롤은 막는다. */
+        overflow-y: hidden;
+        /* 스트립 끝에서 더 밀 때 페이지 전체나 브라우저 뒤로가기로 넘어가지 않게 */
+        overscroll-behavior-x: contain;
       }
+      .filters { padding-bottom: 1px; }
       .filters::-webkit-scrollbar, .blog-keywords::-webkit-scrollbar { display: none; }
       /* flex 항목은 기본으로 줄어들어, 폭이 모자라면 스크롤 대신 칩 안에서 글자가
          줄바꿈된다. flex:none으로 제 너비를 지켜야 가로 스크롤이 걸린다. */
       .radio-wrap, .kw-chip, .filter-label { flex: none; white-space: nowrap; }
       .radio-wrap { font-size: 15px; padding: 14px 12px 12px; }
-      .kw-chip { font-size: 14px; padding: 11px 16px; }
+      /* 손가락 목표 44px보다 작지만, 영역을 너무 먹는다는 판단에 따라 낮춘 값 */
+      .kw-chip { font-size: 13.5px; padding: 7px 13px; }
+      .blog-keywords { padding-top: 6px; padding-bottom: 6px; }
 
       .card-title { font-size: 17px; }
       .news-card, .related-card { padding: 16px 18px; }
@@ -338,13 +389,7 @@
   <div class="logo"><div class="logo-dot"></div>모니터링<a class="help-link" href="/guide.html" target="_blank" rel="noopener" title="기능 정의서 보기" aria-label="기능 정의서 보기">?</a></div>
   <div class="header-right">
     <span class="last-updated" id="lastUpdated">—</span>
-    <button class="refresh-btn" id="refreshBtn" onclick="resetAndFetch()">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline>
-        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
-      </svg>
-      새로고침
-    </button>
+    <button class="refresh-btn" id="refreshBtn" onclick="resetAndFetch()">새로고침</button>
   </div>
 </header>
 
@@ -1065,9 +1110,10 @@
 
     const note = document.createElement('div');
     note.className = 'event-note';
-    note.innerHTML = `<b>자녀계좌 개설 이벤트</b>${updatedAt ? ` · 정리 기준 ${esc(updatedAt)}` : ''}${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`
-      + (allBrokers.length ? `<span class="event-note-brokers"><b>조사 대상 ${allBrokers.length}개사</b> · ${allBrokers.map(esc).join(' · ')}</span>` : '');
+    note.innerHTML = `<b>자녀계좌 개설 이벤트</b>${updatedAt ? ` · 정리 기준 ${esc(updatedAt)}` : ''}${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`;
     grid.appendChild(note);
+    const sv = surveyedBlock([...new Set(events.map(e => e.broker))], pending);
+    if (sv) grid.appendChild(sv);
 
     if (!events.length && !pending.length) {
       grid.insertAdjacentHTML('beforeend', '<p style="color:var(--muted);text-align:center;padding:40px">등록된 이벤트가 없습니다.</p>');
@@ -1127,6 +1173,28 @@
     renderReferral(eventsData || {});
   }
 
+  // 조사 대상 접이식 블록 — 계좌 이벤트·친구 초대 두 탭이 같이 쓴다.
+  // 이벤트가 확인된 증권사는 이름만, 확인 안 된 곳은 상태와 사유까지 보여준다.
+  function surveyedBlock(confirmedBrokers, pendingList) {
+    const total = new Set([...confirmedBrokers, ...pendingList.map(p => p.broker)]).size;
+    if (!total) return null;
+    const el = document.createElement('details');
+    el.className = 'surveyed';
+    const caret = '<svg class="sv-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>';
+    const rows = pendingList.map(p => `<div class="sv-row">` +
+        `<span class="sv-name">${esc(p.broker)}</span>` +
+        `<span class="event-badge-s ${p.status === '확인필요' ? 'badge-check' : 'badge-none'}">${esc(p.status || '미발견')}</span>` +
+        (p.note ? `<span class="sv-note">${esc(p.note)}${p.link ? ` <a href="${esc(p.link)}" target="_blank" rel="noopener">공식 페이지 →</a>` : ''}</span>` : '') +
+      `</div>`).join('');
+    el.innerHTML = `<summary>${caret}<b>조사 대상 ${total}개사</b>` +
+        `<span>이벤트 확인 ${confirmedBrokers.length}곳 · 미확인 ${pendingList.length}곳</span></summary>` +
+      `<div class="sv-body">` +
+        (confirmedBrokers.length ? `<div class="sv-row"><span class="sv-plain"><b style="color:var(--muted2)">이벤트 확인</b> — ${confirmedBrokers.map(esc).join(' · ')}</span></div>` : '') +
+        rows +
+      `</div>`;
+    return el;
+  }
+
   function renderReferral(data) {
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
     const referral = data.referral || [], refPending = data.referralPending || [];
@@ -1136,6 +1204,9 @@
     note.className = 'event-note';
     note.innerHTML = `<b>친구 초대·추천 이벤트</b>${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`;
     grid.appendChild(note);
+    // refPending은 그동안 빈 목록 판정에만 쓰이고 화면에 그려지지 않았다 (탭 분리 때 누락)
+    const svr = surveyedBlock([...new Set(referral.map(e => e.broker))], refPending);
+    if (svr) grid.appendChild(svr);
 
     if (!referral.length && !refPending.length) {
       grid.insertAdjacentHTML('beforeend', '<p style="color:var(--muted);text-align:center;padding:40px">확인된 이벤트가 없습니다.</p>');
@@ -1324,20 +1395,14 @@
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
     const stores = d.stores || [], reviews = d.reviews || [];
 
-    const note = document.createElement('div');
-    note.className = 'event-note';
-    note.innerHTML = `<b>${esc(d.app || '파이')} 앱 리뷰</b> · 구글 플레이 · 애플 앱스토어 · 최대 30분마다 갱신`
-      + (d.note ? `<span class="event-note-brokers">${esc(d.note)}</span>` : '');
-    grid.appendChild(note);
-
     if (stores.length) {
       const box = document.createElement('div');
-      box.className = 'stat-group';
-      box.innerHTML = `<div class="sg-title">스토어 평점</div><div class="sg-tiles">` +
-        stores.map(s => `<div class="s-tile"><div class="st-label">${esc(s.name)}</div>` +
-          `<div class="st-value">${s.rating != null ? esc(s.rating) + '★' : '—'}</div>` +
-          `<div class="st-delta">${s.ok ? `별점 ${s.count != null ? esc(s.count) : '?'}개 · 글 리뷰 ${esc(s.written)}건` : '수집 실패'}</div></div>`).join('') +
-        `</div>`;
+      box.className = 'rv-tiles';
+      box.innerHTML = stores.map(s => `<div class="rv-tile">` +
+          `<div class="rv-tile-store">${esc(s.name)}</div>` +
+          `<div class="rv-tile-score">${s.rating != null ? esc(s.rating) : '—'}<span>★</span></div>` +
+          `<div class="rv-tile-sub">${s.ok ? `별점 ${s.count != null ? esc(s.count) : '?'}개 · 글 리뷰 ${esc(s.written)}건` : '수집 실패'}</div>` +
+        `</div>`).join('');
       grid.appendChild(box);
     }
 
@@ -1347,24 +1412,26 @@
     }
 
     const dv = document.createElement('div');
-    dv.className = 'divider-label'; dv.textContent = `리뷰 ${reviews.length}건 · 최신순`;
+    dv.className = 'divider-label'; dv.textContent = `고객 리뷰 ${reviews.length}건 · 최신순`;
     grid.appendChild(dv);
 
     // 리뷰 카드는 앱 소개가 아니라 스토어의 '평가 및 리뷰' 화면으로 보낸다
     const linkOf = k => { const s = stores.find(x => x.key === k) || {}; return s.reviewsLink || s.link || '#'; };
     reviews.forEach((r, i) => {
       const el = document.createElement('a');
-      el.className = 'news-card'; el.href = linkOf(r.store); el.target = '_blank'; el.rel = 'noopener';
+      el.className = 'news-card rv-card rv-' + (r.rating >= 4 ? 'good' : r.rating >= 3 ? 'mid' : 'bad');
+      el.href = linkOf(r.store); el.target = '_blank'; el.rel = 'noopener';
       el.style.animationDelay = `${Math.min(i*0.05,0.5)}s`;
       const stars = '★'.repeat(r.rating) + '☆'.repeat(Math.max(0, 5 - r.rating));
       el.innerHTML = `
         <div class="card-meta">
-          <span class="rv-stars rv-${r.rating >= 4 ? 'good' : r.rating >= 3 ? 'mid' : 'bad'}">${stars}</span>
+          <span class="rv-stars">${stars}</span>
+          <span class="rv-score">${r.rating}.0</span>
           <span class="rv-store">${r.store === 'play' ? 'Google Play' : 'App Store'}</span>
           <span class="card-date">${esc(r.date)}</span>
         </div>
-        ${r.title ? `<div class="event-title">${esc(r.title)}</div>` : ''}
-        <div class="card-desc" style="-webkit-line-clamp:unset">${esc(r.text)}</div>
+        ${r.title ? `<div class="rv-title">${esc(r.title)}</div>` : ''}
+        <div class="rv-text">${esc(r.text)}</div>
         <div class="rv-foot">${esc(r.author)}${r.version ? ` · v${esc(r.version)}` : ''}${r.thumbsUp ? ` · 도움됨 ${esc(r.thumbsUp)}` : ''}</div>
         ${r.reply ? `<div class="rv-reply"><b>개발사 답변</b> ${esc(r.reply)}</div>` : ''}`;
       grid.appendChild(el);

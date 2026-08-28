@@ -129,6 +129,13 @@ const REFERRAL_PENDING = [
   { broker: '한국투자증권', status: '확인필요', note: '공식 이벤트 게시판 전체검색에서 ‘친구’·‘추천’ 모두 0건. 다만 비대면 계좌개설(뱅키스) 절차에 추천인 코드 입력란이 있어 앱 내 별도 운영 가능성 — 앱에서 재확인 필요', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
   { broker: '키움증권', status: '확인필요', note: '신규고객 이벤트(~2026.08.27)에 ‘친구에게 공유 시 혜택 상향’ 언급이 블로그에 있으나 공식 페이지에서 확인되지 않음', link: 'https://www.kiwoom.com/e/m/common/event/VIngEventView' },
   { broker: '삼성증권', status: '확인필요', note: '이벤트 목록이 비로그인 상태에서 조회되지 않아 판독 불가', link: 'https://www.samsungpop.com/customer/event.do' },
+  // 아래 4건은 0be8aa2(친구 초대 이벤트를 별도 탭으로 분리)에서 '미발견'이라는 이유로 빠졌다가
+  // 복원한 것이다. 조사했는데 없더라는 사실도 결과이므로 목록에 남긴다.
+  // 확인 시점(2026-08-10)이 그대로이니 재조사 때 갱신할 것.
+  { broker: '미래에셋증권', status: '미발견', note: '진행중 이벤트 목록에 친구 초대·추천 항목 없음 (2026-08-10 확인)', link: 'https://securities.miraeasset.com/mw/mki/mki7000/r01.do' },
+  { broker: 'KB증권', status: '미발견', note: '진행중 이벤트 목록에 친구 초대·추천 항목 없음 (2026-08-10 확인)', link: 'https://www.kbsec.com/cs/notice/jsp/CUST_09_0003.jsp' },
+  { broker: '토스증권', status: '미발견', note: '신규 고객 대상 별도 친구 초대 이벤트 없음 (2026-08-10 확인)', link: 'https://tossinvest.com' },
+  { broker: '카카오페이증권', status: '미발견', note: '신규 고객 대상 별도 친구 초대 이벤트 없음 (2026-08-10 확인)', link: 'https://www.kakaopaysec.com' },
 ];
 
 // 추가 조사 대상 — 현재 진행 여부 미확정 (status: 확인필요 | 미발견 | 해당없음)
