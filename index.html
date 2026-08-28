@@ -72,14 +72,6 @@
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
     .header-right { display: flex; align-items: center; gap: 14px; }
     .last-updated { font-size: 12px; color: var(--muted); }
-    .refresh-btn {
-      background: var(--accent); border: 1px solid var(--accent); color: var(--on-accent);
-      padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer;
-      font-family: 'Noto Sans KR', sans-serif; transition: all 0.2s;
-      display: flex; align-items: center; gap: 6px;
-    }
-    .refresh-btn:hover { background: #3ce6c8; border-color: #3ce6c8; }
-    .refresh-btn.loading { opacity: .55; pointer-events: none; }
     @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
     /* 상위 탭 — 알약 대신 밑줄. 화면을 바꾸는 조작(탭)과 결과를 거르는 조작(칩)의
@@ -384,7 +376,7 @@
   <div class="logo"><div class="logo-dot"></div>모니터링<a class="help-link" href="/guide.html" target="_blank" rel="noopener" title="기능 정의서 보기" aria-label="기능 정의서 보기">?</a></div>
   <div class="header-right">
     <span class="last-updated" id="lastUpdated">—</span>
-    <button class="refresh-btn" id="refreshBtn" onclick="resetAndFetch()">새로고침</button>
+
   </div>
 </header>
 
@@ -1691,8 +1683,8 @@
     document.getElementById('initLoader').innerHTML = `<div class="loading-spinner"></div><p class="loading-text">${msg}</p>`;
   }
 
+  // 헤더의 새로고침 버튼은 없앴다. 10분마다 도는 자동 갱신이 이 함수를 계속 쓴다.
   function resetAndFetch() {
-    document.getElementById('refreshBtn').classList.add('loading');
     blogLoaded = false; cafeLoaded = false; blogItems = []; cafeItems = []; eventsLoaded = false; blogStart = 1; blogEnd = false; blogPrefetch = null;
     if (currentMode !== 'event') initEventBadge();       // 다른 탭에 있어도 배지는 최신으로
     if (currentMode !== 'reviews') initReviewBadge();
@@ -1705,7 +1697,6 @@
     else if (currentMode === 'press') { pressLoaded = false; showPress().catch(()=>{}); }
     else if (currentMode === 'stats') { statsLoaded = false; showStats().catch(()=>{}); }
     else { resetNews(); startLoad().catch(()=>{}); }
-    setTimeout(() => document.getElementById('refreshBtn').classList.remove('loading'), 1500);
   }
 
   function resetNews() {
