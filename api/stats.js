@@ -180,13 +180,20 @@ const distRows = (band, total) =>
   BANDS.map((b, i) => ({ label: b, value: nf(band[i]), pct: (band[i] / total * 100).toFixed(1) }));
 
 const DIST = [
-  { title: '미성년(20세 미만) — 얼마를 받았나',
+  { title: '10세 미만 — 얼마를 받았나',
+    note: `${nf(AGES[0].total)}명 · 전체의 ${pct(AGES[0].total, TOTAL)} · 단위 명`,
+    hl: true,
+    rows: distRows(AGES[0].band, AGES[0].total) },
+  { title: '10대(10세 이상 20세 미만) — 얼마를 받았나',
+    note: `${nf(AGES[1].total)}명 · 전체의 ${pct(AGES[1].total, TOTAL)} · 단위 명`,
+    hl: true,
+    rows: distRows(AGES[1].band, AGES[1].total) },
+  { title: '미성년 계(20세 미만) — 위 두 구간의 합',
     note: `${nf(MINOR_TOTAL)}명 · 전체의 ${pct(MINOR_TOTAL, TOTAL)} · 단위 명`,
     hl: true,
     rows: distRows(MINOR_BAND, MINOR_TOTAL) },
   { title: '20~40세 — 얼마를 받았나',
     note: `${nf(A2040_TOTAL)}명 · 전체의 ${pct(A2040_TOTAL, TOTAL)} · 단위 명`,
-    hl: true,
     rows: distRows(A2040_BAND, A2040_TOTAL) },
   { title: `전국 ${nf(TOTAL)}명 — 비교 기준`,
     note: `2025년 신고분 · 단위 명 · 국세통계 6.3.3 '증여재산가액 등 규모별 신고인원'`,
@@ -220,24 +227,7 @@ const TERMS = {
   ],
 };
 
-// '얼마 이하가 몇 %' — 전국이 아니라 연령 구간 기준으로 낸다.
-// 전국 값은 비교용으로 각 타일 밑줄(delta)에 같이 적는다.
-const CUM_STEPS = [0, 1, 2, 3, 5];
-const cumGroup = (name, band, total) => [{
-  group: `얼마 이하가 몇 % — ${name}`,
-  items: [
-    ...CUM_STEPS.map(i => ({
-      label: BANDS[i], value: pct(cum(band, i), total),
-      delta: `${nf(cum(band, i))}명 · 전국 ${pct(cum(ALL, i), TOTAL)}`,
-    })),
-    { label: '10억 초과', value: pct(total - cum(band, 5), total),
-      delta: `${nf(total - cum(band, 5))}명 · 전국 ${pct(TOTAL - cum(ALL, 5), TOTAL)}` },
-  ],
-}];
-
 const METRICS = [
-  ...cumGroup('미성년(20세 미만)', MINOR_BAND, MINOR_TOTAL),
-  ...cumGroup('20~40세', A2040_BAND, A2040_TOTAL),
   { group: '받은 사람 나이별', items: [
     ...AGES.map(a => ({ label: a.name, value: `${nf(a.total)}명`, delta: `${pct(a.total, TOTAL)} · 1억 이하 ${pct(cum(a.band, 2), a.total)}` })),
     { label: YOUTH.name, value: `${nf(YOUTH.total)}명`, delta: `${pct(YOUTH.total, TOTAL)} · 합계에 미포함` },

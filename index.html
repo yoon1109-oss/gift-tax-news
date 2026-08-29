@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>모니터링</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css"/>
   <style>
     /* 라이트 테마 (B안 · 주간 리딩)
        색은 두 갈래로만 쓴다 — accent = 누를 수 있는 것, mark = 중요 표시.
@@ -54,7 +54,8 @@
       --muted2: #cbd4e4;          /* 본문 — Lc 78 */
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: var(--bg); color: var(--text); font-family: 'Noto Sans KR', sans-serif; min-height: 100vh; }
+    body { background: var(--bg); color: var(--text); font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; min-height: 100vh; }
+    button, input, select, textarea { font-family: inherit; }
 
     header {
       padding: 0 48px; height: 56px;
@@ -63,10 +64,10 @@
       background: rgba(13,18,32,0.94); backdrop-filter: blur(12px);
       position: sticky; top: 0; z-index: 100;
     }
-    .logo { font-family: 'Noto Serif KR', serif; font-size: 19px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 9px; letter-spacing: -0.01em; }
+    .logo { font-family: inherit; font-size: 19px; font-weight: 700; color: var(--text); display: flex; align-items: center; gap: 9px; letter-spacing: -0.01em; }
     /* 밝은 배경에서는 발광이 먼지처럼 보여 빼고, 맥박은 투명도로만 남긴다 */
     .logo-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--mark); animation: pulse 2.5s infinite; }
-    .help-link { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--muted); color: var(--muted); font-family: 'Noto Sans KR', sans-serif; font-size: 12px; font-weight: 600; line-height: 1; text-decoration: none; cursor: pointer; transition: all 0.15s; }
+    .help-link { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--muted); color: var(--muted); font-family: inherit; font-size: 12px; font-weight: 600; line-height: 1; text-decoration: none; cursor: pointer; transition: all 0.15s; }
     .help-link:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
     .header-right { display: flex; align-items: center; gap: 14px; }
@@ -129,7 +130,7 @@
       padding: 0 0 10px 0; border-bottom: 2px solid var(--mark); margin-bottom: 14px;
     }
     .related-badge {
-      font-family: 'Noto Serif KR', serif;
+      font-family: inherit;
       font-size: 15px; font-weight: 700; letter-spacing: 0;
       color: var(--mark); border: none; padding: 0; border-radius: 0;
     }
@@ -142,7 +143,7 @@
     }
     .related-card:hover { background: var(--card-hover); border-color: var(--border-strong); transform: translateY(-1px); }
     .divider-label {
-      font-family: 'Noto Serif KR', serif;
+      font-family: inherit;
       font-size: 15px; font-weight: 700; color: var(--text); padding: 4px 0 10px;
       display: flex; align-items: center; gap: 10px;
       border-bottom: 1px solid var(--border-strong); margin-bottom: 14px;
@@ -214,7 +215,7 @@
     /* 연령 구간 상세 — 문장 나열 대신 숫자를 세로로 줄 맞춰 읽게 한다 */
     .ab-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; margin-bottom: 10px; }
     .ab-head { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; margin-bottom: 4px; }
-    .ab-name { font-family: 'Noto Serif KR', serif; font-size: 16px; font-weight: 700; color: var(--text); }
+    .ab-name { font-family: inherit; font-size: 16px; font-weight: 700; color: var(--text); }
     .ab-tag { font-size: 12px; color: var(--muted); }
     .ab-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 12px 0 4px; }
     .ab-fact { background: var(--bg); border-radius: 6px; padding: 10px 12px; }
@@ -301,7 +302,7 @@
     /* 계좌 이벤트 카드 */
     .event-note { font-size: 11px; color: var(--muted); line-height: 1.7; padding: 0 0 12px; border-bottom: 1px solid var(--border); margin-bottom: 14px; }
     .event-note b { color: var(--muted2); font-weight: 600; }
-    .event-broker { font-family: 'Noto Serif KR', serif; font-size: 15px; font-weight: 700; color: var(--text); }
+    .event-broker { font-family: inherit; font-size: 15px; font-weight: 700; color: var(--text); }
     .event-badge { font-size: 10px; font-weight: 700; letter-spacing: .3px; color: var(--pos); border: 1px solid var(--pos-line); background: var(--pos-dim); padding: 2px 7px; border-radius: 3px; }
     .event-period { font-size: 13px; color: var(--muted2); font-weight: 600; margin-left: auto; }
     .event-benefits { list-style: none; display: flex; flex-direction: column; gap: 5px; margin-top: 2px; }
@@ -342,7 +343,7 @@
     .badge-check { color: var(--mark); border: 1px solid var(--mark-line); background: var(--mark-dim); }
     .badge-none, .badge-na { color: var(--muted); border: 1px solid var(--border); }
     .card-title {
-      font-family: 'Noto Serif KR', serif; font-size: 17px; font-weight: 600;
+      font-family: inherit; font-size: 17px; font-weight: 600;
       line-height: 1.5; letter-spacing: -0.01em;
       word-break: keep-all; overflow-wrap: anywhere; transition: color 0.15s;
     }
@@ -1224,7 +1225,8 @@
   function renderReferral(data) {
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
     const referral = data.referral || [], refPending = data.referralPending || [];
-    const checkedAt = data.checkedAt || '';
+    // 친구 초대는 계좌 이벤트와 점검 시점이 달라 전용 날짜를 쓴다
+    const checkedAt = data.referralCheckedAt || data.checkedAt || '';
 
     const note = document.createElement('div');
     note.className = 'event-note';

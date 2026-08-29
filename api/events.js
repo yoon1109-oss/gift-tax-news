@@ -2,7 +2,10 @@
 // 대부분 증권사 이벤트 페이지가 봇 차단/동적렌더/EUC-KR/앱전용이라 자동 수집이 불가하여
 // 여기 배열을 직접 갱신한다. (매주 월요일 10시 스케줄 갱신 대상)
 const UPDATED_AT = '2026-08-24'; // 데이터가 실제 바뀐 날 (정리 기준)
-const CHECKED_AT = '2026-08-24'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
+const CHECKED_AT = '2026-08-24';
+// 친구 초대는 계좌 이벤트와 점검 시점이 다르다. 한 값으로 묶으면 한쪽이 실제보다
+// 최신인 것처럼 보이므로 따로 둔다.
+const REFERRAL_CHECKED_AT = '2026-08-28'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
 
 // 업데이트 메모 — 이벤트 '내용이 실제로 바뀐 것'만 최신순으로 기록 (배치가 변경 시 맨 앞에 추가)
 const CHANGES = [
@@ -129,13 +132,12 @@ const REFERRAL_PENDING = [
   { broker: '한국투자증권', status: '확인필요', note: '공식 이벤트 게시판 전체검색에서 ‘친구’·‘추천’ 모두 0건. 다만 비대면 계좌개설(뱅키스) 절차에 추천인 코드 입력란이 있어 앱 내 별도 운영 가능성 — 앱에서 재확인 필요', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
   { broker: '키움증권', status: '확인필요', note: '신규고객 이벤트(~2026.08.27)에 ‘친구에게 공유 시 혜택 상향’ 언급이 블로그에 있으나 공식 페이지에서 확인되지 않음', link: 'https://www.kiwoom.com/e/m/common/event/VIngEventView' },
   { broker: '삼성증권', status: '확인필요', note: '이벤트 목록이 비로그인 상태에서 조회되지 않아 판독 불가', link: 'https://www.samsungpop.com/customer/event.do' },
-  // 아래 4건은 0be8aa2(친구 초대 이벤트를 별도 탭으로 분리)에서 '미발견'이라는 이유로 빠졌다가
-  // 복원한 것이다. 조사했는데 없더라는 사실도 결과이므로 목록에 남긴다.
-  // 확인 시점(2026-08-10)이 그대로이니 재조사 때 갱신할 것.
-  { broker: '미래에셋증권', status: '미발견', note: '진행중 이벤트 목록에 친구 초대·추천 항목 없음 (2026-08-10 확인)', link: 'https://securities.miraeasset.com/mw/mki/mki7000/r01.do' },
-  { broker: 'KB증권', status: '미발견', note: '진행중 이벤트 목록에 친구 초대·추천 항목 없음 (2026-08-10 확인)', link: 'https://www.kbsec.com/cs/notice/jsp/CUST_09_0003.jsp' },
-  { broker: '토스증권', status: '미발견', note: '신규 고객 대상 별도 친구 초대 이벤트 없음 (2026-08-10 확인)', link: 'https://tossinvest.com' },
-  { broker: '카카오페이증권', status: '미발견', note: '신규 고객 대상 별도 친구 초대 이벤트 없음 (2026-08-10 확인)', link: 'https://www.kakaopaysec.com' },
+  // 아래 4건은 0be8aa2(친구 초대 이벤트를 별도 탭으로 분리)에서 '미발견'이라는 이유로
+  // 빠졌다가 복원한 것이다. 조사했는데 없더라는 사실도 결과이므로 목록에 남긴다.
+  { broker: '미래에셋증권', status: '미발견', note: '진행중 이벤트 14건 전수 확인, 친구·초대·추천·지인·공유 항목 없음 (2026-08-28 확인)', link: 'https://securities.miraeasset.com/mw/mki/mki7000/r01.do' },
+  { broker: 'KB증권', status: '미발견', note: '진행중 이벤트 목록 확인, 친구·초대·추천 항목 없음. 일부 제목이 이미지라 판독되지 않은 건이 있다 (2026-08-28 확인)', link: 'https://www.kbsec.com/cs/notice/jsp/CUST_09_0003.jsp' },
+  { broker: '토스증권', status: '미발견', note: '웹에 이벤트 페이지 자체가 없어 앱에서만 확인 가능. 웹 노출 범위에서는 친구 초대 이벤트 없음 (2026-08-28 확인)', link: 'https://tossinvest.com' },
+  { broker: '카카오페이증권', status: '미발견', note: "친구 초대 이벤트 없음. '주식 선물하기'(카카오톡 친구에게 주식 선물)는 상시 상품 기능이지 초대 이벤트가 아니다 (2026-08-28 확인)", link: 'https://www.kakaopaysec.com' },
 ];
 
 // 추가 조사 대상 — 현재 진행 여부 미확정 (status: 확인필요 | 미발견 | 해당없음)
@@ -166,6 +168,6 @@ export default function handler(req, res) {
   res.status(200).json({
     updatedAt: UPDATED_AT, checkedAt: CHECKED_AT,
     events: EVENTS, pending: PENDING, changes: CHANGES,
-    referral: REFERRAL, referralPending: REFERRAL_PENDING,
+    referral: REFERRAL, referralPending: REFERRAL_PENDING, referralCheckedAt: REFERRAL_CHECKED_AT,
   });
 }
