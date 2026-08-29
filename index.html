@@ -330,10 +330,6 @@
     .sv-caret { flex: none; transition: transform .15s; }
     .surveyed[open] .sv-caret { transform: rotate(90deg); }
     .sv-body { padding: 2px 12px 10px; }
-    .sv-row { display: flex; align-items: baseline; gap: 8px; padding: 6px 0; border-top: 1px solid var(--border); flex-wrap: wrap; }
-    .sv-name { font-size: 12.5px; font-weight: 600; color: var(--text); }
-    .sv-note { flex: 1 1 100%; font-size: 12px; color: var(--muted); line-height: 1.65; word-break: keep-all; }
-    .sv-note a { color: var(--accent); }
     .sv-plain { font-size: 12px; color: var(--muted); line-height: 1.9; word-break: keep-all; }
     .event-pending { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: inherit; margin-bottom: 8px; transition: all .15s; }
     a.event-pending:hover { border-color: var(--accent); box-shadow: var(--shadow); }
@@ -534,9 +530,22 @@
   const NOISE_KW = ['근저당','편법증여','편법 증여','셀러 파이낸싱','셀러파이낸싱','집주인 대출','대통령','이재명',
     '부동산','아파트','주택','빌딩','상가','토지','오피스텔','건물',
   '보이스피싱','메신저피싱','스미싱'];
+  // 연예 가십 제외 — '한가인 ♥연정훈에 6억 증여' 같은 기사가 연관도 상위에 올라왔다.
+  // 연예인 이름은 무한해서 이름으로는 못 거른다. 기사 문맥의 표지만 본다.
+  const CELEB_KW = ['연예','아이돌','개그맨','코미디언','방송인','유튜버','인플루언서','트로트',
+    '열애','결혼설','이혼설','재혼설','파경','소속사','예능','출연료','가요계'];
+  // 주의: 아래 셋은 증여세의 핵심 주제라 절대 걸리면 안 된다 —
+  //   '배우자'(배우자 증여공제 6억) · '혼인'/'결혼'(혼인 증여공제 1억) · '출산'(출산 공제 1억).
+  //   그래서 '배우'는 뒤에 '자'가 오면 빼고, 결혼은 '결혼설'만 본다(위 목록).
+  const CELEB_RE = /♥|배우(?!자)|가수\s*[가-힣]{2,4}/;
+  function isCelebNews(s) {
+    return CELEB_RE.test(s) || CELEB_KW.some(k => s.includes(k));
+  }
+
   function isOwnerNews(t) {
     const s = t || '';
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
+    if (isCelebNews(s)) return true;
     return OWNER_KW.some(k => s.includes(k)) || NOISE_KW.some(k => s.includes(k));
   }
   // 같은 기사 묶기: 회사명(주체) 동일 또는 본문 근접중복(0.5)이면 기존 대표에 dupe로 붙임.
@@ -1243,19 +1252,11 @@
     const el = document.createElement('details');
     el.className = 'surveyed';
     const caret = '<svg class="sv-caret" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 6 15 12 9 18"></polyline></svg>';
-    // 회사명만 보여준다. 상태별로 묶되 사유(note)·링크는 싣지 않는다 —
-    // 조사 근거는 api/events.js에 그대로 남아 있고, 화면에서는 '어디를 봤나'만 알면 된다.
-    const byStatus = (want) => pendingList.filter(p => (p.status || '미발견') === want).map(p => p.broker);
-    const nameRow = (label, names) => names.length
-      ? `<div class="sv-row"><span class="sv-plain"><b style="color:var(--muted2)">${label}</b> — ${names.map(esc).join(' · ')}</span></div>`
-      : '';
-    el.innerHTML = `<summary>${caret}<b>조사 대상 ${total}개사</b>` +
-        `<span>이벤트 확인 ${confirmedBrokers.length}곳 · 미확인 ${pendingList.length}곳</span></summary>` +
-      `<div class="sv-body">` +
-        nameRow('이벤트 확인', confirmedBrokers) +
-        nameRow('확인필요', byStatus('확인필요')) +
-        nameRow('미발견', byStatus('미발견')) +
-      `</div>`;
+    // 기관명만 나열한다. 확인/미확인 구분도, 사유(note)도, 링크도 싣지 않는다 —
+    // 화면에서는 '어디를 봤나'만 알면 되고, 조사 근거는 api/events.js에 그대로 남아 있다.
+    const names = [...new Set([...confirmedBrokers, ...pendingList.map(p => p.broker)])];
+    el.innerHTML = `<summary>${caret}<b>조사 대상 ${total}개사</b></summary>` +
+      `<div class="sv-body"><span class="sv-plain">${names.map(esc).join(' · ')}</span></div>`;
     return el;
   }
 
