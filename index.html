@@ -690,9 +690,17 @@
          + REL_PROMO.reduce((s, k) => s + (t.includes(k) ? 1 : 0), 0);
   }
 
-  function renderRelated(grid, items, kw) {
+  // 연관도 상위는 '최근 기간' 안에서만 고른다.
+  // 네이버 뉴스 API는 sort=sim(관련도순)이라 날짜를 전혀 보지 않는다. 그래서 점수가 높은
+  // 오래된 기사가 몇 주째 같은 자리에 박혀 있었다. 기본 7일로 자르되, 그 안에서 4건이
+  // 안 차면 14→30일→무제한으로 넓힌다 (키워드가 한산한 주에 섹션이 비지 않게).
+  const RELATED_WINDOWS = [7, 14, 30, null];   // null = 기간 제한 없음
+
+  function pickRelated(items, days) {
+    const pool = days == null ? items : items.filter(n =>
+      n.pubDate instanceof Date && !isNaN(n.pubDate) && (Date.now() - n.pubDate) <= days * 864e5);
     // 연관도 점수 내림차순(동점이면 sim 순서), 단 같은 사건 중복 배제하고 상위 4건
-    const scored = [...items]
+    const scored = pool
       .map(n => ({ n, s: relatedScore(n) }))
       .sort((a, b) => b.s - a.s || (a.n._rank ?? 1e9) - (b.n._rank ?? 1e9));
     const candidates = [], pT = [], pTD = [], pSubj = [];
@@ -707,6 +715,16 @@
       if (dup) continue;
       pT.push(gt); pTD.push(gtd); pSubj.push(subj); candidates.push(c);
     }
+    return candidates;
+  }
+
+  function renderRelated(grid, items, kw) {
+    let candidates = [], usedDays = RELATED_WINDOWS[0];
+    for (const d of RELATED_WINDOWS) {
+      const got = pickRelated(items, d);
+      if (got.length > candidates.length) { candidates = got; usedDays = d; }
+      if (candidates.length >= 4) break;
+    }
     if (!candidates.length) return;
     candidates.forEach(({n}) => relatedLinks.add(n.link));
 
@@ -717,7 +735,10 @@
                    : currentMode === 'platform' ? '금융 플랫폼 관련 기사'
                    : currentMode === 'hanwha' ? '한화생명 파이 관련 기사'
                    : '자녀 증여 관련 기사';
-    sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span><span class="related-label">${relLabel}</span></div>`;
+    // 기간을 안 적으면 왜 어제 본 기사가 사라졌는지 알 수 없다. 넓혀 잡은 경우도 그대로 밝힌다.
+    const periodLabel = usedDays == null ? '기간 제한 없음' : `최근 ${usedDays}일`;
+    sec.innerHTML = `<div class="related-header"><span class="related-badge">연관도 높음</span>` +
+      `<span class="related-label">${relLabel} · ${periodLabel}</span></div>`;
 
     candidates.forEach(({n}, i) => {
       const el = document.createElement('a');

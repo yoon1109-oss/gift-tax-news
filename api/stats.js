@@ -48,6 +48,11 @@ const A2040_TOTAL = AGES[2].total + AGES[3].total;   // 60,410명
 // 최다 구간의 인덱스 — 눈으로 고르지 않고 계산한다
 const topIdx = arr => arr.indexOf(Math.max(...arr));
 
+// 구간 라벨은 위쪽 끝만 적혀 있어('5천만 이하') 줄줄이 늘어놓을 때는 앞 구간이 보이니 괜찮지만,
+// 타일·요약처럼 구간 하나만 따로 지목하면 '0~5천만'으로 오해한다. 그럴 때는 시작점을 붙인다.
+const BAND_RANGE = BANDS.map((b, i) =>
+  (i === 0 || i === BANDS.length - 1) ? b : `${BANDS[i - 1].replace(' 이하', '')} 초과~${b}`);
+
 const sum = a => a.reduce((x, y) => x + y, 0);
 const cum = (arr, upto) => sum(arr.slice(0, upto + 1));
 
@@ -125,6 +130,14 @@ const TREND_U40 = TREND_YEARS.map((_, i) => TREND.reduce((a, s) => a + s.v[i], 0
 const yoy = (arr, i) => i === 0 ? null : (arr[i] / arr[i - 1] - 1) * 100;
 const signed = n => (n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%');
 
+// 저점 연도와 그 뒤 회복폭. 계열마다 저점 연도가 달라(10세 미만만 2023년) 이걸 안 적으면
+// '2021→2025' 한 칸만 보고 전부 같은 모양으로 회복한 줄 안다.
+const troughOf = v => { const lo = Math.min(...v); const i = v.indexOf(lo); return { year: TREND_YEARS[i], lo, i }; };
+const reboundRow = v => {
+  const { year, lo } = troughOf(v);
+  return { trough: year, fromTrough: signed((v[4] / lo - 1) * 100), yoy: signed(yoy(v, 4)), idx2025: (v[4] / v[0] * 100).toFixed(1) };
+};
+
 // 연령 구간 상세 — 수치와 그 수치가 뜻하는 정의만 적는다.
 // 해석·추측('~하는 성향', '~때문에')은 넣지 않는다.
 // 문장으로 늘어놓으면 눈에 안 들어와, 핵심 3개는 타일로 뽑고 나머지는 줄을 맞춘다.
@@ -132,19 +145,14 @@ const signed = n => (n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%
 const MINOR_YEARS = TREND_YEARS.map((_, i) => TREND[0].v[i] + TREND[1].v[i]);
 const A2040_YEARS = TREND_YEARS.map((_, i) => TREND[2].v[i] + TREND[3].v[i]);
 
-// 누적 비중이 50%를 처음 넘는 구간 — '한가운데 사람이 속한 금액대'.
-// 최다 구간(최빈)만 보면 분포가 한쪽으로 긴 경우를 놓쳐 둘을 같이 둔다.
-const medianIdx = (band, total) => {
-  let acc = 0;
-  for (let i = 0; i < band.length; i++) { acc += band[i]; if (acc / total >= 0.5) return i; }
-  return band.length - 1;
-};
-
+// 타일 3개. 예전에 '중앙 구간'(중앙값이 걸리는 칸)을 넣었다가 "무슨 말이냐"는 질문을
+// 두 번 받고 뺐다 (2026-08-29). 설명이 필요한 지표는 한눈에 보는 자리에 두지 않는다.
+// 지금은 5천만·1억이라는 고정 문턱의 누계만 쓴다 — 설명 없이 읽히고 구간 간 비교도 그대로 된다.
 const abFacts = (band, total) => {
-  const t = topIdx(band), m = medianIdx(band, total);
+  const t = topIdx(band);
   return [
-    { label: '최다 구간', value: BANDS[t], sub: `${nf(band[t])}명 · ${pct(band[t], total)} (전국 ${pct(ALL[t], TOTAL)})` },
-    { label: '중앙 구간', value: BANDS[m], sub: `누적 ${pct(cum(band, m), total)} 지점 (전국 ${BANDS[medianIdx(ALL, TOTAL)]})` },
+    { label: '최다 구간', value: BAND_RANGE[t], sub: `${nf(band[t])}명 · ${pct(band[t], total)} (전국 ${pct(ALL[t], TOTAL)})` },
+    { label: '5천만 이하 누계', value: pct(cum(band, 1), total), sub: `${nf(cum(band, 1))}명 (전국 ${pct(cum(ALL, 1), TOTAL)})` },
     { label: '1억 이하 누계', value: pct(cum(band, 2), total), sub: `${nf(cum(band, 2))}명 (전국 ${pct(cum(ALL, 2), TOTAL)})` },
   ];
 };
@@ -243,8 +251,8 @@ const SUMMARY = {
   title: '한눈에 보기',
   items: [
     `2025년에 증여를 받았다고 신고한 사람은 <b>${nf(TOTAL)}명</b>. 이 중 <b>20세 미만이 ${nf(MINOR_TOTAL)}명</b>으로 전체의 ${pct(MINOR_TOTAL, TOTAL)}입니다.`,
-    `<b>10세 미만 ${nf(AGES[0].total)}명</b> — 한가운데 사람이 '${BANDS[medianIdx(AGES[0].band, AGES[0].total)]}' 구간에 있고, 1억 이하가 ${pct(cum(AGES[0].band, 2), AGES[0].total)}입니다.`,
-    `<b>10대 ${nf(AGES[1].total)}명</b> — 한가운데 사람이 '${BANDS[medianIdx(AGES[1].band, AGES[1].total)]}' 구간에 있고, 1억 이하가 ${pct(cum(AGES[1].band, 2), AGES[1].total)}입니다 (10세 미만은 ${pct(cum(AGES[0].band, 2), AGES[0].total)}).`,
+    `<b>10세 미만 ${nf(AGES[0].total)}명</b> — 5천만까지가 ${pct(cum(AGES[0].band, 1), AGES[0].total)}, 1억까지가 ${pct(cum(AGES[0].band, 2), AGES[0].total)}입니다.`,
+    `<b>10대 ${nf(AGES[1].total)}명</b> — 5천만까지가 ${pct(cum(AGES[1].band, 1), AGES[1].total)}, 1억까지가 ${pct(cum(AGES[1].band, 2), AGES[1].total)}로 10세 미만보다 각각 ${(cum(AGES[0].band,1)/AGES[0].total*100 - cum(AGES[1].band,1)/AGES[1].total*100).toFixed(1)}%p · ${(cum(AGES[0].band,2)/AGES[0].total*100 - cum(AGES[1].band,2)/AGES[1].total*100).toFixed(1)}%p 낮습니다.`,
     `20세 미만이 전체에서 차지하는 몫은 2023년 ${pct(MINOR_YEARS[2], TREND_ALL[2])}에서 2025년 ${pct(MINOR_YEARS[4], TREND_ALL[4])}로 늘었고, 인원은 1년 새 ${signed(yoy(MINOR_YEARS, 4))} 늘었습니다 (전체 ${signed(yoy(TREND_ALL, 4))}).`,
   ],
 };
@@ -315,6 +323,14 @@ const RAW = [
       ['전체 연령',
         ...TREND_ALL.map((v, i) => i === 0 ? nf(v) : `${nf(v)} (${signed(yoy(TREND_ALL, i))})`),
         signed((TREND_ALL[4] / TREND_ALL[0] - 1) * 100)],
+    ] },
+  { title: '2021~2025년 저점 연도와 그 뒤 회복폭',
+    note: '저점 = 5개 연도 중 신고인원이 가장 적었던 해 · 지수는 2021년을 100으로 놓은 값 · 출처 국세통계 6.3.3',
+    columns: ['연령', '저점 연도', '저점 인원', '저점→2025', '전년 대비', '2025년 지수(2021=100)'],
+    rows: [
+      ...TREND.map(t => { const r = reboundRow(t.v); return [t.name, `${r.trough}년`, nf(troughOf(t.v).lo), r.fromTrough, r.yoy, r.idx2025]; }),
+      (() => { const r = reboundRow(MINOR_YEARS); return ['미성년 계(20세 미만)', `${r.trough}년`, nf(troughOf(MINOR_YEARS).lo), r.fromTrough, r.yoy, r.idx2025]; })(),
+      (() => { const r = reboundRow(TREND_ALL); return ['전체 연령', `${r.trough}년`, nf(troughOf(TREND_ALL).lo), r.fromTrough, r.yoy, r.idx2025]; })(),
     ] },
   { title: '2021~2025년 연령대가 전체 신고인원에서 차지한 비중',
     note: '각 해의 전체 신고인원을 100%로 놓았을 때의 몫 · 출처 국세통계 6.3.3',
