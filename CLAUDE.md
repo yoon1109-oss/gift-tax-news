@@ -136,9 +136,12 @@ scripts/apps-script-review-alert.gs  ← 실제 운영: 30분마다 새 리뷰 �
 
 - `EVENTS[]` 진행중 확정 / `PENDING[]` 추가 조사 대상 / `CHANGES[]` 업데이트 메모(사용자 노출)
 - `REFERRAL[]` / `REFERRAL_PENDING[]` — **친구 초대 이벤트** 탭(`mode='referral'`) 데이터.
-  같은 `api/events.js`를 공유하되 화면은 별도 탭. `REFERRAL_PENDING`에는 `확인필요`만 두고
-  조사 결과 '미발견'인 곳은 넣지 않는다
+  같은 `api/events.js`를 공유하되 화면은 별도 탭. `REFERRAL_PENDING`에는 `확인필요`뿐 아니라
+  **`미발견`도 남긴다** — 조사했는데 없더라는 것도 결과다. 예전에 `미발견`을 지웠다가
+  (`0be8aa2`) 그 증권사를 아예 조사 안 한 것처럼 보여 복원했다. 지우지 말 것
 - `UPDATED_AT` 데이터가 실제 바뀐 날 / `CHECKED_AT` 마지막 확인일(변경 없어도 갱신)
+- **`REFERRAL_CHECKED_AT`은 따로 둔다** — 친구 초대는 계좌 이벤트와 점검 시점이 달라
+  한 값으로 묶으면 한쪽이 실제보다 최신인 것처럼 보인다. 화면은 `referralCheckedAt`으로 받는다
 
 **미확인 갱신 배지**: `CHANGES`의 **날짜 개수** 기준으로 이벤트 탭에 숫자를 띄운다.
 같은 날 여러 건이 바뀌어도 1로 센다. 확인 여부는 `localStorage['giftTax.eventChangesSeen']`
@@ -279,6 +282,20 @@ Apps Script를 쓰지 않고 서버에서 직접 보내고 싶을 때만 쓴다.
 
 - 로컬에 키 파일 두지 않음. KOSIS 개발 시 Vercel 키로 라이브 임시 debug 엔드포인트를 붙였다가 **작업 후 반드시 제거**
 - KOSIS 호출 시 `objL` 에러 → `objL1=ALL&objL2=ALL` 둘 다 지정하면 해결. 통계표 검색은 `statisticsSearch.do`
+
+## 폰트
+
+**Pretendard 하나로 통일돼 있다 (2026-08-29).** 이전에는 index.html이 본문 `Noto Sans KR` /
+제목·로고 `Noto Serif KR` 2종을 섞어 썼고, guide.html은 `Pretendard`를 선언만 하고
+웹폰트를 안 불러와 시스템 폰트로 떨어져 있었다. 세 갈래를 하나로 합쳤다.
+
+- CDN은 **변수 폰트 dynamic subset** 한 줄 — `pretendardvariable-dynamic-subset.min.css`.
+  한글 유니코드 구간을 쪼개 필요한 것만 받으므로 Noto 2종보다 로딩량이 적다
+- **`font-family` 선언은 `index.html`의 `body` 한 곳에만 둔다.** 나머지는 전부 `inherit`이다.
+  개별 요소에 폰트를 직접 적지 말 것 — 다시 섞이는 원인이 된다
+- 폼 컨트롤은 폰트를 상속하지 않으므로 `button, input, select, textarea { font-family: inherit; }`
+  규칙을 body 바로 밑에 따로 뒀다. 이 줄을 지우면 버튼만 시스템 폰트로 튄다
+- `guide.html`의 `code`·`.kw`는 **monospace 유지**가 맞다. 여기까지 통일하지 말 것
 
 ## 작업 규칙
 
