@@ -23,13 +23,15 @@ const ALL = [22168, 33884, 42894, 49700, 13073, 12697, 3873, 845, 508, 618];
 //   [D] 기타 = 수증자가 비영리법인 등인 경우  ← '연령 미상'이 아니다
 //   [E] 청년 = 청년기본법 제3조의 19세 이상 34세 이하. 합계구간에 추가 합산되지 않음
 // (연령 8개 구간 합 = 180,260 총계와 일치. 청년은 여기에 더해지지 않는다)
+// 원표기는 '10세 이상 / 20세 이상 / …'이지만 이는 각각 10대·20대를 뜻하는 구간이다
+// (다음 구간이 20세 이상이므로 '10세 이상'은 10~19세). 오해를 막으려고 라벨을 풀어 쓴다.
 const AGES = [
   { name: '10세 미만', total: 8278,  band: [1087, 3803, 1400, 1419, 291, 192, 68, 9, 2, 7] },
-  { name: '10세 이상', total: 9958,  band: [738, 3708, 2268, 2205, 507, 345, 111, 32, 24, 20] },
-  { name: '20세 이상', total: 21892, band: [1676, 2471, 6315, 7433, 1925, 1401, 461, 93, 56, 61] },
-  { name: '30세 이상', total: 38518, band: [3265, 4144, 8101, 13636, 4136, 3578, 1067, 247, 164, 180] },
-  { name: '40세 이상', total: 35748, band: [3863, 5183, 8694, 10472, 3017, 2945, 1023, 229, 142, 180] },
-  { name: '50세 이상', total: 35628, band: [4797, 6774, 9341, 9277, 2175, 2272, 635, 149, 82, 126] },
+  { name: '10대(10~19세)', total: 9958,  band: [738, 3708, 2268, 2205, 507, 345, 111, 32, 24, 20] },
+  { name: '20대', total: 21892, band: [1676, 2471, 6315, 7433, 1925, 1401, 461, 93, 56, 61] },
+  { name: '30대', total: 38518, band: [3265, 4144, 8101, 13636, 4136, 3578, 1067, 247, 164, 180] },
+  { name: '40대', total: 35748, band: [3863, 5183, 8694, 10472, 3017, 2945, 1023, 229, 142, 180] },
+  { name: '50대', total: 35628, band: [4797, 6774, 9341, 9277, 2175, 2272, 635, 149, 82, 126] },
   { name: '60세 이상', total: 28130, band: [5628, 7460, 6533, 5027, 945, 1912, 489, 71, 30, 35] },
   { name: '기타(비영리법인 등)', total: 2108, band: [1114, 341, 242, 231, 77, 52, 19, 15, 8, 9] },
 ];
@@ -130,14 +132,26 @@ const signed = n => (n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(1) + '%
 const MINOR_YEARS = TREND_YEARS.map((_, i) => TREND[0].v[i] + TREND[1].v[i]);
 const A2040_YEARS = TREND_YEARS.map((_, i) => TREND[2].v[i] + TREND[3].v[i]);
 
+// 누적 비중이 50%를 처음 넘는 구간 — '한가운데 사람이 속한 금액대'.
+// 최다 구간(최빈)만 보면 분포가 한쪽으로 긴 경우를 놓쳐 둘을 같이 둔다.
+const medianIdx = (band, total) => {
+  let acc = 0;
+  for (let i = 0; i < band.length; i++) { acc += band[i]; if (acc / total >= 0.5) return i; }
+  return band.length - 1;
+};
+
 const abFacts = (band, total) => {
-  const t = topIdx(band);
+  const t = topIdx(band), m = medianIdx(band, total);
   return [
     { label: '최다 구간', value: BANDS[t], sub: `${nf(band[t])}명 · ${pct(band[t], total)} (전국 ${pct(ALL[t], TOTAL)})` },
+    { label: '중앙 구간', value: BANDS[m], sub: `누적 ${pct(cum(band, m), total)} 지점 (전국 ${BANDS[medianIdx(ALL, TOTAL)]})` },
     { label: '1억 이하 누계', value: pct(cum(band, 2), total), sub: `${nf(cum(band, 2))}명 (전국 ${pct(cum(ALL, 2), TOTAL)})` },
-    { label: '10억 초과', value: pct(total - cum(band, 5), total), sub: `${nf(total - cum(band, 5))}명 (전국 ${pct(TOTAL - cum(ALL, 5), TOTAL)})` },
   ];
 };
+
+// 전체 신고인원 중 이 연령대가 차지하는 비중의 연도별 변화
+const shareRow = years =>
+  TREND_YEARS.map((y, i) => `${String(y).slice(2)}년 <b>${pct(years[i], TREND_ALL[i])}</b>`).join('  ·  ');
 
 const cumRow = (band, total) =>
   [1, 2, 3].map(i => `${BANDS[i]} <b>${pct(cum(band, i), total)}</b>`).join('  ·  ')
@@ -151,13 +165,36 @@ const PI_POINTS = {
   title: '연령 구간 상세',
   items: [
     {
-      group: '미성년 — 20세 미만',
+      group: '10세 미만',
+      tag: `${nf(AGES[0].total)}명 · 전체의 ${pct(AGES[0].total, TOTAL)}`,
+      facts: abFacts(AGES[0].band, AGES[0].total),
+      rows: [
+        { label: '이하 누계', value: cumRow(AGES[0].band, AGES[0].total) },
+        { label: '연도별', value: yearRow(TREND[0].v) },
+        { label: '전체 중 비중', value: shareRow(TREND[0].v) },
+      ],
+      note: `<b>1천만 이하</b> ${nf(AGES[0].band[0])}명(${pct(AGES[0].band[0], AGES[0].total)}) · <b>5천만 이하</b> ${nf(AGES[0].band[1])}명(${pct(AGES[0].band[1], AGES[0].total)}). 미성년 증여재산공제 한도는 10년간 2천만원이며, 구간 경계(1천만·5천만)와 한도가 일치하지 않아 구간만으로 공제 소진 여부를 알 수는 없습니다.`,
+    },
+    {
+      group: '10대 — 10세 이상 20세 미만',
+      tag: `${nf(AGES[1].total)}명 · 전체의 ${pct(AGES[1].total, TOTAL)}`,
+      facts: abFacts(AGES[1].band, AGES[1].total),
+      rows: [
+        { label: '이하 누계', value: cumRow(AGES[1].band, AGES[1].total) },
+        { label: '연도별', value: yearRow(TREND[1].v) },
+        { label: '전체 중 비중', value: shareRow(TREND[1].v) },
+      ],
+      note: `<b>10세 미만과의 차이</b> — 1억 이하 누계가 10세 미만 ${pct(cum(AGES[0].band, 2), AGES[0].total)} / 10대 ${pct(cum(AGES[1].band, 2), AGES[1].total)}, 3억 이하 누계는 ${pct(cum(AGES[0].band, 3), AGES[0].total)} / ${pct(cum(AGES[1].band, 3), AGES[1].total)}입니다.`,
+    },
+    {
+      group: '미성년 계 — 20세 미만',
       tag: `${nf(MINOR_TOTAL)}명 · 전체의 ${pct(MINOR_TOTAL, TOTAL)}`,
       facts: abFacts(MINOR_BAND, MINOR_TOTAL),
       rows: [
         { label: '구성', value: `10세 미만 <b>${nf(AGES[0].total)}</b> (${pct(AGES[0].total, MINOR_TOTAL)})  ·  10대 <b>${nf(AGES[1].total)}</b> (${pct(AGES[1].total, MINOR_TOTAL)})` },
         { label: '이하 누계', value: cumRow(MINOR_BAND, MINOR_TOTAL) },
         { label: '연도별', value: yearRow(MINOR_YEARS) },
+        { label: '전체 중 비중', value: shareRow(MINOR_YEARS) },
       ],
       note: `<b>구간 기준</b> — 통계표의 연령 구간이 '10세 미만 / 10세 이상 / 20세 이상'이라 여기서 미성년은 <b>20세 미만</b>입니다. 민법상 미성년(19세 미만)·증여재산공제 미성년 한도(2천만원) 기준과 한 살 차이가 나며, 19세가 이 집계에 포함됩니다.`,
     },
@@ -169,6 +206,7 @@ const PI_POINTS = {
         { label: '구성', value: `20대 <b>${nf(AGES[2].total)}</b> (${pct(AGES[2].total, A2040_TOTAL)})  ·  30대 <b>${nf(AGES[3].total)}</b> (${pct(AGES[3].total, A2040_TOTAL)})` },
         { label: '이하 누계', value: cumRow(A2040_BAND, A2040_TOTAL) },
         { label: '연도별', value: yearRow(A2040_YEARS) },
+        { label: '전체 중 비중', value: shareRow(A2040_YEARS) },
       ],
       note: `<b>겹치는 항목</b> — 청년(19~34세) ${nf(YOUTH.total)}명은 연령 구간을 가로질러 다시 묶은 항목이라 이 수치와 겹치며, 합계에는 더해지지 않습니다.`,
     },
@@ -204,10 +242,10 @@ const DIST = [
 const SUMMARY = {
   title: '한눈에 보기',
   items: [
-    `2025년 증여세 신고인원 <b>${nf(TOTAL)}명</b>.`,
-    `<b>미성년(20세 미만) ${nf(MINOR_TOTAL)}명</b> — 전체의 ${pct(MINOR_TOTAL, TOTAL)}. 이 중 1억 이하 ${pct(cum(MINOR_BAND, 2), MINOR_TOTAL)}, 최다 구간은 5천만 이하 ${pct(MINOR_BAND[1], MINOR_TOTAL)}.`,
-    `<b>20~40세 ${nf(A2040_TOTAL)}명</b> — 전체의 ${pct(A2040_TOTAL, TOTAL)}. 이 중 1억 이하 ${pct(cum(A2040_BAND, 2), A2040_TOTAL)}, 최다 구간은 3억 이하 ${pct(A2040_BAND[3], A2040_TOTAL)}.`,
-    `신고인원 추이 — 2021년 ${nf(TREND_ALL[0])}명에서 3년 연속 감소 후 2025년 ${nf(TREND_ALL[4])}명 (전년 대비 ${signed(yoy(TREND_ALL, 4))}).`,
+    `2025년에 증여를 받았다고 신고한 사람은 <b>${nf(TOTAL)}명</b>. 이 중 <b>20세 미만이 ${nf(MINOR_TOTAL)}명</b>으로 전체의 ${pct(MINOR_TOTAL, TOTAL)}입니다.`,
+    `<b>10세 미만 ${nf(AGES[0].total)}명</b> — 한가운데 사람이 '${BANDS[medianIdx(AGES[0].band, AGES[0].total)]}' 구간에 있고, 1억 이하가 ${pct(cum(AGES[0].band, 2), AGES[0].total)}입니다.`,
+    `<b>10대 ${nf(AGES[1].total)}명</b> — 한가운데 사람이 '${BANDS[medianIdx(AGES[1].band, AGES[1].total)]}' 구간에 있고, 1억 이하가 ${pct(cum(AGES[1].band, 2), AGES[1].total)}입니다 (10세 미만은 ${pct(cum(AGES[0].band, 2), AGES[0].total)}).`,
+    `20세 미만이 전체에서 차지하는 몫은 2023년 ${pct(MINOR_YEARS[2], TREND_ALL[2])}에서 2025년 ${pct(MINOR_YEARS[4], TREND_ALL[4])}로 늘었고, 인원은 1년 새 ${signed(yoy(MINOR_YEARS, 4))} 늘었습니다 (전체 ${signed(yoy(TREND_ALL, 4))}).`,
   ],
 };
 
@@ -277,6 +315,18 @@ const RAW = [
       ['전체 연령',
         ...TREND_ALL.map((v, i) => i === 0 ? nf(v) : `${nf(v)} (${signed(yoy(TREND_ALL, i))})`),
         signed((TREND_ALL[4] / TREND_ALL[0] - 1) * 100)],
+    ] },
+  { title: '2021~2025년 연령대가 전체 신고인원에서 차지한 비중',
+    note: '각 해의 전체 신고인원을 100%로 놓았을 때의 몫 · 출처 국세통계 6.3.3',
+    columns: ['연령', ...TREND_YEARS.map(y => `${y}년`), '2021→2025 변화'],
+    rows: [
+      ...TREND.map(t => [t.name, ...t.v.map((v, i) => pct(v, TREND_ALL[i])),
+        signed(t.v[4] / TREND_ALL[4] * 100 - t.v[0] / TREND_ALL[0] * 100) + 'p']),
+      ['미성년 계(20세 미만)', ...MINOR_YEARS.map((v, i) => pct(v, TREND_ALL[i])),
+        signed(MINOR_YEARS[4] / TREND_ALL[4] * 100 - MINOR_YEARS[0] / TREND_ALL[0] * 100) + 'p'],
+      ['40세 미만 계', ...TREND_U40.map((v, i) => pct(v, TREND_ALL[i])),
+        signed(TREND_U40[4] / TREND_ALL[4] * 100 - TREND_U40[0] / TREND_ALL[0] * 100) + 'p'],
+      ['전체 연령(기준)', ...TREND_YEARS.map(() => '100.0%'), '—'],
     ] },
   { title: '2025년 금액 구간별 신고인원 — 전국',
     note: '단위: 명 · 출처 국세통계 6.3.3',
