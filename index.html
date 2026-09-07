@@ -600,7 +600,7 @@
     //   노후 상품 '노후 자금 마련 상품'    200건 중 유효 115 / 노이즈 0 — 노후 대비 상품 축
     // '연금' 단독은 쓰지 말 것 — 연금개혁 정치·국민연금 지분공시가 대부분이다.
     if (currentMode === 'pension') return '연금저축 IRP 퇴직연금';
-    if (currentMode === 'retire')  return '노후 자금 마련 상품';
+    if (currentMode === 'retire')  return '노후 자금 마련 상품';   // + PEN_SERVICE_QUERY 를 함께 받는다
     return '한화생명 파이 증여';
   }
 
@@ -642,12 +642,17 @@
     const existingLinks = new Set(allNews.map(n => n.link));
     const modeAtStart = currentMode;
     // 배경 배치(101·201)는 병렬로 받되, 관련도(_rank) 보존을 위해 순서대로 처리
-    // 연금 탭은 '전반적인 시장 상황'을 보는 화면이라 더 깊이 받는다 (네이버 start 최대 1000)
+    // 연금·노후 상품은 시장 현황을 보는 화면이라 더 깊이 받는다 (네이버 start 최대 1000)
     const starts = (modeAtStart === 'pension' || modeAtStart === 'retire')
       ? [101, 201, 301, 401, 501, 601] : [101, 201];
-    const batches = await Promise.all(
-      starts.map(start => fetchBatch(keyword, start).catch(() => []))
-    );
+    const jobs = starts.map(start => fetchBatch(keyword, start).catch(() => []));
+    // '노후 상품'은 상품 축 질의만으로는 서비스·플랫폼이 거의 안 잡힌다.
+    // ('해빗팩토리, AI 자산관리·노후설계' 류가 상위 700건에 아예 없었다 — 2026-09-07 제보)
+    // 그래서 서비스 축 질의를 하나 더 받아 합친다.
+    if (modeAtStart === 'retire') {
+      [1, 101, 201, 301].forEach(start => jobs.push(fetchBatch(PEN_SERVICE_QUERY, start).catch(() => [])));
+    }
+    const batches = await Promise.all(jobs);
     if (currentMode === modeAtStart) {
       for (const items of batches) {
         items.forEach(item => {
@@ -734,12 +739,17 @@
     '미래에셋증권','미래에셋생명','미래에셋자산운용','삼성증권','삼성생명','삼성화재','한화생명','한화투자증권','한화손해보험',
     '한국투자증권','교보생명','교보증권','키움증권','메리츠증권','메리츠화재','DB손해보험','DB증권','유안타증권','신영증권',
     '대신증권','현대차증권','유진투자증권','토스증권','토스뱅크','카카오뱅크','카카오페이','케이뱅크','흥국생명','동양생명',
-    'ABL생명','푸본현대생명','iM증권','부산은행','SK증권','LS증권','다올투자증권','한투운용','미래에셋','한국투자','삼성','한화'];
+    'ABL생명','푸본현대생명','iM증권','부산은행','SK증권','LS증권','다올투자증권','한투운용',
+    // 핀테크·자산관리 플랫폼 사업자 — 전통 금융사만 넣으면 '해빗팩토리, AI 노후설계' 류가 통째로 빠진다
+    '해빗팩토리','뱅크샐러드','핀다','두물머리','파운트','콴텍','불릴레오','쿼터백','핀트','디셈버앤컴퍼니',
+    '한국포스증권','SK텔레콤','네이버페이','토스','신한플러스','하나원큐',
+    '미래에셋','한국투자','삼성','한화'];
   const PEN_PRODUCTS = ['연금저축랩','연금저축펀드','연금저축보험','연금저축','개인형퇴직연금','퇴직연금','IRP','개인연금',
     '연금보험','변액연금','주택연금','내집연금','연금계좌','TDF','디폴트옵션','ISA','연금펀드','연금ETF','즉시연금','종신연금'];
   // 같은 상품의 다른 이름 (안 묶으면 'KB국민은행 | IRP'와 'KB국민은행 | 개인형퇴직연금'이 갈라진다)
   const PEN_PROD_ALIAS = { '개인형퇴직연금': 'IRP', '개인형 퇴직연금': 'IRP', '연금저축펀드': '연금저축' };
-  const PEN_PLATFORMS = ['로보어드바이저','슈퍼앱','플랫폼','MTS','HTS','실물이전','계산기','시뮬레이션','챗봇','앱'];
+  const PEN_PLATFORMS = ['로보어드바이저','슈퍼앱','플랫폼','MTS','HTS','실물이전','계산기','시뮬레이션','챗봇','앱',
+    '노후설계','자산관리','마이데이터','에이전트','솔루션','컨설팅'];
   // 종류는 '목록에 있는 상품어를 찾았는가'가 아니라 **이름 자체로** 판정한다.
   // 목록만 보면 따옴표에서 뽑은 고유 상품명이 전부 플랫폼으로 떨어졌다
   // (삼성화재 '매일든든 가족생활보험' -> 플랫폼, 2026-09-07 사용자 제보)
@@ -766,7 +776,7 @@
   // 제목 속 따옴표는 상품명만이 아니라 강조·인용에도 쓰인다.
   // ('연금 영토' 넓힌다 / '공부' / '잠자는 목돈 연금으로 받으세요' 가 상품명으로 잡혔다)
   // 그래서 상품·플랫폼처럼 끝나는 말일 때만 이름으로 채택한다.
-  const PEN_NAME_TAIL = /(보험|연금|랩|펀드|계좌|ETF|플랜|LAB|Lab|lab|케어|라이프|뱅크|앱|서비스)$/;
+  const PEN_NAME_TAIL = /(보험|연금|랩|펀드|계좌|ETF|ETN|플랜|LAB|Lab|lab|케어|라이프|뱅크|앱|서비스|신탁|저축|솔루션|AI)$/;
   const penQuoted = t => {
     const m = t.match(/[‘'“"]([^’'”"]{2,22})[’'”"]/);
     if (!m) return null;
@@ -784,13 +794,20 @@
     const map = new Map();
     items.forEach(n => {
       const t = n.title || '', d = n.desc || '';
-      const firm = penFirm(t, d);
+      let firm = penFirm(t, d);
       if (!firm) return;                                   // 금융사를 못 뽑으면 카드로 만들지 않는다
       const prod = penFind(PEN_PRODUCTS, t) || penFind(PEN_PRODUCTS, d);
       const plat = penFind(PEN_PLATFORMS, t);
-      let name = penQuoted(t) || prod || (plat ? plat : null);
+      // 본문 따옴표까지 보면 고유 상품명이 크게 늘어난다 (실측 39 → 61건).
+      // 제목에서 유형만 뽑는 방식(복합어 추출)은 '노후 대비연금보험' 같은 문장 조각을 만들어 쓰지 않는다.
+      let name = penQuoted(t) || penQuoted(d) || prod || (plat ? plat : null);
       name = name ? (PEN_PROD_ALIAS[name] || name) : null;   // IRP = 개인형퇴직연금
       if (!name) return;
+      // 상품명 안에 회사 이름이 들어 있으면 그 회사를 쓴다.
+      // 제목 첫 회사만 보면 본문에서 뽑은 이름과 어긋난다
+      // ('미래에셋증권 | 신한 SOL 로보 연금', 'KB국민은행 | NH올원더풀…치매안심신탁')
+      const inName = penFind(PEN_FIRMS, name);
+      if (inName) firm = PEN_FIRM_ALIAS[inName] || inName;
       const kind = penKind(name, prod, plat);
       const key = firm + '|' + penNorm(name, firm);
       // 포함관계면 기존 그룹에 합친다 ('연금보험' ⊂ '한번에내는연금보험')
@@ -1185,6 +1202,10 @@
   //      한글이 끼면 막으므로 '한화생명볼파크'는 걸러진다.
   //      ②가 없으면 '파이낸셜타임스'·'와이파이'·'스틱파이' 같은 글이 통과한다.
   // 검색어에 '증여'를 더하지 말 것 — 모집단이 44건→22건으로 줄어 관련 글을 잃는다.
+  // '노후 상품' 칩이 상품 축 질의와 함께 받는 서비스·플랫폼 축 질의.
+  // 실측(300건): 서비스형 150건, 해빗팩토리 11건. '은퇴 자산관리 플랫폼'은 89/300으로 더 낮았다.
+  const PEN_SERVICE_QUERY = '노후 자산관리 서비스 출시';
+
   const BLOG_PI_CHIP = '한화생명 파이';
   const BLOG_PI_RE = /한화생명[^가-힣]{0,6}파이|파이\s*\(\s*[Pp]i\s*\)|파이\s*앱|파이앱|['"“”‘’]파이['"“”‘’]/;
   const blogQuery = () => blogKeyword;
