@@ -645,15 +645,27 @@
     // 연금·노후 상품은 시장 현황을 보는 화면이라 더 깊이 받는다 (네이버 start 최대 1000)
     const starts = (modeAtStart === 'pension' || modeAtStart === 'retire')
       ? [101, 201, 301, 401, 501, 601, 701, 801, 901] : [101, 201];
-    const jobs = starts.map(start => fetchBatch(keyword, start).catch(() => []));
+    // 한 번에 20개를 동시에 던지면 네이버가 일부를 거절한다 (catch로 삼켜져 조용히 유실됨).
+    // 실측 2026-09-07: 병렬 20개 -> 364건만 수집, 4개씩 나눠 보내면 970건.
+    // 실패한 요청은 한 번 더 시도한다.
+    const fetchSafe = (kw, start) => fetchBatch(kw, start)
+      .catch(() => new Promise(r => setTimeout(r, 400)).then(() => fetchBatch(kw, start)).catch(() => []));
+    async function runPooled(tasks, size) {
+      const out = [];
+      for (let i = 0; i < tasks.length; i += size) {
+        out.push(...await Promise.all(tasks.slice(i, i + size).map(f => f())));
+      }
+      return out;
+    }
+    const jobs = starts.map(start => () => fetchSafe(keyword, start));
     // '노후 상품'은 상품 축 질의만으로는 서비스·플랫폼이 거의 안 잡힌다.
     // ('해빗팩토리, AI 자산관리·노후설계' 류가 상위 700건에 아예 없었다 — 2026-09-07 제보)
     // 그래서 서비스 축 질의를 하나 더 받아 합친다.
     if (modeAtStart === 'retire') {
       [1, 101, 201, 301, 401, 501, 601, 701, 801, 901]
-        .forEach(start => jobs.push(fetchBatch(PEN_SERVICE_QUERY, start).catch(() => [])));
+        .forEach(start => jobs.push(() => fetchSafe(PEN_SERVICE_QUERY, start)));
     }
-    const batches = await Promise.all(jobs);
+    const batches = await runPooled(jobs, 4);
     if (currentMode === modeAtStart) {
       for (const items of batches) {
         items.forEach(item => {
