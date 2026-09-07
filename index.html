@@ -467,6 +467,10 @@
     <input type="radio" name="newsFilter" value="reviews" onchange="onModeChange('reviews')">
     <span>앱 리뷰<span class="tab-badge" id="reviewBadge" style="display:none"></span></span>
   </label>
+  <label class="radio-wrap" id="wrap-pension">
+    <input type="radio" name="newsFilter" value="pension" onchange="onModeChange('pension')">
+    <span>연금</span>
+  </label>
   <label class="radio-wrap" id="wrap-taxnews">
     <input type="radio" name="newsFilter" value="taxnews" onchange="onModeChange('taxnews')">
     <span>세무</span>
@@ -483,6 +487,12 @@
   <span class="kw-chip" data-mode="referral" onclick="selectEventTab('referral', this)">친구 초대 이벤트</span>
 </div>
 
+<div class="blog-keywords" id="pensionTabs" style="display:none">
+  <span class="filter-label">분류</span>
+  <span class="kw-chip active" data-mode="pension" onclick="selectPensionTab('pension', this)">상품·플랫폼</span>
+  <span class="kw-chip" data-mode="pensionnews" onclick="selectPensionTab('pensionnews', this)">연금 뉴스</span>
+</div>
+
 <div class="blog-keywords" id="taxTabs" style="display:none">
   <span class="filter-label">분류</span>
   <span class="kw-chip active" data-mode="taxnews" onclick="selectTaxTab('taxnews', this)">세법 뉴스</span>
@@ -495,7 +505,6 @@
   <span class="kw-chip" data-mode="childfin" onclick="selectNewsKeyword('childfin', this)">자녀 금융</span>
   <span class="kw-chip" data-mode="family" onclick="selectNewsKeyword('family', this)">가족 자산 관리</span>
   <span class="kw-chip" data-mode="platform" onclick="selectNewsKeyword('platform', this)">금융 플랫폼</span>
-  <span class="kw-chip" data-mode="pension" onclick="selectNewsKeyword('pension', this)">연금</span>
   <span class="kw-chip" data-mode="hanwha" onclick="selectNewsKeyword('hanwha', this)">한화생명 파이</span>
 </div>
 
@@ -569,7 +578,7 @@
     const s = t || '';
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
     if (isCelebNews(s)) return true;
-    const noise = currentMode === 'pension' ? NOISE_KW.filter(k => !REALTY_KW.includes(k)) : NOISE_KW;
+    const noise = (currentMode === 'pension' || currentMode === 'pensionnews') ? NOISE_KW.filter(k => !REALTY_KW.includes(k)) : NOISE_KW;
     return OWNER_KW.some(k => s.includes(k)) || noise.some(k => s.includes(k));
   }
   // 같은 기사 묶기: 회사명(주체) 동일 또는 본문 근접중복(0.5)이면 기존 대표에 dupe로 붙임.
@@ -594,7 +603,7 @@
     // 칩 이름은 '연금'이지만 검색어는 넓힌다. '연금' 단독은 100건 중 연금개혁 정치 35건·
     // 국민연금 지분공시 21건이고 정작 연금 상품 기사는 0건이었다(실측 2026-09-07).
     // '연금 상품 노후 준비'는 100건 중 76건이 유효, 노이즈 0건.
-    if (currentMode === 'pension') return '연금 상품 노후 준비';
+    if (currentMode === 'pension' || currentMode === 'pensionnews') return '연금 상품 노후 준비';
     return '한화생명 파이 증여';
   }
 
@@ -636,8 +645,11 @@
     const existingLinks = new Set(allNews.map(n => n.link));
     const modeAtStart = currentMode;
     // 배경 배치(101·201)는 병렬로 받되, 관련도(_rank) 보존을 위해 순서대로 처리
+    // 연금 탭은 '전반적인 시장 상황'을 보는 화면이라 더 깊이 받는다 (네이버 start 최대 1000)
+    const starts = (modeAtStart === 'pension' || modeAtStart === 'pensionnews')
+      ? [101, 201, 301, 401, 501, 601, 701, 801, 901] : [101, 201];
     const batches = await Promise.all(
-      [101, 201].map(start => fetchBatch(keyword, start).catch(() => []))
+      starts.map(start => fetchBatch(keyword, start).catch(() => []))
     );
     if (currentMode === modeAtStart) {
       for (const items of batches) {
@@ -728,6 +740,8 @@
     'ABL생명','푸본현대생명','iM증권','부산은행','SK증권','LS증권','다올투자증권','한투운용','미래에셋','한국투자','삼성','한화'];
   const PEN_PRODUCTS = ['연금저축랩','연금저축펀드','연금저축보험','연금저축','개인형퇴직연금','퇴직연금','IRP','개인연금',
     '연금보험','변액연금','주택연금','내집연금','연금계좌','TDF','디폴트옵션','ISA','연금펀드','연금ETF','즉시연금','종신연금'];
+  // 같은 상품의 다른 이름 (안 묶으면 'KB국민은행 | IRP'와 'KB국민은행 | 개인형퇴직연금'이 갈라진다)
+  const PEN_PROD_ALIAS = { '개인형퇴직연금': 'IRP', '개인형 퇴직연금': 'IRP', '연금저축펀드': '연금저축' };
   const PEN_PLATFORMS = ['로보어드바이저','슈퍼앱','플랫폼','MTS','HTS','실물이전','계산기','시뮬레이션','챗봇','앱'];
 
   // 제목 앞쪽에 나온 금융사를 우선한다.
@@ -765,7 +779,8 @@
       if (!firm) return;                                   // 금융사를 못 뽑으면 카드로 만들지 않는다
       const prod = penFind(PEN_PRODUCTS, t) || penFind(PEN_PRODUCTS, d);
       const plat = penFind(PEN_PLATFORMS, t);
-      const name = penQuoted(t) || prod || (plat ? plat : null);
+      let name = penQuoted(t) || prod || (plat ? plat : null);
+      name = name ? (PEN_PROD_ALIAS[name] || name) : null;   // IRP = 개인형퇴직연금
       if (!name) return;
       const kind = prod ? '상품' : '플랫폼';
       const key = firm + '|' + penNorm(name, firm);
@@ -811,7 +826,7 @@
       return REL_PLAT_HIGH.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
            + REL_PLAT.reduce((s, k) => s + (t.includes(k) ? 2 : 0) + (d.includes(k) ? 1 : 0), 0);
     }
-    if (currentMode === 'pension') {
+    if (currentMode === 'pension' || currentMode === 'pensionnews') {
       // childfin과 같은 방식 — 등급마다 '개념당 1회'만 센다.
       // 키워드마다 더하면 동의어를 나열한 제목이 점수를 배로 얻는다.
       let s = 0;
@@ -879,7 +894,7 @@
     const relLabel = currentMode === 'family' ? '가족 자산 관리 관련 기사'
                    : currentMode === 'childfin' ? '자녀 금융 관련 기사'
                    : currentMode === 'platform' ? '금융 플랫폼 관련 기사'
-                   : currentMode === 'pension' ? '연금 관련 기사'
+                   : (currentMode === 'pension' || currentMode === 'pensionnews') ? '연금 관련 기사'
                    : currentMode === 'hanwha' ? '한화생명 파이 관련 기사'
                    : '자녀 증여 관련 기사';
     // 기간을 안 적으면 왜 어제 본 기사가 사라졌는지 알 수 없다. 넓혀 잡은 경우도 그대로 밝힌다.
@@ -910,18 +925,16 @@
 
   // 연금 탭 상단 — 금융사 / 상품·플랫폼 / 관련 기사
   function renderPensionGroups(grid, items) {
-    const all = buildPensionGroups(items);
-    const groups = all.slice(0, 12);
-    if (!groups.length) return;
-    // renderRelated가 끝에 붙여둔 '최신 기사' 구분선 앞에 끼워 넣는다.
-    // 뒤에 붙이면 '최신 기사'가 두 번 나온다.
-    const marker = [...grid.querySelectorAll('.divider-label')].find(d => d.textContent === '최신 기사');
-    const put = el => marker ? grid.insertBefore(el, marker) : grid.appendChild(el);
+    const groups = buildPensionGroups(items);
+    if (!groups.length) {
+      grid.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">상품·플랫폼을 찾지 못했습니다.</p>';
+      return;
+    }
+    const put = el => grid.appendChild(el);
+    const prod = groups.filter(g => g.kind === '상품').length;
     const dv = document.createElement('div');
     dv.className = 'divider-label';
-    dv.textContent = all.length > groups.length
-      ? `상품·플랫폼 ${groups.length}건 (전체 ${all.length}건 중 최신순)`
-      : `상품·플랫폼 ${groups.length}건`;
+    dv.textContent = `상품·플랫폼 ${groups.length}건 · 최신 보도순 (상품 ${prod} / 플랫폼 ${groups.length - prod})`;
     put(dv);
     groups.forEach(g => {
       const box = document.createElement('div');
@@ -950,21 +963,27 @@
 
   function renderNextPage() {
     if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'reviews' || currentMode === 'taxnews' || currentMode === 'press' || currentMode === 'stats') return;
+    // 연금 '상품·플랫폼' 탭은 기사 목록 대신 그룹 카드만 그린다 (한 번만)
+    if (currentMode === 'pension') {
+      if (renderedCount === 0) {
+        renderPensionGroups(document.getElementById('newsGrid'), allNews);
+        renderedCount = allNews.length;
+        document.getElementById('endMsg').style.display = 'none';
+      }
+      return;
+    }
     if (renderedCount >= allNews.length) { checkEnd(); return; }
     const grid = document.getElementById('newsGrid');
     const kw = currentMode === 'all' ? ['자녀','증여']
              : currentMode === 'family' ? ['가족','자산관리']
              : currentMode === 'childfin' ? ['자녀','금융']
              : currentMode === 'platform' ? ['금융','플랫폼']
-             : currentMode === 'pension' ? ['연금','노후','은퇴']
+             : (currentMode === 'pension' || currentMode === 'pensionnews') ? ['연금','노후','은퇴']
              : '파이';
 
     // 첫 렌더시에만 연관 기사 섹션 삽입
-    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family' || currentMode === 'childfin' || currentMode === 'platform' || currentMode === 'pension')) {
+    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family' || currentMode === 'childfin' || currentMode === 'platform' || currentMode === 'pensionnews')) {
       renderRelated(grid, allNews, kw);
-      // 연금은 연관도 아래에 '금융사 × 상품/플랫폼' 카드를 한 층 더 둔다.
-      // 금융사·상품을 못 뽑은 기사는 카드로 안 만들고 아래 '최신 기사'에 그대로 나온다.
-      if (currentMode === 'pension') renderPensionGroups(grid, allNews);
     }
 
     let added = 0;
@@ -1021,8 +1040,8 @@
   // ── 주소로 탭 지정 ──────────────────────────────────────────
   // #reviews 처럼 mode 이름을 해시에 담아, 특정 탭을 연 상태의 주소를 공유할 수 있게 한다.
   // 뉴스 키워드(#childfin)와 이벤트 서브탭(#referral)도 같은 방식으로 지정된다.
-  const NEWS_MODES = ['all','family','childfin','platform','pension','hanwha'];
-  const TAB_MODES  = ['blog','event','reviews','taxnews','stats'];
+  const NEWS_MODES = ['all','family','childfin','platform','hanwha'];   // 연금은 최상위 탭으로 분리됨
+  const TAB_MODES  = ['blog','event','reviews','pension','taxnews','stats'];
 
   function setHash(mode) {
     // 기본 화면(자녀 증여)은 해시 없이 둔다
@@ -1059,6 +1078,13 @@
       if (chip) selectEventTab('referral', chip);
       return true;
     }
+    if (m === 'pensionnews') {                             // 연금 탭의 서브탭
+      document.querySelector('input[value="pension"]').checked = true;
+      onModeChange('pension');
+      const chip = document.querySelector('#pensionTabs .kw-chip[data-mode="pensionnews"]');
+      if (chip) selectPensionTab('pensionnews', chip);
+      return true;
+    }
     if (TAB_MODES.includes(m)) {
       const input = document.querySelector('input[value="' + m + '"]');
       if (!input) return false;
@@ -1087,6 +1113,7 @@
     document.getElementById('newsKeywords').style.display = (mode === 'all') ? 'flex' : 'none';
     document.getElementById('eventTabs').style.display = (mode === 'event') ? 'flex' : 'none';
     document.getElementById('taxTabs').style.display = (mode === 'taxnews') ? 'flex' : 'none';
+    document.getElementById('pensionTabs').style.display = (mode === 'pension' || mode === 'pensionnews') ? 'flex' : 'none';
     if (mode === 'blog') { blogItems = []; blogStart = 1; blogEnd = false; blogPrefetch = null; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { // 이벤트 탭 — 서브탭을 '계좌 이벤트'로 초기화
@@ -1100,6 +1127,10 @@
     }
     else if (mode === 'press') { showPress(); }
     else if (mode === 'stats') { showStats(); }
+    else if (mode === 'pension') { // 연금 탭 — 서브탭을 '상품·플랫폼'으로 초기화
+      document.querySelectorAll('#pensionTabs .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === 'pension'));
+      resetNews(); startLoad();
+    }
     else { // 뉴스 검색 탭 — 키워드 칩을 '자녀 증여'로 초기화
       document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === 'all'));
       resetNews(); startLoad();
@@ -1248,6 +1279,19 @@
   }
 
   // 세법 탭의 서브탭 (세법 뉴스 / 세무사회 보도자료)
+  // 연금 서브탭 — 두 화면이 같은 수집 결과를 쓰므로 다시 받지 않고 다시 그리기만 한다
+  function selectPensionTab(mode, el) {
+    if (mode === currentMode) return;
+    document.querySelectorAll('#pensionTabs .kw-chip').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+    currentMode = mode;
+    setHash(mode);
+    document.getElementById('newsGrid').innerHTML = '';
+    document.getElementById('endMsg').style.display = 'none';
+    renderedCount = 0; relatedLinks = new Set();
+    renderNextPage();
+  }
+
   function selectTaxTab(mode, el) {
     if (mode === currentMode) return;
     document.querySelectorAll('#taxTabs .kw-chip').forEach(c => c.classList.remove('active'));
