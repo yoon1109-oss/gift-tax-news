@@ -260,6 +260,25 @@
     .stat-notice.terms .sn-row::before { color: var(--muted2); }
     .related-card .card-desc b { color: var(--text); font-weight: 600; }
 
+    /* 연금 — 금융사 × 상품/플랫폼 카드 */
+    .pen-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      padding: 13px 15px; margin-bottom: 8px; }
+    .pen-head { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .pen-firm { font-size: 11px; font-weight: 700; color: #f9a26c; }
+    .pen-name { font-size: 15px; font-weight: 700; color: var(--text); }
+    .pen-kind { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+      border: 1px solid var(--border-strong, var(--border)); color: var(--muted); }
+    .pen-meta { font-size: 11px; color: var(--muted); margin-top: 5px; }
+    .pen-lead { font-size: 13px; color: var(--muted2); line-height: 1.6; margin-top: 6px; word-break: keep-all; }
+    .pen-more { font-size: 11.5px; color: #6ea8fe; cursor: pointer; margin-top: 8px; display: inline-block; }
+    .pen-more:hover { text-decoration: underline; }
+    .pen-arts { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 6px; }
+    .pen-art { display: block; font-size: 12.5px; color: var(--muted2); line-height: 1.55;
+      padding: 5px 0 5px 11px; position: relative; text-decoration: none; }
+    .pen-art:hover { color: var(--text); }
+    .pen-art::before { content: '·'; position: absolute; left: 2px; color: var(--muted); }
+    .pen-art span { color: var(--muted); font-size: 11px; margin-left: 5px; }
+
     /* 연도별 추이 선그래프 */
     .trend-box { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; }
     .trend-title { font-size: 15px; font-weight: 700; color: var(--text); }
@@ -691,6 +710,84 @@
   const REL_PEN_MID  = [/\bISA\b/, /세액공제/, /노후\s*(준비|설계|대비|자금)/, /은퇴\s*(준비|설계|이후)/,
     /연금\s*수령/, /월\s*배당/, /수익률/, /절세/];
   const REL_PEN_LOW  = [/연금/, /은퇴/, /노후/, /적립/, /납입/, /고령/];
+  // 노후 자산 설계·전략 기사는 상품명을 안 쓰는 경우가 많아 구조적으로 불리했다.
+  // (실측 2026-09-07: 상품명 있는 칼럼은 3·4위, 없는 설계 기사는 20·22·24위)
+  // CORE 바로 아래 등급을 줘서 상품 기사를 밀어내지 않으면서 상위에 올라오게 한다.
+  const REL_PEN_PLAN = [/설계/, /전략/, /포트폴리오/, /인출/, /수령\s*(전략|방법|시기|시점)/, /소득\s*공백/,
+    /자산\s*배분/, /리밸런싱/, /건강보험료|건보료/, /은퇴\s*(후|생활)/, /노후\s*자금/, /월\s*\d+만원/, /얼마를?\s*(받|모)/];
+
+  // ── 연금: 금융사 × 상품/플랫폼 묶기 ──
+  // 같은 상품이 여러 매체에 중복 보도되므로(삼성생명 신상품이 12개 매체) 묶으면
+  // '이번 주에 뭐가 나왔나'가 한눈에 보인다. 300건 -> 79그룹 (실측 2026-09-07).
+  // 긴 이름을 앞에 둬야 한다 — 'KB국민은행'이 'KB'보다 먼저 걸려야 정확히 잡힌다.
+  const PEN_FIRMS = ['KB국민은행','KB증권','KB라이프','KB손해보험','국민은행','신한투자증권','신한은행','신한라이프',
+    '하나금융','하나은행','하나증권','하나생명','우리은행','우리투자증권','NH투자증권','농협은행','기업은행','IBK투자증권',
+    '미래에셋증권','미래에셋생명','미래에셋자산운용','삼성증권','삼성생명','삼성화재','한화생명','한화투자증권','한화손해보험',
+    '한국투자증권','교보생명','교보증권','키움증권','메리츠증권','메리츠화재','DB손해보험','DB증권','유안타증권','신영증권',
+    '대신증권','현대차증권','유진투자증권','토스증권','토스뱅크','카카오뱅크','카카오페이','케이뱅크','흥국생명','동양생명',
+    'ABL생명','푸본현대생명','iM증권','부산은행','SK증권','LS증권','다올투자증권','한투운용','미래에셋','한국투자','삼성','한화'];
+  const PEN_PRODUCTS = ['연금저축랩','연금저축펀드','연금저축보험','연금저축','개인형퇴직연금','퇴직연금','IRP','개인연금',
+    '연금보험','변액연금','주택연금','내집연금','연금계좌','TDF','디폴트옵션','ISA','연금펀드','연금ETF','즉시연금','종신연금'];
+  const PEN_PLATFORMS = ['로보어드바이저','슈퍼앱','플랫폼','MTS','HTS','실물이전','계산기','시뮬레이션','챗봇','앱'];
+
+  // 제목 앞쪽에 나온 금융사를 우선한다.
+  // ('미래에셋자산운용 연금, 브랜드평판 1위… 하나은행·신한은행 제쳤다'가 신한은행으로 잡혔다)
+  function penFirm(t, d) {
+    let best = null, at = 1e9;
+    for (const f of PEN_FIRMS) { const i = t.indexOf(f); if (i >= 0 && i < at) { at = i; best = f; } }
+    if (!best) for (const f of PEN_FIRMS) if (d.includes(f)) { best = f; break; }
+    return best ? (PEN_FIRM_ALIAS[best] || best) : null;
+  }
+  // 같은 회사가 다른 표기로 갈라지지 않게 통일한다 ('국민은행 | IRP'와 'KB국민은행 | IRP')
+  const PEN_FIRM_ALIAS = { '국민은행': 'KB국민은행', '한국투자': '한국투자증권', '한투': '한국투자증권',
+    '한투운용': '한국투자신탁운용', '하나금융': '하나은행' };
+  // 제목 속 따옴표는 상품명만이 아니라 강조·인용에도 쓰인다.
+  // ('연금 영토' 넓힌다 / '공부' / '잠자는 목돈 연금으로 받으세요' 가 상품명으로 잡혔다)
+  // 그래서 상품·플랫폼처럼 끝나는 말일 때만 이름으로 채택한다.
+  const PEN_NAME_TAIL = /(보험|연금|랩|펀드|계좌|ETF|플랜|LAB|Lab|lab|케어|라이프|뱅크|앱|서비스)$/;
+  const penQuoted = t => {
+    const m = t.match(/[‘'“"]([^’'”"]{2,22})[’'”"]/);
+    if (!m) return null;
+    const q = m[1].trim();
+    if (/(요|다|까|자|죠|네|군|나|함|중)$/.test(q)) return null;   // 문장 조각
+    return PEN_NAME_TAIL.test(q) ? q : null;
+  };
+  const penFind = (list, t) => { for (const x of list) if (t.includes(x)) return x; return null; };
+  // 표기 흔들림을 없애고 비교한다 — '한번에내는연금보험' / '삼성 한번에내는연금보험' 이 갈라졌다
+  const penNorm = (name, firm) => name.replace(/\s+/g, '')
+    .replace(new RegExp('^' + (firm || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), '');
+
+  function buildPensionGroups(items) {
+    const map = new Map();
+    items.forEach(n => {
+      const t = n.title || '', d = n.desc || '';
+      const firm = penFirm(t, d);
+      if (!firm) return;                                   // 금융사를 못 뽑으면 카드로 만들지 않는다
+      const prod = penFind(PEN_PRODUCTS, t) || penFind(PEN_PRODUCTS, d);
+      const plat = penFind(PEN_PLATFORMS, t);
+      const name = penQuoted(t) || prod || (plat ? plat : null);
+      if (!name) return;
+      const kind = prod ? '상품' : '플랫폼';
+      const key = firm + '|' + penNorm(name, firm);
+      // 포함관계면 기존 그룹에 합친다 ('연금보험' ⊂ '한번에내는연금보험')
+      let hit = null;
+      for (const [k, g] of map) {
+        if (g.firm !== firm) continue;
+        const a = penNorm(name, firm), b = penNorm(g.name, firm);
+        if (a === b || a.includes(b) || b.includes(a)) { hit = g; break; }
+      }
+      if (hit) {
+        if (name.length > hit.name.length) hit.name = name;  // 더 구체적인 이름을 대표로
+        hit.arts.push(n);
+      } else {
+        map.set(key, { firm, name, kind, arts: [n] });
+      }
+    });
+    // 모니터링 도구라 '이번 주에 뭐가 나왔나'가 먼저다 — 최신 보도순, 같으면 기사 많은 순
+    return [...map.values()]
+      .map(g => { g.arts.sort((a, b) => b.pubDate - a.pubDate); return g; })
+      .sort((a, b) => b.arts[0].pubDate - a.arts[0].pubDate || b.arts.length - a.arts.length);
+  }
 
   function relatedScore(n) {
     const t = n.title || '', d = n.desc || '';
@@ -720,6 +817,8 @@
       let s = 0;
       if (REL_PEN_CORE.some(r => r.test(t))) s += 5;
       if (REL_PEN_CORE.some(r => r.test(d))) s += 2;
+      if (REL_PEN_PLAN.some(r => r.test(t))) s += 4;   // 노후 설계·전략
+      if (REL_PEN_PLAN.some(r => r.test(d))) s += 2;
       if (REL_PEN_MID.some(r => r.test(t)))  s += 3;
       if (REL_PEN_MID.some(r => r.test(d)))  s += 1;
       if (REL_PEN_LOW.some(r => r.test(t)))  s += 2;
@@ -809,6 +908,46 @@
     grid.appendChild(divider);
   }
 
+  // 연금 탭 상단 — 금융사 / 상품·플랫폼 / 관련 기사
+  function renderPensionGroups(grid, items) {
+    const all = buildPensionGroups(items);
+    const groups = all.slice(0, 12);
+    if (!groups.length) return;
+    // renderRelated가 끝에 붙여둔 '최신 기사' 구분선 앞에 끼워 넣는다.
+    // 뒤에 붙이면 '최신 기사'가 두 번 나온다.
+    const marker = [...grid.querySelectorAll('.divider-label')].find(d => d.textContent === '최신 기사');
+    const put = el => marker ? grid.insertBefore(el, marker) : grid.appendChild(el);
+    const dv = document.createElement('div');
+    dv.className = 'divider-label';
+    dv.textContent = all.length > groups.length
+      ? `상품·플랫폼 ${groups.length}건 (전체 ${all.length}건 중 최신순)`
+      : `상품·플랫폼 ${groups.length}건`;
+    put(dv);
+    groups.forEach(g => {
+      const box = document.createElement('div');
+      box.className = 'pen-card';
+      const lead = g.arts[0];
+      const rest = g.arts.slice(1);
+      box.innerHTML =
+        `<div class="pen-head"><span class="pen-firm">${esc(g.firm)}</span>` +
+        `<span class="pen-name">${esc(g.name)}</span>` +
+        `<span class="pen-kind">${esc(g.kind)}</span></div>` +
+        `<div class="pen-meta">기사 ${g.arts.length}건 · 최신 ${formatDate(lead.pubDate)}</div>` +
+        `<a class="pen-lead" href="${esc(lead.link)}" target="_blank" rel="noopener">${esc(lead.title)}</a>` +
+        (rest.length ? `<div class="pen-more">관련 기사 ${rest.length}건 더 보기</div>` +
+          `<div class="pen-arts" hidden>` + rest.map(a =>
+            `<a class="pen-art" href="${esc(a.link)}" target="_blank" rel="noopener">${esc(a.title)}<span>${esc(a.source)} · ${formatDate(a.pubDate)}</span></a>`
+          ).join('') + `</div>` : '');
+      const more = box.querySelector('.pen-more');
+      if (more) more.onclick = () => {
+        const list = box.querySelector('.pen-arts');
+        list.hidden = !list.hidden;
+        more.textContent = list.hidden ? `관련 기사 ${rest.length}건 더 보기` : '접기';
+      };
+      put(box);
+    });
+  }
+
   function renderNextPage() {
     if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'reviews' || currentMode === 'taxnews' || currentMode === 'press' || currentMode === 'stats') return;
     if (renderedCount >= allNews.length) { checkEnd(); return; }
@@ -823,6 +962,9 @@
     // 첫 렌더시에만 연관 기사 섹션 삽입
     if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family' || currentMode === 'childfin' || currentMode === 'platform' || currentMode === 'pension')) {
       renderRelated(grid, allNews, kw);
+      // 연금은 연관도 아래에 '금융사 × 상품/플랫폼' 카드를 한 층 더 둔다.
+      // 금융사·상품을 못 뽑은 기사는 카드로 안 만들고 아래 '최신 기사'에 그대로 나온다.
+      if (currentMode === 'pension') renderPensionGroups(grid, allNews);
     }
 
     let added = 0;
