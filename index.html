@@ -921,16 +921,18 @@
     grid.appendChild(divider);
   }
 
-  // 연금 탭 상단 — 금융사 / 상품·플랫폼 / 관련 기사
-  function renderPensionGroups(grid, items) {
+  // '노후 상품' 칩 전용 — 금융사 / 상품·플랫폼명 / 관련 기사 묶음만 나열한다.
+  // standalone=true면 개수 제한 없이 그대로 붙인다. (기사와 섞어 쓸 일이 생기면 false)
+  function renderPensionGroups(grid, items, standalone) {
     const all = buildPensionGroups(items);
-    const groups = all.slice(0, 25);
+    const groups = standalone ? all : all.slice(0, 25);
     if (!groups.length) {
       grid.innerHTML = '<p style="color:var(--muted);text-align:center;padding:40px">상품·플랫폼을 찾지 못했습니다.</p>';
       return;
     }
-    // renderRelated가 끝에 붙여둔 '최신 기사' 구분선 앞에 끼워 넣는다 (뒤에 붙이면 두 번 나온다)
-    const marker = [...grid.querySelectorAll('.divider-label')].find(d => d.textContent === '최신 기사');
+    // 기사와 함께 보여줄 때는 renderRelated가 붙여둔 '최신 기사' 구분선 앞에 끼워 넣는다
+    // (뒤에 붙이면 '최신 기사'가 두 번 나온다). standalone이면 그냥 붙인다.
+    const marker = standalone ? null : [...grid.querySelectorAll('.divider-label')].find(d => d.textContent === '최신 기사');
     const put = el => marker ? grid.insertBefore(el, marker) : grid.appendChild(el);
     const prod = groups.filter(g => g.kind === '상품').length;
     const dv = document.createElement('div');
@@ -965,6 +967,15 @@
 
   function renderNextPage() {
     if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'reviews' || currentMode === 'taxnews' || currentMode === 'press' || currentMode === 'stats') return;
+    // '노후 상품' 칩은 기사를 빼고 상품·플랫폼만 쭉 나열한다 (한 번만 그린다)
+    if (currentMode === 'retire') {
+      if (renderedCount === 0) {
+        renderPensionGroups(document.getElementById('newsGrid'), allNews, true);
+        renderedCount = allNews.length;
+        document.getElementById('endMsg').style.display = 'none';
+      }
+      return;
+    }
     if (renderedCount >= allNews.length) { checkEnd(); return; }
     const grid = document.getElementById('newsGrid');
     const kw = currentMode === 'all' ? ['자녀','증여']
@@ -976,11 +987,8 @@
              : '파이';
 
     // 첫 렌더시에만 연관 기사 섹션 삽입
-    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family' || currentMode === 'childfin' || currentMode === 'platform' || currentMode === 'pension' || currentMode === 'retire')) {
+    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family' || currentMode === 'childfin' || currentMode === 'platform' || currentMode === 'pension')) {
       renderRelated(grid, allNews, kw);
-      // 연금·노후 상품은 연관도 아래에 '금융사 × 상품/플랫폼' 카드를 한 층 더 둔다.
-      // 금융사·상품을 못 뽑은 기사는 카드로 안 만들고 아래 '최신 기사'에 그대로 나온다.
-      if (currentMode === 'pension' || currentMode === 'retire') renderPensionGroups(grid, allNews);
     }
 
     let added = 0;
