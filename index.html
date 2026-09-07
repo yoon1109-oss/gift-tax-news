@@ -740,6 +740,17 @@
   // 같은 상품의 다른 이름 (안 묶으면 'KB국민은행 | IRP'와 'KB국민은행 | 개인형퇴직연금'이 갈라진다)
   const PEN_PROD_ALIAS = { '개인형퇴직연금': 'IRP', '개인형 퇴직연금': 'IRP', '연금저축펀드': '연금저축' };
   const PEN_PLATFORMS = ['로보어드바이저','슈퍼앱','플랫폼','MTS','HTS','실물이전','계산기','시뮬레이션','챗봇','앱'];
+  // 종류는 '목록에 있는 상품어를 찾았는가'가 아니라 **이름 자체로** 판정한다.
+  // 목록만 보면 따옴표에서 뽑은 고유 상품명이 전부 플랫폼으로 떨어졌다
+  // (삼성화재 '매일든든 가족생활보험' -> 플랫폼, 2026-09-07 사용자 제보)
+  const PEN_KIND_PLATFORM = /(앱|플랫폼|서비스|LAB|Lab|lab|MTS|HTS|로보|어드바이저|계산기|시뮬레이션|챗봇|뱅크|센터|라운지)$/;
+  const PEN_KIND_PRODUCT  = /(보험|연금|저축|펀드|계좌|ETF|ETN|랩|신탁|플랜|채권|국채|적금|예금|카드)$/;
+  function penKind(name, prod, plat) {
+    if (prod) return '상품';
+    if (PEN_KIND_PRODUCT.test(name)) return '상품';
+    if (plat || PEN_KIND_PLATFORM.test(name)) return '플랫폼';
+    return '상품';   // 금융사가 이름 붙여 내놓는 것은 대개 상품이다
+  }
 
   // 제목 앞쪽에 나온 금융사를 우선한다.
   // ('미래에셋자산운용 연금, 브랜드평판 1위… 하나은행·신한은행 제쳤다'가 신한은행으로 잡혔다)
@@ -760,7 +771,8 @@
     const m = t.match(/[‘'“"]([^’'”"]{2,22})[’'”"]/);
     if (!m) return null;
     const q = m[1].trim();
-    if (/(요|다|까|자|죠|네|군|나|함|중)$/.test(q)) return null;   // 문장 조각
+    if (/(요|다|까|자|죠|네|군|나|함|중)$/.test(q)) return null;              // 문장 조각
+    if (/(이라더니|라더니|했더니|하더니|인데|지만|면서|라며|하며|는데)/.test(q)) return null;  // 연결어미가 낀 인용
     return PEN_NAME_TAIL.test(q) ? q : null;
   };
   const penFind = (list, t) => { for (const x of list) if (t.includes(x)) return x; return null; };
@@ -779,7 +791,7 @@
       let name = penQuoted(t) || prod || (plat ? plat : null);
       name = name ? (PEN_PROD_ALIAS[name] || name) : null;   // IRP = 개인형퇴직연금
       if (!name) return;
-      const kind = prod ? '상품' : '플랫폼';
+      const kind = penKind(name, prod, plat);
       const key = firm + '|' + penNorm(name, firm);
       // 포함관계면 기존 그룹에 합친다 ('연금보험' ⊂ '한번에내는연금보험')
       let hit = null;
