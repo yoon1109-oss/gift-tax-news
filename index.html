@@ -644,13 +644,14 @@
     // 배경 배치(101·201)는 병렬로 받되, 관련도(_rank) 보존을 위해 순서대로 처리
     // 연금·노후 상품은 시장 현황을 보는 화면이라 더 깊이 받는다 (네이버 start 최대 1000)
     const starts = (modeAtStart === 'pension' || modeAtStart === 'retire')
-      ? [101, 201, 301, 401, 501, 601] : [101, 201];
+      ? [101, 201, 301, 401, 501, 601, 701, 801, 901] : [101, 201];
     const jobs = starts.map(start => fetchBatch(keyword, start).catch(() => []));
     // '노후 상품'은 상품 축 질의만으로는 서비스·플랫폼이 거의 안 잡힌다.
     // ('해빗팩토리, AI 자산관리·노후설계' 류가 상위 700건에 아예 없었다 — 2026-09-07 제보)
     // 그래서 서비스 축 질의를 하나 더 받아 합친다.
     if (modeAtStart === 'retire') {
-      [1, 101, 201, 301].forEach(start => jobs.push(fetchBatch(PEN_SERVICE_QUERY, start).catch(() => [])));
+      [1, 101, 201, 301, 401, 501, 601, 701, 801, 901]
+        .forEach(start => jobs.push(fetchBatch(PEN_SERVICE_QUERY, start).catch(() => [])));
     }
     const batches = await Promise.all(jobs);
     if (currentMode === modeAtStart) {
@@ -670,10 +671,15 @@
       // 연관도 섹션은 1차 배치(100건 중 필터를 통과한 40건 안팎)만 보고 이미 그려져 있다.
       // 배경 배치까지 합친 전체 기준으로 다시 뽑지 않으면 2·3차에 들어온 상위 기사가 영영 누락된다.
       // 사용자가 아직 위쪽을 보고 있을 때만 다시 그려 스크롤 위치가 튀지 않게 한다.
-      if (window.scrollY < 200) {
+      // 단 '노후 상품'은 카드 목록이 전부라, 스크롤을 내렸다고 갱신을 건너뛰면
+      // 1차 배치 분량(12장 남짓)에 영원히 멈춘다. 여기서는 항상 다시 그리고 위치를 되돌린다.
+      const alwaysRedraw = (currentMode === 'retire');
+      if (window.scrollY < 200 || alwaysRedraw) {
+        const keepY = window.scrollY;
         document.getElementById('newsGrid').innerHTML = '';
         renderedCount = 0; relatedLinks = new Set();
         renderNextPage();
+        if (alwaysRedraw && keepY) window.scrollTo(0, keepY);
       }
       updateStats();
     }
