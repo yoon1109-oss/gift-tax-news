@@ -589,7 +589,12 @@
 
   function getKeyword() {
     if (currentMode === 'all') return '자녀 증여';
-    if (currentMode === 'family') return '가족 자산 관리';
+    // 칩 이름은 '가족 자산 관리'지만 검색어는 다르다.
+    // '가족 자산 관리'로 그대로 찾으면 300건 중 유효가 34%뿐이고, '가족'이라는 흔한 단어 때문에
+    // 재단 특강·가족센터·'가족당' 정치 논란 같은 기사가 44건이나 섞인다 (실측 2026-09-09).
+    // '자산 이전 상속 증여 신탁'은 유효 92%, 사회공헌·정치 노이즈 0건.
+    // 다른 칩과의 겹침도 3%(자녀 증여) / 0%(자녀 금융)로 낮다.
+    if (currentMode === 'family') return '자산 이전 상속 증여 신탁';
     if (currentMode === 'childfin') return '자녀 금융';
     if (currentMode === 'platform') return '금융 플랫폼';
     // 칩 이름은 '연금'이지만 검색어는 넓힌다. '연금' 단독은 100건 중 연금개혁 정치 35건·
