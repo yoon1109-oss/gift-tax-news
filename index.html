@@ -495,7 +495,7 @@
   <span class="kw-chip" data-mode="childfin" onclick="selectNewsKeyword('childfin', this)">자녀 금융</span>
   <span class="kw-chip" data-mode="family" onclick="selectNewsKeyword('family', this)">가족 자산 관리</span>
   <span class="kw-chip" data-mode="platform" onclick="selectNewsKeyword('platform', this)">금융 플랫폼</span>
-  <span class="kw-chip" data-mode="pension" onclick="selectNewsKeyword('pension', this)">연금</span>
+  <span class="kw-chip" data-mode="savenews" onclick="selectNewsKeyword('savenews', this)">절세/장기투자 기사</span>
   <span class="kw-chip" data-mode="saving" onclick="selectNewsKeyword('saving', this)">절세/장기투자 상품</span>
   <span class="kw-chip" data-mode="hanwha" onclick="selectNewsKeyword('hanwha', this)">한화생명 파이</span>
 </div>
@@ -570,7 +570,7 @@
     const s = t || '';
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
     if (isCelebNews(s)) return true;
-    const noise = (currentMode === 'pension' || currentMode === 'saving') ? NOISE_KW.filter(k => !REALTY_KW.includes(k)) : NOISE_KW;
+    const noise = (currentMode === 'savenews' || currentMode === 'saving') ? NOISE_KW.filter(k => !REALTY_KW.includes(k)) : NOISE_KW;
     return OWNER_KW.some(k => s.includes(k)) || noise.some(k => s.includes(k));
   }
   // 같은 기사 묶기: 회사명(주체) 동일 또는 본문 근접중복(0.5)이면 기존 대표에 dupe로 붙임.
@@ -597,14 +597,12 @@
     if (currentMode === 'family') return '자산 이전 상속 증여 신탁';
     if (currentMode === 'childfin') return '자녀 금융';
     if (currentMode === 'platform') return '금융 플랫폼';
-    // 칩 이름은 '연금'이지만 검색어는 넓힌다. '연금' 단독은 100건 중 연금개혁 정치 35건·
-    // 국민연금 지분공시 21건이고 정작 연금 상품 기사는 0건이었다(실측 2026-09-07).
-    // '연금 상품 노후 준비'는 100건 중 76건이 유효, 노이즈 0건.
-    // 두 칩은 서로 겹치지 않게 검색어를 나눴다 (중복률 1%, 실측 2026-09-07).
-    //   연금      '연금저축 IRP 퇴직연금'  200건 중 유효 132 / 노이즈 0 — 연금계좌·상품 축
-    //   절세/장기투자 '절세 상품' + '장기 투자 상품'  유효 92% / 68%, 둘 다 노이즈 0
-    // '연금' 단독은 쓰지 말 것 — 연금개혁 정치·국민연금 지분공시가 대부분이다.
-    if (currentMode === 'pension') return '연금저축 IRP 퇴직연금';
+    // '절세/장기투자'는 기사(savenews)와 상품(saving) 두 칩이 같은 질의를 공유한다.
+    //   1차 '절세 상품'      300건 중 유효 92% / 노이즈 0 (잰 것 중 최고)
+    //   2차 '장기 투자 상품' 300건 중 유효 68% / 노이즈 0  → PEN_SECOND_QUERY
+    // '연금' 단독으로 되돌리지 말 것 — 연금개혁 정치·국민연금 지분공시가 대부분이다.
+    // 옛 '연금저축 IRP 퇴직연금'보다 최근 7일 기사가 46 → 211건으로 늘어 연관도 선택 폭이 넓다.
+    if (currentMode === 'savenews') return '절세 상품';
     // 실측(300건, 2026-09-09): 유효 92% · 노이즈 0 — 지금까지 잰 검색어 중 가장 깨끗하다.
     // 겹침도 낮다 — 장기 투자 상품 3% / 가족 자산 관리 0% / 연금 2%.
     if (currentMode === 'saving')  return '절세 상품';   // + PEN_SECOND_QUERY 를 함께 받는다
@@ -650,7 +648,7 @@
     const modeAtStart = currentMode;
     // 배경 배치(101·201)는 병렬로 받되, 관련도(_rank) 보존을 위해 순서대로 처리
     // 연금·절세/장기투자 상품은 시장 현황을 보는 화면이라 더 깊이 받는다 (네이버 start 최대 1000)
-    const starts = (modeAtStart === 'pension' || modeAtStart === 'saving')
+    const starts = (modeAtStart === 'savenews' || modeAtStart === 'saving')
       ? [101, 201, 301, 401, 501, 601, 701, 801, 901] : [101, 201];
     // 한 번에 20개를 동시에 던지면 네이버가 일부를 거절한다 (catch로 삼켜져 조용히 유실됨).
     // 실측 2026-09-07: 병렬 20개 -> 364건만 수집, 4개씩 나눠 보내면 970건.
@@ -668,7 +666,7 @@
     // '절세/장기투자 상품'은 한 축 질의만으로는 놓치는 상품·플랫폼이 많다.
     // ('해빗팩토리, AI 자산관리·노후설계' 류가 상위 700건에 아예 없었다 — 2026-09-07 제보)
     // 그래서 서비스 축 질의를 하나 더 받아 합친다.
-    if (modeAtStart === 'saving') {
+    if (modeAtStart === 'saving' || modeAtStart === 'savenews') {
       [1, 101, 201, 301, 401, 501, 601, 701, 801, 901]
         .forEach(start => jobs.push(() => fetchSafe(PEN_SECOND_QUERY, start)));
     }
@@ -746,16 +744,17 @@
   // 파이와 같은 영역(자녀·증여·자산관리)을 다루면 함께 가산되도록 했다.
   const REL_PLAT_HIGH = ['자녀','증여','미성년','자산관리','자산 관리','생애주기','연금','저축','슈퍼앱','MAU','금융앱','뱅킹'];
   const REL_PLAT = ['플랫폼','앱','핀테크','디지털','간편','비대면','이용자','가입자','출시','론칭','개편','고도화','페이','송금','결제','계좌','은행','증권','보험'];
-  // 연금 모드: '연금' 단독 검색은 정치·기금운용 뉴스가 대부분이라 검색어를 넓혔고(getKeyword),
-  // 점수는 '개인이 드는 연금·절세 상품'을 축으로 잡는다.
-  //   핵심 = 연금 상품 그 자체 / 중간 = 절세계좌·노후설계 / 일반 = 연금 일반어
+  // 절세/장기투자 모드(savenews·saving 공용): '연금' 단독 검색은 정치·기금운용 뉴스가
+  // 대부분이라 검색어를 '절세 상품'+'장기 투자 상품'으로 잡았고(getKeyword),
+  // 점수는 '개인이 드는 절세·연금 상품'을 축으로 본다.
+  //   핵심 = 연금·절세 상품 그 자체 / 중간 = 절세계좌·노후설계 / 일반 = 일반어
   // ISA는 연금이 아니라 절세 계좌라 중간 등급에 둔다. 핵심에 두면 '중개형 ISA 유치 이벤트'
   // 같은 마케팅 기사가 상위로 올라온다(ISA 기사 100건 중 노후 맥락은 17건뿐, 실측).
   // ISA/IRP는 대소문자를 구분해야 한다 — /i를 붙이면 'Melisa' 같은 영문 이름에 걸린다.
   const REL_PEN_CORE = [/연금저축/, /개인연금/, /연금보험/, /변액연금/, /\bIRP\b/, /개인형\s*퇴직연금/,
     /퇴직연금/, /주택연금/, /연금계좌/, /\bTDF\b/, /디폴트옵션/];
   const REL_PEN_MID  = [/\bISA\b/, /세액공제/, /노후\s*(준비|설계|대비|자금)/, /은퇴\s*(준비|설계|이후)/,
-    /연금\s*수령/, /월\s*배당/, /수익률/, /절세/];
+    /연금\s*수령/, /월\s*배당/, /수익률/, /절세/, /비과세/, /과세\s*이연/, /복리/, /적립식/, /장기\s*투자/];
   const REL_PEN_LOW  = [/연금/, /은퇴/, /노후/, /적립/, /납입/, /고령/];
   // 노후 자산 설계·전략 기사는 상품명을 안 쓰는 경우가 많아 구조적으로 불리했다.
   // (실측 2026-09-07: 상품명 있는 칼럼은 3·4위, 없는 설계 기사는 20·22·24위)
@@ -895,7 +894,7 @@
       return REL_PLAT_HIGH.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
            + REL_PLAT.reduce((s, k) => s + (t.includes(k) ? 2 : 0) + (d.includes(k) ? 1 : 0), 0);
     }
-    if (currentMode === 'pension' || currentMode === 'saving') {
+    if (currentMode === 'savenews' || currentMode === 'saving') {
       // childfin과 같은 방식 — 등급마다 '개념당 1회'만 센다.
       // 키워드마다 더하면 동의어를 나열한 제목이 점수를 배로 얻는다.
       let s = 0;
@@ -963,7 +962,7 @@
     const relLabel = currentMode === 'family' ? '가족 자산 관리 관련 기사'
                    : currentMode === 'childfin' ? '자녀 금융 관련 기사'
                    : currentMode === 'platform' ? '금융 플랫폼 관련 기사'
-                   : currentMode === 'pension' ? '연금 관련 기사'
+                   : currentMode === 'savenews' ? '절세/장기투자 관련 기사'
                    : currentMode === 'saving' ? '절세/장기투자 상품 관련 기사'
                    : currentMode === 'hanwha' ? '한화생명 파이 관련 기사'
                    : '자녀 증여 관련 기사';
@@ -1054,12 +1053,12 @@
              : currentMode === 'family' ? ['가족','자산관리']
              : currentMode === 'childfin' ? ['자녀','금융']
              : currentMode === 'platform' ? ['금융','플랫폼']
-             : currentMode === 'pension' ? ['연금','IRP','퇴직연금']
+             : currentMode === 'savenews' ? ['절세','장기','투자','연금']
              : currentMode === 'saving' ? ['절세','장기','투자']
              : '파이';
 
     // 첫 렌더시에만 연관 기사 섹션 삽입
-    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family' || currentMode === 'childfin' || currentMode === 'platform' || currentMode === 'pension')) {
+    if (renderedCount === 0 && (currentMode === 'all' || currentMode === 'family' || currentMode === 'childfin' || currentMode === 'platform' || currentMode === 'savenews')) {
       renderRelated(grid, allNews, kw);
     }
 
@@ -1117,7 +1116,7 @@
   // ── 주소로 탭 지정 ──────────────────────────────────────────
   // #reviews 처럼 mode 이름을 해시에 담아, 특정 탭을 연 상태의 주소를 공유할 수 있게 한다.
   // 뉴스 키워드(#childfin)와 이벤트 서브탭(#referral)도 같은 방식으로 지정된다.
-  const NEWS_MODES = ['all','family','childfin','platform','pension','saving','hanwha'];
+  const NEWS_MODES = ['all','family','childfin','platform','savenews','saving','hanwha'];
   const TAB_MODES  = ['blog','event','reviews','taxnews','stats'];
 
   function setHash(mode) {
@@ -1133,7 +1132,8 @@
     let m = (location.hash || '').replace(/^#\/?/, '');
     if (!m) return false;
 
-    if (m === 'retire') m = 'saving';   // 옛 주소(#retire) 호환 — 칩 이름이 바뀌기 전 공유된 링크
+    if (m === 'retire') m = 'saving';       // 옛 주소 호환 — 칩 이름이 바뀌기 전 공유된 링크
+    if (m === 'pension') m = 'savenews';    //
     if (NEWS_MODES.includes(m)) {
       if (m === 'all') return false;                       // 기본 화면과 같다
       document.querySelector('input[value="all"]').checked = true;
