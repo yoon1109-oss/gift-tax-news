@@ -599,10 +599,10 @@
     // 재단 특강·가족센터·'가족당' 정치 논란 같은 기사가 44건이나 섞인다 (실측 2026-09-09).
     // '자산 이전 상속 증여 신탁'은 유효 92%, 사회공헌·정치 노이즈 0건.
     // 다른 칩과의 겹침도 3%(자녀 증여) / 0%(자녀 금융)로 낮다.
-    // '자산 이전 상속 증여 신탁'은 적합률 94%로 높았지만 최근 7일 기사가 7건뿐이라
-    // 연관도 상위 4칸을 2점짜리 무관 기사가 채웠다 (2026-09-11 재점검).
-    // '상속 증여 자산관리'는 적합 77%지만 최근 7일이 92건이라 고를 폭이 훨씬 넓다.
-    if (currentMode === 'family') return '상속 증여 자산관리';
+    // 이 칩은 '가족 단위 금융 자산관리' 동향을 본다. 세무·절세 강좌가 아니다.
+    // '상속 증여 자산관리'로 찾으면 금투협 신탁 절세법 교육·세미나가 상위를 점령했다.
+    // '가족 자산관리 금융'은 금융사 동향(패밀리오피스·WM센터·PB·신탁 상품)이 상위에 온다.
+    if (currentMode === 'family') return '가족 자산관리 금융';
     if (currentMode === 'childfin') return '자녀 금융';
     if (currentMode === 'platform') return '금융 플랫폼';
     // '절세/장기투자'는 기사(savenews)와 상품(saving) 두 칩이 같은 질의를 공유한다.
@@ -732,8 +732,12 @@
   // 그러면 '가족'이라는 흔한 단어 하나로 5점을 얻어 최근 7일 81건 중 23건이 5점 동점이 되고,
   // "용혜인 '가족당' 운영 논란", "암 투병 가족 보며 창업" 같은 기사가 상위에 올라왔다.
   // (2026-09-07 제보) 그래서 다른 칩과 같은 3단 + 교차 보너스 구조로 바꿨다.
-  const REL_FAM_CORE = [/자산\s?관리/, /자산\s?이전/, /자산\s?승계/, /부의\s?이전/, /상속/, /증여/, /신탁/,
-    /패밀리\s?오피스/, /프라이빗\s?뱅킹/, /\bPB\b/, /\bWM\b/, /절세/, /세대\s?이전/];
+  // 핵심은 '금융 자산관리'다. 상속·증여·절세는 인접 축(REL_FAM_NEAR)으로 한 단계 내렸다 —
+  // 핵심에 두면 금투협 '신탁 절세법' 교육 같은 세무 강좌가 상위를 점령한다 (2026-09-11).
+  const REL_FAM_CORE = [/자산\s?관리/, /\bWM\b/, /\bPB\b/, /프라이빗\s?뱅킹/, /패밀리\s?오피스/,
+    /신탁/, /펀드/, /계좌/, /포트폴리오/, /자산\s?배분/, /투자\s?상품/, /일임/];
+  const REL_FAM_NEAR = [/상속/, /증여/, /절세/, /세액공제/, /자산\s?이전/, /자산\s?승계/, /부의\s?이전/,
+    /승계/, /투자/, /주식/, /ETF/, /연금/, /보험/, /적금/, /예금/, /저축/];
   const REL_FAM_WHO = [/가족/, /부부/, /배우자/, /자녀/, /부모/, /손주/, /3대/, /가구/, /노후/];
   // 사회공헌·정치성 기사는 '가족'이 들어가도 자산 관리와 무관하다 (재단 특강, 정당 논란 등)
   // 지자체 주민 프로그램(은평구 중장년 노후자산 클래스 등)도 자산 관리 동향이 아니다.
@@ -875,16 +879,18 @@
   function relatedScore(n) {
     const t = n.title || '', d = n.desc || '';
     if (currentMode === 'family') {
+      const coreT = REL_FAM_CORE.some(r => r.test(t)), nearT = REL_FAM_NEAR.some(r => r.test(t));
+      if (!coreT && !nearT) return 0;          // 금융 신호가 제목에 없으면 이 칩의 기사가 아니다
       let s = 0;
-      const coreT = REL_FAM_CORE.some(r => r.test(t)), whoT = REL_FAM_WHO.some(r => r.test(t));
+      const whoT = REL_FAM_WHO.some(r => r.test(t));
       if (coreT) s += 5;
       if (REL_FAM_CORE.some(r => r.test(d))) s += 2;
+      if (nearT) s += 3;
+      if (REL_FAM_NEAR.some(r => r.test(d))) s += 1;
       if (whoT) s += 3;
       if (REL_FAM_WHO.some(r => r.test(d))) s += 1;
-      if (coreT && whoT) s += 5;                                  // 자산 관리 × 가족이 제목에서 만남
-      const n = REL_FAM_CORE.filter(r => r.test(t)).length;
-      if (n > 1) s += Math.min(n - 1, 3);                          // 상속·증여·신탁을 함께 다루는 기사
-      if (REL_FAM_CSR.test(t)) s -= 8;                             // 사회공헌·정치성 기사 강등
+      if (coreT && whoT) s += 5;                                  // 금융 자산관리 × 가족이 제목에서 만남
+      if (REL_FAM_CSR.test(t)) s -= 8;                             // 사회공헌·정치성·지자체 기사 강등
       return s;
     }
     if (currentMode === 'childfin') {
