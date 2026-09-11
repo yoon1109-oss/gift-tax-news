@@ -142,6 +142,95 @@ const REFERRAL_PENDING = [
   { broker: '카카오페이증권', status: '미발견', note: "친구 초대 이벤트 없음. '주식 선물하기'(카카오톡 친구에게 주식 선물)는 상시 상품 기능이지 초대 이벤트가 아니다 (2026-08-28 확인)", link: 'https://www.kakaopaysec.com' },
 ];
 
+// 절세 3종 계좌(ISA·연금저축·IRP) 이벤트 — 2026-09-11 신설
+// 계좌 이벤트(미성년 자녀)와 성격이 다르다. 여기는 성인 대상 절세계좌 유치 경쟁이고
+// 이전(타사→당사) 혜택이 중심이라, 금액도 자릿수가 다르다(최대 100만~200만원).
+const TAX_CHECKED_AT = '2026-09-11';
+const TAX_ACCOUNTS = [
+  {
+    broker: '하나증권',
+    title: '개인연금 순증 이벤트',
+    period: '~ 2026.12.31',
+    kinds: ['연금저축'],
+    benefits: [
+      '개인연금 추가납입 또는 타사 이전 시 순증금액 구간별 신세계 모바일 상품권 — 최대 200만원',
+      "'1Q 스마트 개인연금 랩' 신규 가입 시 2만원 상품권 추가",
+      '별도 진행: IRP 신규·순증 이벤트 최대 3만원 상품권',
+    ],
+    link: 'https://www.hanaw.com/main/event/eventList.cmd',
+  },
+  {
+    broker: 'SK증권',
+    title: 'IRP·연금저축 이전 캐시백 이벤트 (10월까지 연장)',
+    period: '~ 2026.10.31',
+    kinds: ['연금저축', 'IRP'],
+    benefits: [
+      '타사 IRP·연금저축을 당사로 이전 시 순이전금액 구간별 현금 캐시백 — IRP 최대 100만원 / 연금저축 최대 50만원',
+      '최초 신규고객은 2배 — 5천만원 이상 60만원, 1억원 이상 100만원',
+      '보험사·은행에서 이전 시 5만원 추가',
+      '2026.11.30까지 잔고 유지 조건',
+    ],
+    link: 'https://www.sks.co.kr',
+  },
+  {
+    broker: '한화투자증권',
+    title: '중개형 ISA 투자 시작 이벤트',
+    period: '~ 2026.10.30',
+    kinds: ['ISA'],
+    benefits: [
+      '중개형 ISA 신규 개설·휴면계좌 보유 고객 대상 계좌개설 지원금 5,000원',
+      '국내주식·채권·ETF·펀드 1,000만원 이상 거래 시 순입금 구간별 현금 최대 100만원',
+      '타사 중개형 ISA 이전 시 이전금액을 2배로 인정',
+    ],
+    link: 'https://www.hanwhawm.com',
+  },
+  {
+    broker: '현대차증권',
+    title: "중개형 ISA '스텝업 챌린지' + IRP 연말 이벤트",
+    period: '~ 2026.12.31',
+    kinds: ['ISA', 'IRP'],
+    benefits: [
+      '중개형 ISA 거래 수수료 우대(0.0042087%) 평생 제공',
+      '신규 고객 순입금 구간별 — 100만원↑ 메가커피 세트 / 500만원↑ 배달의민족 2만원권 / 1,000만원↑ 신세계상품권 5만원권',
+      'ISA 연간 납입한도 2,000만원을 채운 고객 추첨 — 아이패드 에어11·에어팟 맥스2·다이슨 헤어드라이어·호텔 숙박권',
+    ],
+    link: 'https://www.hmsec.com',
+  },
+  {
+    broker: '미래에셋증권',
+    title: '저축에서 투자하는 연금으로 (개인연금·IRP)',
+    period: '2026.01.01 ~ 2026.12.31',
+    kinds: ['연금저축', 'IRP', 'ISA'],
+    benefits: [
+      '타사 연금 이전 또는 ISA 연금 전환 시 최대 100만원 상품권',
+      '퇴직금 입금 시 최대 3만원 상품권',
+      '연금저축 온라인 ETF·리츠 거래 수수료 0.0036396%',
+    ],
+    link: 'https://digital.securities.miraeasset.com/personal-pension/',
+  },
+  {
+    broker: 'iM증권',
+    title: '절세계좌·퇴직연금 ETF 거래 이벤트',
+    period: '~ 2026.09.30',
+    kinds: ['ISA', '연금저축', 'IRP'],
+    benefits: [
+      '절세계좌·퇴직연금 계좌로 전략 ETF 거래 시 모바일 문화상품권·커피 쿠폰',
+      '대상 ETF 21종 — KODEX(삼성)·TIGER(미래에셋)·RISE(KB)·ACE(한국투자)',
+    ],
+    link: 'https://www.imfnsec.com',
+  },
+];
+
+// 절세 3종 계좌 — 추가 조사 대상
+const TAX_PENDING = [
+  { broker: 'KB증권', status: '확인필요', note: 'ISA·연금 이벤트 상시 운영으로 보이나 공식 페이지에서 기간·혜택 확정 못함 (2026-09-11)', link: 'https://www.kbsec.com/cs/notice/jsp/CUST_09_0003.jsp' },
+  { broker: '삼성증권', status: '확인필요', note: '이벤트 목록이 비로그인 상태에서 조회되지 않아 판독 불가 (2026-09-11)', link: 'https://www.samsungpop.com/customer/event.do' },
+  { broker: '신한투자증권', status: '확인필요', note: '연금·ISA 이벤트 진행 여부 공식 확인 필요 (2026-09-11)', link: 'https://m.shinhansec.com/mweb/anev/evnt/aevnt0001' },
+  { broker: 'NH투자증권', status: '확인필요', note: '퇴직연금 개인투자용 국채 판매 등 상품 뉴스는 있으나 계좌 유치 이벤트는 미확인 (2026-09-11)', link: 'https://www.nhqv.com' },
+  { broker: '한국투자증권', status: '확인필요', note: '이벤트 목록에 ISA 검색 결과 있으나 기간·혜택 미확정 (2026-09-11)', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
+  { broker: '키움증권', status: '확인필요', note: 'robots 차단으로 크롤링 불가, 뉴스로만 판단 — 절세계좌 이벤트 미확인 (2026-09-11)', link: 'https://www.kiwoom.com/e/m/common/event/VIngEventView' },
+];
+
 // 추가 조사 대상 — 현재 진행 여부 미확정 (status: 확인필요 | 미발견 | 해당없음)
 const PENDING = [
   { broker: '대신증권', status: '확인필요', note: '2024.03 미성년 비대면 계좌 이벤트(종료). 현재는 일반 신규고객 대상만', link: 'https://www.daishin.com/g.ds?m=1109&p=12931&v=12831' },
@@ -171,5 +260,6 @@ export default function handler(req, res) {
     updatedAt: UPDATED_AT, checkedAt: CHECKED_AT,
     events: EVENTS, pending: PENDING, changes: CHANGES,
     referral: REFERRAL, referralPending: REFERRAL_PENDING, referralCheckedAt: REFERRAL_CHECKED_AT,
+    taxAccounts: TAX_ACCOUNTS, taxPending: TAX_PENDING, taxCheckedAt: TAX_CHECKED_AT,
   });
 }

@@ -481,6 +481,7 @@
   <span class="filter-label">분류</span>
   <span class="kw-chip active" data-mode="event" onclick="selectEventTab('event', this)">계좌 이벤트</span>
   <span class="kw-chip" data-mode="referral" onclick="selectEventTab('referral', this)">친구 초대 이벤트</span>
+  <span class="kw-chip" data-mode="taxacct" onclick="selectEventTab('taxacct', this)">절세 3종 계좌</span>
 </div>
 
 <div class="blog-keywords" id="taxTabs" style="display:none">
@@ -1060,7 +1061,7 @@
   }
 
   function renderNextPage() {
-    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'reviews' || currentMode === 'taxnews' || currentMode === 'press' || currentMode === 'stats') return;
+    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'taxacct' || currentMode === 'taxacct' || currentMode === 'reviews' || currentMode === 'taxnews' || currentMode === 'press' || currentMode === 'stats') return;
     // '절세/장기투자 상품' 칩은 기사를 빼고 상품·플랫폼만 쭉 나열한다 (한 번만 그린다)
     if (currentMode === 'saving') {
       if (renderedCount === 0) {
@@ -1131,7 +1132,7 @@
   const observer = new IntersectionObserver(entries => {
     if (!entries[0].isIntersecting) return;
     if (currentMode === 'blog') { if (!blogEnd && !blogLoading) loadBlogPage(); return; }
-    if (currentMode==='cafe' || currentMode==='event' || currentMode==='referral' || currentMode==='reviews' || currentMode==='taxnews' || currentMode==='press' || currentMode==='stats') return;
+    if (currentMode==='cafe' || currentMode==='event' || currentMode==='referral' || currentMode==='taxacct' || currentMode==='reviews' || currentMode==='taxnews' || currentMode==='press' || currentMode==='stats') return;
     if (renderedCount < allNews.length) renderNextPage();
   }, { rootMargin: '400px' });
   observer.observe(document.getElementById('sentinel'));
@@ -1170,6 +1171,13 @@
       onModeChange('taxnews');
       const chip = document.querySelector('#taxTabs .kw-chip[data-mode="press"]');
       if (chip) selectTaxTab('press', chip);
+      return true;
+    }
+    if (m === 'taxacct') {                                 // 이벤트 탭의 서브탭
+      document.querySelector('input[value="event"]').checked = true;
+      onModeChange('event');
+      const chip = document.querySelector('#eventTabs .kw-chip[data-mode="taxacct"]');
+      if (chip) selectEventTab('taxacct', chip);
       return true;
     }
     if (m === 'referral') {                                // 이벤트 탭의 서브탭
@@ -1368,7 +1376,9 @@
     if (el) el.classList.add('active');
     currentMode = mode;
     setHash(mode);
-    if (mode === 'referral') showReferral(); else showEvents();
+    if (mode === 'referral') showReferral();
+    else if (mode === 'taxacct') showTaxAccounts();
+    else showEvents();
   }
 
   // 세법 탭의 서브탭 (세법 뉴스 / 세무사회 보도자료)
@@ -1564,6 +1574,67 @@
     el.innerHTML = `<summary>${caret}<b>조사 대상 ${total}개사</b></summary>` +
       `<div class="sv-body"><span class="sv-plain">${names.map(esc).join(' · ')}</span></div>`;
     return el;
+  }
+
+  // 절세 3종 계좌(ISA·연금저축·IRP) 이벤트 — 성인 대상, 이전(타사→당사) 혜택이 중심이라
+  // 미성년 계좌 이벤트와 금액 자릿수가 다르다 (최대 100만~200만원).
+  async function showTaxAccounts() {
+    resetGrid('절세 계좌 이벤트를 불러오는 중...');
+    document.querySelector('.stats-bar').style.display = 'none';
+    if (!eventsLoaded) {
+      try {
+        const res = await fetch('/api/events');
+        eventsData = await res.json();
+        eventsLoaded = true;
+      } catch(e) { document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">이벤트를 불러오지 못했습니다.</p>'; return; }
+    }
+    if (currentMode !== 'taxacct') return;
+    const list = (eventsData && eventsData.taxAccounts) || [];
+    const pend = (eventsData && eventsData.taxPending) || [];
+    document.getElementById('initLoader').style.display = 'none';
+    document.getElementById('endMsg').style.display = 'none';
+    document.getElementById('totalCount').textContent = list.length;
+    document.getElementById('totalLabel').textContent = '건의 이벤트';
+    document.getElementById('sourceCount').textContent = list.length + pend.length;
+    document.getElementById('sourceLabel').textContent = '개 증권사';
+    renderTaxAccounts(eventsData || {});
+  }
+
+  function renderTaxAccounts(data) {
+    const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
+    const list = data.taxAccounts || [], pend = data.taxPending || [];
+    const checkedAt = data.taxCheckedAt || data.checkedAt || '';
+
+    const note = document.createElement('div');
+    note.className = 'event-note';
+    note.innerHTML = `<b>절세 3종 계좌 이벤트</b> — ISA · 연금저축 · IRP` +
+      `${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''}<br>` +
+      `<span style="color:var(--muted)">성인 대상이며 <b>타사에서 옮겨오는 이전 혜택</b>이 중심입니다. ` +
+      `대부분 잔고 유지 기간과 최소 거래 조건이 붙으니 공식 페이지에서 확인하세요.</span>`;
+    grid.appendChild(note);
+    const svr = surveyedBlock([...new Set(list.map(e => e.broker))], pend);
+    if (svr) grid.appendChild(svr);
+
+    if (!list.length && !pend.length) {
+      grid.insertAdjacentHTML('beforeend', '<p style="color:var(--muted);text-align:center;padding:40px">확인된 이벤트가 없습니다.</p>');
+      return;
+    }
+
+    list.forEach((ev, i) => {
+      const el = document.createElement('a');
+      el.className = 'news-card'; el.href = ev.link; el.target = '_blank'; el.rel = 'noopener';
+      el.style.animationDelay = `${Math.min(i*0.05,0.5)}s`;
+      el.innerHTML = `
+        <div class="card-meta">
+          <span class="event-broker">${esc(ev.broker)}</span>
+          <span class="event-period">${esc(ev.period)}</span>
+        </div>
+        ${(ev.kinds||[]).length ? `<div style="margin:4px 0 2px">${ev.kinds.map(k => `<span class="pen-kind" style="margin-right:4px">${esc(k)}</span>`).join('')}</div>` : ''}
+        ${ev.title ? `<div class="event-title">${esc(ev.title)}</div>` : ''}
+        <ul class="event-benefits">${(ev.benefits||[]).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+        <div class="event-link">공식 페이지 바로가기 →</div>`;
+      grid.appendChild(el);
+    });
   }
 
   function renderReferral(data) {
