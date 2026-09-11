@@ -480,8 +480,8 @@
 <div class="blog-keywords" id="eventTabs" style="display:none">
   <span class="filter-label">분류</span>
   <span class="kw-chip active" data-mode="event" onclick="selectEventTab('event', this)">계좌 이벤트</span>
-  <span class="kw-chip" data-mode="referral" onclick="selectEventTab('referral', this)">친구 초대 이벤트</span>
   <span class="kw-chip" data-mode="taxacct" onclick="selectEventTab('taxacct', this)">절세 3종 계좌</span>
+  <span class="kw-chip" data-mode="referral" onclick="selectEventTab('referral', this)">친구 초대 이벤트</span>
 </div>
 
 <div class="blog-keywords" id="taxTabs" style="display:none">
@@ -1608,9 +1608,7 @@
     const note = document.createElement('div');
     note.className = 'event-note';
     note.innerHTML = `<b>절세 3종 계좌 이벤트</b> — ISA · 연금저축 · IRP` +
-      `${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''}<br>` +
-      `<span style="color:var(--muted)">성인 대상이며 <b>타사에서 옮겨오는 이전 혜택</b>이 중심입니다. ` +
-      `대부분 잔고 유지 기간과 최소 거래 조건이 붙으니 공식 페이지에서 확인하세요.</span>`;
+      `${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`;
     grid.appendChild(note);
     const svr = surveyedBlock([...new Set(list.map(e => e.broker))], pend);
     if (svr) grid.appendChild(svr);

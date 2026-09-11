@@ -229,6 +229,18 @@ const TAX_PENDING = [
   { broker: 'NH투자증권', status: '확인필요', note: '퇴직연금 개인투자용 국채 판매 등 상품 뉴스는 있으나 계좌 유치 이벤트는 미확인 (2026-09-11)', link: 'https://www.nhqv.com' },
   { broker: '한국투자증권', status: '확인필요', note: '이벤트 목록에 ISA 검색 결과 있으나 기간·혜택 미확정 (2026-09-11)', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
   { broker: '키움증권', status: '확인필요', note: 'robots 차단으로 크롤링 불가, 뉴스로만 판단 — 절세계좌 이벤트 미확인 (2026-09-11)', link: 'https://www.kiwoom.com/e/m/common/event/VIngEventView' },
+  // 아래 10개사는 계좌 이벤트 탭과 조사 범위를 맞추기 위해 추가했다 (2026-09-11).
+  // 조사했는데 확인이 안 되더라는 사실도 결과이므로 목록에 남긴다.
+  { broker: '유안타증권', status: '확인필요', note: 'IRP 이벤트(2025.11.03~2026.01.31, 최대 3만원)는 종료. 후속 이벤트 미확인 (2026-09-11)', link: 'https://03.myasset.com/myasset/events/2025_irp/index.cmd' },
+  { broker: '대신증권', status: '확인필요', note: '진행중 이벤트 목록에서 ISA·연금·IRP 건 확인되지 않음 (2026-09-11)', link: 'https://www.daishin.com/g.ds?m=1109&p=12931&v=12831' },
+  { broker: '교보증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://www.iprovest.com' },
+  { broker: '메리츠증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://home.imeritz.com' },
+  { broker: '신영증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://www.shinyoung.com' },
+  { broker: '유진투자증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://www.eugenefn.com' },
+  { broker: '우리투자증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://www.wooriib.com' },
+  { broker: 'IBK투자증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://www.ibks.com' },
+  { broker: 'DB증권 (구 DB금융투자)', status: '확인필요', note: '이벤트 페이지가 로그인 필요라 판독 불가 (2026-09-11)', link: 'https://www.dbsec.co.kr/custcenter/notices/cu_NoticesEvent_lst.do' },
+  { broker: '토스증권', status: '미발견', note: '웹에 이벤트 페이지가 없어 앱에서만 확인 가능. 웹 노출 범위에서는 절세계좌 이벤트 없음 (2026-09-11)', link: 'https://tossinvest.com' },
 ];
 
 // 추가 조사 대상 — 현재 진행 여부 미확정 (status: 확인필요 | 미발견 | 해당없음)
