@@ -233,7 +233,7 @@ scripts/apps-script-review-alert.gs  ← 실제 운영: 30분마다 새 리뷰 �
 
 ## 모아보기 (`digest`, 2026-09-11 신설)
 
-**뉴스 검색 탭의 기본 화면.** 키워드 6종의 최근 30일 연관도 상위 3건씩을 한 페이지에 모은다.
+**뉴스 검색 탭의 기본 화면.** 키워드 6종의 최근 30일 연관도 상위 5건씩을 한 페이지에 모은다.
 
 - `DIGEST_MODES` 6종 — all·childfin·family·platform·savenews·hanwha.
   `saving`(절세/장기투자 상품)은 기사가 아니라 상품 카드라 **제외**한다
