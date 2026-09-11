@@ -492,7 +492,8 @@
 
 <div class="blog-keywords" id="newsKeywords" style="display:flex">
   <span class="filter-label">키워드</span>
-  <span class="kw-chip active" data-mode="all" onclick="selectNewsKeyword('all', this)">자녀 증여</span>
+  <span class="kw-chip active" data-mode="digest" onclick="selectNewsKeyword('digest', this)">모아보기</span>
+  <span class="kw-chip" data-mode="all" onclick="selectNewsKeyword('all', this)">자녀 증여</span>
   <span class="kw-chip" data-mode="childfin" onclick="selectNewsKeyword('childfin', this)">자녀 금융</span>
   <span class="kw-chip" data-mode="family" onclick="selectNewsKeyword('family', this)">가족 자산 관리</span>
   <span class="kw-chip" data-mode="platform" onclick="selectNewsKeyword('platform', this)">금융 플랫폼</span>
@@ -571,12 +572,13 @@
   // (네이버가 제목을 잘라 보내므로 '이해충돌'은 '이해충'까지만 매칭해야 한다)
   const CHILDFIN_NOISE = /이해\s?충|재산\s?(신고|공개|내역|뜯어)|공직자|인사청문|장관|후보자|의혹|가족센터|다문화|결혼이민|한국어교육|교육청|유류분|소송|분쟁|재판|피소|고소|숨진|사망보험금|학대|실종|주민등록|등\s?·?\s?초본|재혼가정/;
   const REALTY_KW = ['부동산','아파트','주택','빌딩','상가','토지','오피스텔','건물'];
-  function isOwnerNews(t) {
+  function isOwnerNews(t, mode) {
     const s = t || '';
+    const m = mode || currentMode;
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
     if (isCelebNews(s)) return true;
-    if (currentMode === 'childfin' && CHILDFIN_NOISE.test(s)) return true;
-    const noise = (currentMode === 'savenews' || currentMode === 'saving') ? NOISE_KW.filter(k => !REALTY_KW.includes(k)) : NOISE_KW;
+    if (m === 'childfin' && CHILDFIN_NOISE.test(s)) return true;
+    const noise = (m === 'savenews' || m === 'saving') ? NOISE_KW.filter(k => !REALTY_KW.includes(k)) : NOISE_KW;
     return OWNER_KW.some(k => s.includes(k)) || noise.some(k => s.includes(k));
   }
   // 같은 기사 묶기: 회사명(주체) 동일 또는 본문 근접중복(0.5)이면 기존 대표에 dupe로 붙임.
@@ -593,8 +595,22 @@
     return true;
   }
 
-  function getKeyword() {
-    if (currentMode === 'all') return '자녀 증여';
+  // 모아보기 — 키워드마다 최근 한 달 연관도 상위만 모아 보여주는 기본 화면.
+  // saving(절세/장기투자 상품)은 기사 목록이 아니라 상품 카드라 제외한다.
+  const DIGEST_MODES = [
+    { mode: 'all',      label: '자녀 증여' },
+    { mode: 'childfin', label: '자녀 금융' },
+    { mode: 'family',   label: '가족 자산 관리' },
+    { mode: 'platform', label: '금융 플랫폼' },
+    { mode: 'savenews', label: '절세/장기투자' },
+    { mode: 'hanwha',   label: '한화생명 파이' },
+  ];
+  const DIGEST_DAYS = 30, DIGEST_PER = 3;
+  let digestLoaded = false, digestData = null;
+
+  function getKeyword(mode) {
+    const cm = mode || currentMode;
+    if (cm === 'all') return '자녀 증여';
     // 칩 이름은 '가족 자산 관리'지만 검색어는 다르다.
     // '가족 자산 관리'로 그대로 찾으면 300건 중 유효가 34%뿐이고, '가족'이라는 흔한 단어 때문에
     // 재단 특강·가족센터·'가족당' 정치 논란 같은 기사가 44건이나 섞인다 (실측 2026-09-09).
@@ -603,18 +619,18 @@
     // 이 칩은 '가족 단위 금융 자산관리' 동향을 본다. 세무·절세 강좌가 아니다.
     // '상속 증여 자산관리'로 찾으면 금투협 신탁 절세법 교육·세미나가 상위를 점령했다.
     // '가족 자산관리 금융'은 금융사 동향(패밀리오피스·WM센터·PB·신탁 상품)이 상위에 온다.
-    if (currentMode === 'family') return '가족 자산관리 금융';
-    if (currentMode === 'childfin') return '자녀 금융';
-    if (currentMode === 'platform') return '금융 플랫폼';
+    if (cm === 'family') return '가족 자산관리 금융';
+    if (cm === 'childfin') return '자녀 금융';
+    if (cm === 'platform') return '금융 플랫폼';
     // '절세/장기투자'는 기사(savenews)와 상품(saving) 두 칩이 같은 질의를 공유한다.
     //   1차 '절세 상품'      300건 중 유효 92% / 노이즈 0 (잰 것 중 최고)
     //   2차 '장기 투자 상품' 300건 중 유효 68% / 노이즈 0  → PEN_SECOND_QUERY
     // '연금' 단독으로 되돌리지 말 것 — 연금개혁 정치·국민연금 지분공시가 대부분이다.
     // 옛 '연금저축 IRP 퇴직연금'보다 최근 7일 기사가 46 → 211건으로 늘어 연관도 선택 폭이 넓다.
-    if (currentMode === 'savenews') return '절세 상품';
+    if (cm === 'savenews') return '절세 상품';
     // 실측(300건, 2026-09-09): 유효 92% · 노이즈 0 — 지금까지 잰 검색어 중 가장 깨끗하다.
     // 겹침도 낮다 — 장기 투자 상품 3% / 가족 자산 관리 0% / 연금 2%.
-    if (currentMode === 'saving')  return '절세 상품';   // + PEN_SECOND_QUERY 를 함께 받는다
+    if (cm === 'saving')  return '절세 상품';   // + PEN_SECOND_QUERY 를 함께 받는다
     return '한화생명 파이 증여';
   }
 
@@ -877,9 +893,10 @@
       .sort((a, b) => b.arts[0].pubDate - a.arts[0].pubDate || b.arts.length - a.arts.length);
   }
 
-  function relatedScore(n) {
+  function relatedScore(n, mode) {
+    const cm = mode || currentMode;
     const t = n.title || '', d = n.desc || '';
-    if (currentMode === 'family') {
+    if (cm === 'family') {
       const coreT = REL_FAM_CORE.some(r => r.test(t)), nearT = REL_FAM_NEAR.some(r => r.test(t));
       if (!coreT && !nearT) return 0;          // 금융 신호가 제목에 없으면 이 칩의 기사가 아니다
       let s = 0;
@@ -894,7 +911,7 @@
       if (REL_FAM_CSR.test(t)) s -= 8;                             // 사회공헌·정치성·지자체 기사 강등
       return s;
     }
-    if (currentMode === 'childfin') {
+    if (cm === 'childfin') {
       // 제목에 자녀 신호가 없으면 이 칩의 기사가 아니다. 예전엔 본문에만 '자녀'가 있어도
       // 2점을 받아 '[더밸류 브리핑] 오늘의 금융계 소식' 같은 일반 금융 기사가 상위에 올라왔다.
       const kidT = REL_KID.some(r => r.test(t));
@@ -911,11 +928,11 @@
       if (REL_KID_EDU.some(r => r.test(t))) s += 1;
       return s;
     }
-    if (currentMode === 'platform') {
+    if (cm === 'platform') {
       return REL_PLAT_HIGH.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
            + REL_PLAT.reduce((s, k) => s + (t.includes(k) ? 2 : 0) + (d.includes(k) ? 1 : 0), 0);
     }
-    if (currentMode === 'savenews' || currentMode === 'saving') {
+    if (cm === 'savenews' || cm === 'saving') {
       // childfin과 같은 방식 — 등급마다 '개념당 1회'만 센다.
       // 키워드마다 더하면 동의어를 나열한 제목이 점수를 배로 얻는다.
       let s = 0;
@@ -946,14 +963,14 @@
   // 안 차면 14→30일→무제한으로 넓힌다 (키워드가 한산한 주에 섹션이 비지 않게).
   const RELATED_WINDOWS = [7, 14, 30, null];   // null = 기간 제한 없음
 
-  function pickRelated(items, days) {
+  function pickRelated(items, days, mode) {
     const pool = days == null ? items : items.filter(n =>
       n.pubDate instanceof Date && !isNaN(n.pubDate) && (Date.now() - n.pubDate) <= days * 864e5);
     // 연관도 점수 내림차순(동점이면 sim 순서), 단 같은 사건 중복 배제하고 상위 4건
     // 점수가 0 이하면 '연관도 높음'이 아니다. 예전엔 후보가 모자라면 0점 기사로 4칸을 채워
     // 무관한 기사가 상단에 올라왔다 — 기간을 넓혀서(7→14→30→무제한) 채우는 편이 낫다.
     const scored = pool
-      .map(n => ({ n, s: relatedScore(n) }))
+      .map(n => ({ n, s: relatedScore(n, mode) }))
       .filter(c => c.s > 0)
       .sort((a, b) => b.s - a.s || (a.n._rank ?? 1e9) - (b.n._rank ?? 1e9));
     const candidates = [], pT = [], pTD = [], pSubj = [];
@@ -1061,7 +1078,7 @@
   }
 
   function renderNextPage() {
-    if (currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'taxacct' || currentMode === 'taxacct' || currentMode === 'reviews' || currentMode === 'taxnews' || currentMode === 'press' || currentMode === 'stats') return;
+    if (currentMode === 'digest' || currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'taxacct' || currentMode === 'taxacct' || currentMode === 'reviews' || currentMode === 'taxnews' || currentMode === 'press' || currentMode === 'stats') return;
     // '절세/장기투자 상품' 칩은 기사를 빼고 상품·플랫폼만 쭉 나열한다 (한 번만 그린다)
     if (currentMode === 'saving') {
       if (renderedCount === 0) {
@@ -1132,7 +1149,7 @@
   const observer = new IntersectionObserver(entries => {
     if (!entries[0].isIntersecting) return;
     if (currentMode === 'blog') { if (!blogEnd && !blogLoading) loadBlogPage(); return; }
-    if (currentMode==='cafe' || currentMode==='event' || currentMode==='referral' || currentMode==='taxacct' || currentMode==='reviews' || currentMode==='taxnews' || currentMode==='press' || currentMode==='stats') return;
+    if (currentMode==='digest' || currentMode==='cafe' || currentMode==='event' || currentMode==='referral' || currentMode==='taxacct' || currentMode==='reviews' || currentMode==='taxnews' || currentMode==='press' || currentMode==='stats') return;
     if (renderedCount < allNews.length) renderNextPage();
   }, { rootMargin: '400px' });
   observer.observe(document.getElementById('sentinel'));
@@ -1140,7 +1157,7 @@
   // ── 주소로 탭 지정 ──────────────────────────────────────────
   // #reviews 처럼 mode 이름을 해시에 담아, 특정 탭을 연 상태의 주소를 공유할 수 있게 한다.
   // 뉴스 키워드(#childfin)와 이벤트 서브탭(#referral)도 같은 방식으로 지정된다.
-  const NEWS_MODES = ['all','family','childfin','platform','savenews','saving','hanwha'];
+  const NEWS_MODES = ['digest','all','family','childfin','platform','savenews','saving','hanwha'];
   const TAB_MODES  = ['blog','event','reviews','taxnews','stats'];
 
   function setHash(mode) {
@@ -1159,7 +1176,7 @@
     if (m === 'retire') m = 'saving';       // 옛 주소 호환 — 칩 이름이 바뀌기 전 공유된 링크
     if (m === 'pension') m = 'savenews';    //
     if (NEWS_MODES.includes(m)) {
-      if (m === 'all') return false;                       // 기본 화면과 같다
+      if (m === 'digest') return false;                    // 기본 화면과 같다
       document.querySelector('input[value="all"]').checked = true;
       currentMode = m;                                     // onModeChange를 거치면 검색이 두 번 돈다
       document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === m));
@@ -1228,9 +1245,10 @@
     }
     else if (mode === 'press') { showPress(); }
     else if (mode === 'stats') { showStats(); }
-    else { // 뉴스 검색 탭 — 키워드 칩을 '자녀 증여'로 초기화
-      document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === 'all'));
-      resetNews(); startLoad();
+    else { // 뉴스 검색 탭 — 기본은 '모아보기'
+      document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === 'digest'));
+      currentMode = 'digest'; setHash('digest');
+      resetNews(); showDigest();
     }
   }
 
@@ -1382,6 +1400,100 @@
   }
 
   // 세법 탭의 서브탭 (세법 뉴스 / 세무사회 보도자료)
+  // ── 모아보기 ──
+  // 키워드 6종을 각각 2배치(200건)씩 받아, 그 키워드의 점수 기준으로 최근 30일 상위만 고른다.
+  // 한 번에 다 던지면 네이버가 일부를 거절하므로 4개씩 나눠 보낸다(loadRest와 같은 이유).
+  async function buildDigest() {
+    const jobs = [];
+    DIGEST_MODES.forEach(m => [1, 101].forEach(start =>
+      jobs.push(() => fetchBatch(getKeyword(m.mode), start)
+        .catch(() => new Promise(r => setTimeout(r, 400))
+          .then(() => fetchBatch(getKeyword(m.mode), start)).catch(() => []))
+        .then(items => ({ mode: m.mode, items })))));
+    const out = [];
+    for (let i = 0; i < jobs.length; i += 4) {
+      out.push(...await Promise.all(jobs.slice(i, i + 4).map(f => f())));
+    }
+    const byMode = {};
+    out.forEach(({ mode, items }) => {
+      (byMode[mode] = byMode[mode] || []).push(...items);
+    });
+    const cut = Date.now() - DIGEST_DAYS * 864e5;
+    return DIGEST_MODES.map(m => {
+      const seen = new Set(), rows = [];
+      (byMode[m.mode] || []).forEach(item => {
+        const n = cleanItem(item);
+        if (!n.link || seen.has(n.link)) return;
+        if (isOwnerNews(n.title, m.mode)) return;
+        if (!(n.pubDate instanceof Date) || isNaN(n.pubDate) || n.pubDate < cut) return;
+        if (m.mode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
+        seen.add(n.link);
+        const sc = relatedScore(n, m.mode);
+        if (sc > 0) rows.push({ n, s: sc });
+      });
+      rows.sort((a, b) => b.s - a.s || b.n.pubDate - a.n.pubDate);
+      // 같은 사건이 여러 매체에 실린 것을 접는다 (제목 바이그램 유사도)
+      const picked = [], sigs = [];
+      for (const r of rows) {
+        if (picked.length >= DIGEST_PER) break;
+        const g = titleBigrams(r.n.title);
+        if (sigs.some(p => bgJaccard(g, p) >= 0.5)) continue;
+        sigs.push(g); picked.push(r);
+      }
+      return { ...m, items: picked, total: rows.length };
+    });
+  }
+
+  async function showDigest() {
+    resetGrid('키워드별 주요 기사를 모으는 중...');
+    document.querySelector('.stats-bar').style.display = 'flex';
+    if (!digestLoaded) {
+      try { digestData = await buildDigest(); digestLoaded = true; }
+      catch (e) { document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">기사를 불러오지 못했습니다.</p>'; return; }
+    }
+    if (currentMode !== 'digest') return;
+    document.getElementById('initLoader').style.display = 'none';
+    document.getElementById('endMsg').style.display = 'none';
+    const groups = digestData || [];
+    const shown = groups.reduce((a, g) => a + g.items.length, 0);
+    const pool = groups.reduce((a, g) => a + g.total, 0);
+    document.getElementById('totalCount').textContent = shown;
+    document.getElementById('totalLabel').textContent = '건의 기사';
+    document.getElementById('sourceCount').textContent = pool;
+    document.getElementById('sourceLabel').textContent = `건 중 (최근 ${DIGEST_DAYS}일)`;
+
+    const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
+    const note = document.createElement('div');
+    note.className = 'event-note';
+    note.innerHTML = `<b>모아보기</b> · 키워드 ${groups.length}종의 최근 ${DIGEST_DAYS}일 연관도 상위 ${DIGEST_PER}건씩` +
+      ` · 키워드 칩을 누르면 그 주제만 자세히 볼 수 있습니다`;
+    grid.appendChild(note);
+
+    groups.forEach(g => {
+      const dv = document.createElement('div');
+      dv.className = 'divider-label';
+      dv.textContent = g.items.length ? `${g.label} · ${g.total}건 중 상위 ${g.items.length}` : `${g.label} · 최근 ${DIGEST_DAYS}일 해당 기사 없음`;
+      dv.style.cursor = 'pointer';
+      dv.onclick = () => {
+        const chip = document.querySelector(`#newsKeywords .kw-chip[data-mode="${g.mode}"]`);
+        if (chip) selectNewsKeyword(g.mode, chip);
+      };
+      grid.appendChild(dv);
+      g.items.forEach(({ n }) => {
+        const el = document.createElement('a');
+        el.className = 'related-card'; el.href = n.link; el.target = '_blank'; el.rel = 'noopener';
+        el.innerHTML = `
+          <div class="card-meta">
+            <span class="card-source">[${esc(n.source)}]</span>
+            <span class="card-date">${formatDate(n.pubDate)}</span>
+          </div>
+          <div class="card-title">${esc(n.title)}</div>
+          ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0, 160))}</div>` : ''}`;
+        grid.appendChild(el);
+      });
+    });
+  }
+
   function selectTaxTab(mode, el) {
     if (mode === currentMode) return;
     document.querySelectorAll('#taxTabs .kw-chip').forEach(c => c.classList.remove('active'));
@@ -1392,11 +1504,12 @@
   }
 
   function selectNewsKeyword(mode, el) {
-    if (mode === currentMode && allNews.length) return;
+    if (mode === currentMode && (allNews.length || mode === 'digest')) return;
     document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.remove('active'));
     if (el) el.classList.add('active');
-    currentMode = mode; // 'all'=자녀 증여, 'hanwha'=한화생명 파이
+    currentMode = mode; // 'all'=자녀 증여, 'hanwha'=한화생명 파이, 'digest'=모아보기
     setHash(mode);
+    if (mode === 'digest') { resetNews(); showDigest(); return; }
     resetNews(); startLoad();
   }
 
@@ -2170,6 +2283,7 @@
     else if (currentMode === 'taxnews') { taxLoaded = false; showTaxNews().catch(()=>{}); }
     else if (currentMode === 'press') { pressLoaded = false; showPress().catch(()=>{}); }
     else if (currentMode === 'stats') { statsLoaded = false; showStats().catch(()=>{}); }
+    else if (currentMode === 'digest') { digestLoaded = false; resetNews(); showDigest().catch(()=>{}); }
     else { resetNews(); startLoad().catch(()=>{}); }
   }
 
@@ -2245,7 +2359,7 @@
   // 숫자를 넘겨도 죽지 않도록 문자열로 변환한다 ((str||'')는 숫자에서 .replace가 없어 터진다)
   function esc(str) { return String(str == null ? '' : str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
-  if (!routeFromHash()) startLoad();
+  if (!routeFromHash()) { currentMode = 'digest'; showDigest(); }
   initEventBadge();
   initReviewBadge();
   setInterval(resetAndFetch, 10*60*1000);
