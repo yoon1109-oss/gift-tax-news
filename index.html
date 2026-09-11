@@ -344,7 +344,9 @@
     .eu-row { display: flex; gap: 10px; padding: 5px 0; font-size: 13px; color: var(--muted2); line-height: 1.6; }
     .eu-date { color: var(--muted); flex: none; font-variant-numeric: tabular-nums; }
     .eu-text { word-break: keep-all; }
-    .event-title { font-size: 15px; font-weight: 600; color: var(--text); margin: 3px 0 3px; word-break: keep-all; }
+    /* 이벤트명은 강조색 — 카드에서 가장 먼저 읽혀야 하는 정보 (모아보기 제목과 같은 톤) */
+    .event-title { font-size: 15px; font-weight: 600; color: #f9a26c; margin: 3px 0 3px; word-break: keep-all; }
+    .news-card:hover .event-title { color: #fbb98c; }
     /* 조사 대상 — 기본은 닫아두고 필요할 때만 편다 */
     .surveyed { margin-top: 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--card); }
     .surveyed > summary {
@@ -578,6 +580,12 @@
 
   // 연금 모드에서는 부동산 계열을 막지 않는다 — 주택연금·'내집연금'·노후 상가 투자처럼
   // 정당한 연금 기사가 걸린다(300건 중 3건 오탈락 실측). 지분·정치·연예 제외는 그대로 적용.
+  // 정치·비위 스캔들 — 어느 키워드에서도 원하는 기사가 아닌데, '자녀'·'ETF' 같은 단어가
+  // 제목에 함께 들어 있으면 점수가 높게 나온다.
+  // ('[이슈] 김용범 사퇴로 번진 ETF 로비설…자녀 재직은 사실'이 자녀 금융 상위에 올라왔다 — 2026-09-11 제보)
+  // 실측 1,000건 중 해당 기사 1건만 걸리고 다른 칩 오탈락 0건이라 전 키워드 공통으로 둔다.
+  const SCANDAL_KW = /로비|대가성|청탁|유착|게이트|뇌물|압수수색|국정감사|국감|경질|사퇴|해임|기소|구속|입건|검찰|징계|횡령|배임/;
+
   // 자녀 금융 전용 제외 — 공직자 재산 논란·가족 분쟁 사연·지자체 행정 기사가
   // '자녀'와 '금융' 단어를 함께 갖고 있어 점수만으로는 안 걸러진다.
   // (네이버가 제목을 잘라 보내므로 '이해충돌'은 '이해충'까지만 매칭해야 한다)
@@ -588,6 +596,7 @@
     const m = mode || currentMode;
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
     if (isCelebNews(s)) return true;
+    if (SCANDAL_KW.test(s)) return true;
     if (m === 'childfin' && CHILDFIN_NOISE.test(s)) return true;
     const noise = (m === 'savenews' || m === 'saving') ? NOISE_KW.filter(k => !REALTY_KW.includes(k)) : NOISE_KW;
     return OWNER_KW.some(k => s.includes(k)) || noise.some(k => s.includes(k));
