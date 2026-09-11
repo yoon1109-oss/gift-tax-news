@@ -565,11 +565,16 @@
 
   // 연금 모드에서는 부동산 계열을 막지 않는다 — 주택연금·'내집연금'·노후 상가 투자처럼
   // 정당한 연금 기사가 걸린다(300건 중 3건 오탈락 실측). 지분·정치·연예 제외는 그대로 적용.
+  // 자녀 금융 전용 제외 — 공직자 재산 논란·가족 분쟁 사연·지자체 행정 기사가
+  // '자녀'와 '금융' 단어를 함께 갖고 있어 점수만으로는 안 걸러진다.
+  // (네이버가 제목을 잘라 보내므로 '이해충돌'은 '이해충'까지만 매칭해야 한다)
+  const CHILDFIN_NOISE = /이해\s?충|재산\s?(신고|공개|내역|뜯어)|공직자|인사청문|장관|후보자|의혹|가족센터|다문화|결혼이민|한국어교육|교육청|유류분|소송|분쟁|재판|피소|고소|숨진|사망보험금|학대|실종|주민등록|등\s?·?\s?초본|재혼가정/;
   const REALTY_KW = ['부동산','아파트','주택','빌딩','상가','토지','오피스텔','건물'];
   function isOwnerNews(t) {
     const s = t || '';
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
     if (isCelebNews(s)) return true;
+    if (currentMode === 'childfin' && CHILDFIN_NOISE.test(s)) return true;
     const noise = (currentMode === 'savenews' || currentMode === 'saving') ? NOISE_KW.filter(k => !REALTY_KW.includes(k)) : NOISE_KW;
     return OWNER_KW.some(k => s.includes(k)) || noise.some(k => s.includes(k));
   }
@@ -594,7 +599,10 @@
     // 재단 특강·가족센터·'가족당' 정치 논란 같은 기사가 44건이나 섞인다 (실측 2026-09-09).
     // '자산 이전 상속 증여 신탁'은 유효 92%, 사회공헌·정치 노이즈 0건.
     // 다른 칩과의 겹침도 3%(자녀 증여) / 0%(자녀 금융)로 낮다.
-    if (currentMode === 'family') return '자산 이전 상속 증여 신탁';
+    // '자산 이전 상속 증여 신탁'은 적합률 94%로 높았지만 최근 7일 기사가 7건뿐이라
+    // 연관도 상위 4칸을 2점짜리 무관 기사가 채웠다 (2026-09-11 재점검).
+    // '상속 증여 자산관리'는 적합 77%지만 최근 7일이 92건이라 고를 폭이 훨씬 넓다.
+    if (currentMode === 'family') return '상속 증여 자산관리';
     if (currentMode === 'childfin') return '자녀 금융';
     if (currentMode === 'platform') return '금융 플랫폼';
     // '절세/장기투자'는 기사(savenews)와 상품(saving) 두 칩이 같은 질의를 공유한다.
@@ -728,7 +736,9 @@
     /패밀리\s?오피스/, /프라이빗\s?뱅킹/, /\bPB\b/, /\bWM\b/, /절세/, /세대\s?이전/];
   const REL_FAM_WHO = [/가족/, /부부/, /배우자/, /자녀/, /부모/, /손주/, /3대/, /가구/, /노후/];
   // 사회공헌·정치성 기사는 '가족'이 들어가도 자산 관리와 무관하다 (재단 특강, 정당 논란 등)
-  const REL_FAM_CSR = /재단|기부|후원|봉사|사회공헌|캠페인|특강|장학|나눔|위촉|협약|MOU|공모전|논란|고발|의원|정당|당직|출마/;
+  // 지자체 주민 프로그램(은평구 중장년 노후자산 클래스 등)도 자산 관리 동향이 아니다.
+  // '[가-힣]{1,3}[시군구],' 는 '은평구,' '김제시,' 를 잡고 '삼성증권,' '금투협,' 은 안 잡는다.
+  const REL_FAM_CSR = /재단|기부|후원|봉사|사회공헌|캠페인|특강|장학|나눔|위촉|협약|MOU|공모전|논란|고발|의원|정당|당직|출마|구청|시청|주민센터|복지관|클래스|수강|강좌|아카데미|[가-힣]{1,3}[시군구],/;
 
   // 자녀 금융 모드: '자녀 대상'과 '금융 수단'이 제목에서 만나는 기사를 축으로 본다.
   // 검색어가 넓어 'KB금융 소방공무원 지원' 같은 금융사 사회공헌 기사가 다수 섞이는데,
@@ -878,16 +888,20 @@
       return s;
     }
     if (currentMode === 'childfin') {
+      // 제목에 자녀 신호가 없으면 이 칩의 기사가 아니다. 예전엔 본문에만 '자녀'가 있어도
+      // 2점을 받아 '[더밸류 브리핑] 오늘의 금융계 소식' 같은 일반 금융 기사가 상위에 올라왔다.
+      const kidT = REL_KID.some(r => r.test(t));
+      if (!kidT) return 0;
+      const finT = REL_FIN.some(r => r.test(t)), finD = REL_FIN.some(r => r.test(d));
+      if (!finT && !finD) return 0;          // 금융 신호가 전혀 없으면 제외 (재혼가정 등초본 등)
       // 각 묶음은 '개념당 1회'만 센다. 키워드마다 더하면 동의어를 나열한 제목이 점수를 배로 얻는다.
-      let s = 0;
-      const kidT = REL_KID.some(r => r.test(t)), finT = REL_FIN.some(r => r.test(t));
-      if (kidT) s += 5;
+      let s = 5;
       if (REL_KID.some(r => r.test(d))) s += 2;
       if (finT) s += 3;
-      if (REL_FIN.some(r => r.test(d))) s += 1;
-      if (kidT && finT) s += 4;                                    // 자녀 × 금융이 제목에서 만나는 기사
-      if (kidT && REL_KID_CORE.some(r => r.test(t))) s += 3;       // 증여·투자·계좌 = 파이 핵심
-      if (kidT && REL_KID_EDU.some(r => r.test(t))) s += 1;
+      if (finD) s += 1;
+      if (finT) s += 4;                                    // 자녀 × 금융이 제목에서 만나는 기사
+      if (REL_KID_CORE.some(r => r.test(t))) s += 3;       // 증여·투자·계좌 = 파이 핵심
+      if (REL_KID_EDU.some(r => r.test(t))) s += 1;
       return s;
     }
     if (currentMode === 'platform') {
@@ -929,8 +943,11 @@
     const pool = days == null ? items : items.filter(n =>
       n.pubDate instanceof Date && !isNaN(n.pubDate) && (Date.now() - n.pubDate) <= days * 864e5);
     // 연관도 점수 내림차순(동점이면 sim 순서), 단 같은 사건 중복 배제하고 상위 4건
+    // 점수가 0 이하면 '연관도 높음'이 아니다. 예전엔 후보가 모자라면 0점 기사로 4칸을 채워
+    // 무관한 기사가 상단에 올라왔다 — 기간을 넓혀서(7→14→30→무제한) 채우는 편이 낫다.
     const scored = pool
       .map(n => ({ n, s: relatedScore(n) }))
+      .filter(c => c.s > 0)
       .sort((a, b) => b.s - a.s || (a.n._rank ?? 1e9) - (b.n._rank ?? 1e9));
     const candidates = [], pT = [], pTD = [], pSubj = [];
     for (const c of scored) {
