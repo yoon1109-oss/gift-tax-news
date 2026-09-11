@@ -260,6 +260,10 @@
     .stat-notice.terms .sn-row::before { color: var(--muted2); }
     .related-card .card-desc b { color: var(--text); font-weight: 600; }
 
+    /* 모아보기 — 기사 제목을 강조색으로 (키워드별 요약 화면임을 한눈에) */
+    .digest-card .card-title { color: #f9a26c; }
+    .digest-card:hover .card-title { color: #fbb98c; }
+
     /* 연금 — 금융사 × 상품/플랫폼 카드 */
     .pen-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
       padding: 13px 15px; margin-bottom: 8px; }
@@ -597,13 +601,17 @@
 
   // 모아보기 — 키워드마다 최근 한 달 연관도 상위만 모아 보여주는 기본 화면.
   // saving(절세/장기투자 상품)은 기사 목록이 아니라 상품 카드라 제외한다.
+  // prio = 같은 기사가 여러 키워드에 걸릴 때 가져갈 우선순위(작을수록 먼저).
+  // 배열 순서는 화면 표시 순서다. 둘을 분리한 이유 —
+  // 표시 순서대로 가져가게 하면 '금융 플랫폼'(후보 188건)이 좁은 키워드의 기사를 먼저 채간다.
+  // 좁은 키워드일수록 대체할 기사가 없으므로 좁은 쪽에 먼저 준다.
   const DIGEST_MODES = [
-    { mode: 'all',      label: '자녀 증여' },
-    { mode: 'childfin', label: '자녀 금융' },
-    { mode: 'family',   label: '가족 자산 관리' },
-    { mode: 'platform', label: '금융 플랫폼' },
-    { mode: 'savenews', label: '절세/장기투자' },
-    { mode: 'hanwha',   label: '한화생명 파이' },
+    { mode: 'all',      label: '자녀 증여',      prio: 1 },
+    { mode: 'childfin', label: '자녀 금융',      prio: 2 },
+    { mode: 'family',   label: '가족 자산 관리', prio: 3 },
+    { mode: 'platform', label: '금융 플랫폼',    prio: 5 },
+    { mode: 'savenews', label: '절세/장기투자',  prio: 4 },
+    { mode: 'hanwha',   label: '한화생명 파이',  prio: 0 },
   ];
   const DIGEST_DAYS = 30, DIGEST_PER = 3;
   let digestLoaded = false, digestData = null;
@@ -1419,7 +1427,9 @@
       (byMode[mode] = byMode[mode] || []).push(...items);
     });
     const cut = Date.now() - DIGEST_DAYS * 864e5;
-    return DIGEST_MODES.map(m => {
+    // 1) 키워드별 후보를 점수순으로 만든다
+    const cand = {};
+    DIGEST_MODES.forEach(m => {
       const seen = new Set(), rows = [];
       (byMode[m.mode] || []).forEach(item => {
         const n = cleanItem(item);
@@ -1432,16 +1442,23 @@
         if (sc > 0) rows.push({ n, s: sc });
       });
       rows.sort((a, b) => b.s - a.s || b.n.pubDate - a.n.pubDate);
-      // 같은 사건이 여러 매체에 실린 것을 접는다 (제목 바이그램 유사도)
-      const picked = [], sigs = [];
-      for (const r of rows) {
-        if (picked.length >= DIGEST_PER) break;
-        const g = titleBigrams(r.n.title);
-        if (sigs.some(p => bgJaccard(g, p) >= 0.5)) continue;
-        sigs.push(g); picked.push(r);
-      }
-      return { ...m, items: picked, total: rows.length };
+      cand[m.mode] = rows;
     });
+    // 2) 우선순위가 높은(좁은) 키워드부터 가져간다. 이미 다른 키워드가 가져간 기사와
+    //    같은 사건은 건너뛰고 다음 후보로 채워, 어느 키워드도 빈칸이 생기지 않게 한다.
+    const takenLinks = new Set(), takenSigs = [], chosen = {};
+    [...DIGEST_MODES].sort((a, b) => a.prio - b.prio).forEach(m => {
+      const picked = [];
+      for (const r of cand[m.mode] || []) {
+        if (picked.length >= DIGEST_PER) break;
+        if (takenLinks.has(r.n.link)) continue;
+        const g = titleBigrams(r.n.title);
+        if (takenSigs.some(p => bgJaccard(g, p) >= 0.5)) continue;
+        takenLinks.add(r.n.link); takenSigs.push(g); picked.push(r);
+      }
+      chosen[m.mode] = picked;
+    });
+    return DIGEST_MODES.map(m => ({ ...m, items: chosen[m.mode] || [], total: (cand[m.mode] || []).length }));
   }
 
   async function showDigest() {
@@ -1481,7 +1498,7 @@
       grid.appendChild(dv);
       g.items.forEach(({ n }) => {
         const el = document.createElement('a');
-        el.className = 'related-card'; el.href = n.link; el.target = '_blank'; el.rel = 'noopener';
+        el.className = 'related-card digest-card'; el.href = n.link; el.target = '_blank'; el.rel = 'noopener';
         el.innerHTML = `
           <div class="card-meta">
             <span class="card-source">[${esc(n.source)}]</span>
