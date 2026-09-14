@@ -5,10 +5,12 @@ const UPDATED_AT = '2026-09-14'; // 데이터가 실제 바뀐 날 (정리 기�
 const CHECKED_AT = '2026-09-14';
 // 친구 초대는 계좌 이벤트와 점검 시점이 다르다. 한 값으로 묶으면 한쪽이 실제보다
 // 최신인 것처럼 보이므로 따로 둔다.
-const REFERRAL_CHECKED_AT = '2026-08-28'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
+const REFERRAL_CHECKED_AT = '2026-09-14'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
 
 // 업데이트 메모 — 이벤트 '내용이 실제로 바뀐 것'만 최신순으로 기록 (배치가 변경 시 맨 앞에 추가)
 const CHANGES = [
+  { date: '2026-09-14', text: '신한투자증권이 IRP·퇴직연금·중개형 ISA 이벤트를 여러 건 진행 중인 것을 확인해 절세 3종 계좌 목록에 추가했어요' },
+  { date: '2026-09-14', text: 'iM증권 절세계좌 이벤트의 혜택 조건을 자세히 적었어요. 적립식 자동매수 신청 시 문화상품권 1만원(선착순), 디폴트옵션 지정 시 커피 쿠폰을 받으실 수 있어요' },
   { date: '2026-09-14', text: '키움증권 미성년자 계좌 이벤트의 대상 조건을 확인해 자세히 적었어요. 7월 16일 이후 처음 만든 미성년 계좌가 대상이고, 9월 30일까지 계좌를 갖고 계셔야 혜택을 받으실 수 있어요' },
   { date: '2026-09-07', text: 'SK증권 우리 아이 미래 투자 이벤트가 9월분(9월 1일~30일)으로 새로 열렸어요. 혜택은 지난달과 같고, 평생 수수료 우대도 함께 받으실 수 있어요' },
   { date: '2026-08-24', text: '미래에셋증권 \'90만원 모으기 2만원 추가\' 챌린지는 신청이 7월 31일로 마감됐어요. 지금 계좌를 새로 여시면 개설 축하금 2만원과 수수료 90일 무료는 그대로 받으실 수 있어요' },
@@ -148,7 +150,7 @@ const REFERRAL_PENDING = [
 // 절세 3종 계좌(ISA·연금저축·IRP) 이벤트 — 2026-09-11 신설
 // 계좌 이벤트(미성년 자녀)와 성격이 다르다. 여기는 성인 대상 절세계좌 유치 경쟁이고
 // 이전(타사→당사) 혜택이 중심이라, 금액도 자릿수가 다르다(최대 100만~200만원).
-const TAX_CHECKED_AT = '2026-09-11';
+const TAX_CHECKED_AT = '2026-09-14';
 const TAX_ACCOUNTS = [
   {
     broker: '하나증권',
@@ -161,6 +163,19 @@ const TAX_ACCOUNTS = [
       '별도 진행: IRP 신규·순증 이벤트 최대 3만원 상품권',
     ],
     link: 'https://www.hanaw.com/main/event/eventList.cmd',
+  },
+  {
+    broker: '신한투자증권',
+    title: 'IRP·퇴직연금·중개형 ISA 이벤트 (여러 건 동시 진행)',
+    period: '~ 2026.12.31 (건별 상이)',
+    kinds: ['IRP', 'ISA', '연금저축'],
+    benefits: [
+      "'지금 IRP 시작하면 상품권 100% 드림' ~2026.09.30",
+      "'퇴직연금 로보자동투자' ~2026.11.30 · '퇴직연금 ETF 정기투자' ~2026.09.30",
+      "'퇴직연금 DC 신규 웰컴'·'퇴직연금 디폴트옵션'·'프로 %IRP 관리 수수료 혜택' ~2026.12.31",
+      "'중개형 ISA 국내주식 수수료 혜택' ~2026.12.31 · 중개형 ISA 전용 특판 RP 수시 진행",
+    ],
+    link: 'https://m.shinhansec.com/mweb/anev/evnt/aevnt0001?tab=1',
   },
   {
     broker: 'SK증권',
@@ -217,8 +232,10 @@ const TAX_ACCOUNTS = [
     period: '~ 2026.09.30',
     kinds: ['ISA', '연금저축', 'IRP'],
     benefits: [
-      '절세계좌·퇴직연금 계좌로 전략 ETF 거래 시 모바일 문화상품권·커피 쿠폰',
+      'ISA·연금저축에서 전략 ETF를 1회 10만원 이상 1년 이상 적립식 자동매수 신청 + 1회 이상 매수 시 문화상품권 1만원 (운용사별 선착순 200명, 총 1,600명)',
+      '삼성·미래에셋·한국투자신탁운용 상품으로 디폴트옵션 신규 지정·변경 시 커피 쿠폰 (선착순 300명)',
       '대상 ETF 21종 — KODEX(삼성)·TIGER(미래에셋)·RISE(KB)·ACE(한국투자)',
+      '퇴직연금 계좌는 관련 규정에 따라 최대 3만원 한도',
     ],
     link: 'https://www.imfnsec.com',
   },
@@ -228,7 +245,6 @@ const TAX_ACCOUNTS = [
 const TAX_PENDING = [
   { broker: 'KB증권', status: '확인필요', note: 'ISA·연금 이벤트 상시 운영으로 보이나 공식 페이지에서 기간·혜택 확정 못함 (2026-09-11)', link: 'https://www.kbsec.com/cs/notice/jsp/CUST_09_0003.jsp' },
   { broker: '삼성증권', status: '확인필요', note: '이벤트 목록이 비로그인 상태에서 조회되지 않아 판독 불가 (2026-09-11)', link: 'https://www.samsungpop.com/customer/event.do' },
-  { broker: '신한투자증권', status: '확인필요', note: '연금·ISA 이벤트 진행 여부 공식 확인 필요 (2026-09-11)', link: 'https://m.shinhansec.com/mweb/anev/evnt/aevnt0001' },
   { broker: 'NH투자증권', status: '확인필요', note: '퇴직연금 개인투자용 국채 판매 등 상품 뉴스는 있으나 계좌 유치 이벤트는 미확인 (2026-09-11)', link: 'https://www.nhqv.com' },
   { broker: '한국투자증권', status: '확인필요', note: '이벤트 목록에 ISA 검색 결과 있으나 기간·혜택 미확정 (2026-09-11)', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
   { broker: '키움증권', status: '확인필요', note: 'robots 차단으로 크롤링 불가, 뉴스로만 판단 — 절세계좌 이벤트 미확인 (2026-09-11)', link: 'https://www.kiwoom.com/e/m/common/event/VIngEventView' },
