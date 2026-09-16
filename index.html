@@ -564,8 +564,25 @@
   function leadSubject(t) {
     return (t||'').replace(/<[^>]*>/g,'').replace(/^\s*\[[^\]]*\]\s*/,'').split(/[,·…“”"'‘’]/)[0].replace(/\s+/g,'').slice(0, 12);
   }
+  // 제목 어디에 있든 금융기관명을 뽑는다. leadSubject 는 제목 맨 앞만 보기 때문에
+  // 회사명이 중간에 오는 제목을 놓쳤다 (2026-09-16 제보):
+  //   '절세 전략부터 1:1 맞춤 상담까지…하나은행, 퇴직연금 세미나 열어'  → leadSubject '절세전략부터1:1맞춤상'
+  //   '하나은행, 퇴직연금 \'수익률 관리\' 강화…일대일 은퇴 상담'        → leadSubject '하나은행'
+  // 같은 하나은행 퇴직연금 건인데 주체가 어긋나 둘 다 모아보기에 실렸다.
+  const ORG_RE = /[가-힣A-Za-z]{2,8}?(?:저축은행|은행|증권|생명|화재|손보|금융지주|금융|카드|자산운용|캐피탈|투자운용)/g;
+  function orgNames(t) {
+    return new Set((((t || '').replace(/<[^>]*>/g, '')).match(ORG_RE) || []).map(x => x.replace(/\s+/g, '')));
+  }
+  function shareOrg(a, b) { for (const x of a) if (b.has(x)) return true; return false; }
+
   // 기업 오너·재벌 승계성 증여/재산 뉴스 제외 (세무사회장·협회장 등 정보성은 예외)
   const OWNER_KW = ['오너','총수','창업주','창업자','일가','블록딜','대주주','최대주주','경영권','지분','株','2세','3세','4세','오너가','가업승계','기업승계'];
+  // 기업 경영진 일가의 개인 사안 제외 — OWNER_KW와 취지는 같은데 직함이 빠져 있었다.
+  // ('앱코 전 대표 자녀, 24억 원 증여세 취소소송 1심 패소'가 자녀 증여 3위에 올라왔다 — 2026-09-16 제보)
+  // 막아야 할 이유는 '소송'이 아니라 '누구의 이야기인가'다. 소송어로 막으면 유류분·증여세
+  // 판례 같은 정보성 기사까지 걸린다(실측 800건 중 유류분 기사 7건이 그 경우).
+  // 직함만으로 좁히면 노출후보 496건 중 정확히 이 1건만 걸린다(오탈락 0).
+  const EXEC_RE = /전\s?대표|대표이사|전\s?사장/;
   // 부동산 증여·편법증여·근저당·정치성 노이즈 제외 (예: '대통령도 쓴 근저당 매매…', 아파트/주택 증여 류)
   const NOISE_KW = ['근저당','편법증여','편법 증여','셀러 파이낸싱','셀러파이낸싱','집주인 대출','대통령','이재명',
     '부동산','아파트','주택','빌딩','상가','토지','오피스텔','건물',
@@ -600,6 +617,7 @@
     const m = mode || currentMode;
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
     if (isCelebNews(s)) return true;
+    if (EXEC_RE.test(s)) return true;
     if (SCANDAL_KW.test(s)) return true;
     if (m === 'childfin' && CHILDFIN_NOISE.test(s)) return true;
     const noise = (m === 'savenews' || m === 'saving') ? NOISE_KW.filter(k => !REALTY_KW.includes(k)) : NOISE_KW;
@@ -1472,15 +1490,31 @@
     });
     // 2) 우선순위가 높은(좁은) 키워드부터 가져간다. 이미 다른 키워드가 가져간 기사와
     //    같은 사건은 건너뛰고 다음 후보로 채워, 어느 키워드도 빈칸이 생기지 않게 한다.
+    // 같은 사건 판별은 목록 화면(assignGroup·pickRelated)과 같은 신호를 쓴다.
+    // 예전엔 제목 bigram 하나만 0.5로 봤는데, 같은 회사·같은 사건 기사가 제목을 달리 뽑으면
+    // 유사도가 그 아래로 떨어져 그대로 통과했다 (2026-09-16 제보로 실측):
+    //   'IBK기업은행, 키자니아에 디지털 금융센터…' vs 'IBK기업은행, 어린이 금융교육 강화…' → 제목 0.46
+    //   'KB국민은행, 비대면 보증부 대출…'         vs '[금융권 소식] KB국민은행ㆍ신한은행…'   → 제목 0.14 / 본문 0.58
+    // 주체(회사명)·제목·제목+본문 셋 중 하나만 걸려도 같은 사건으로 본다.
+    // 실측 800건 기준 중복쌍 6 → 0, 20칸 모두 채워짐(빈칸 없음).
+    // DUP_ORG_T — 같은 금융기관 기사끼리만 적용하는 낮은 임계.
+    // 기관명만 같으면 무조건 접으면 안 된다. 한 은행이 서로 다른 사건으로 여러 번 나오는 건
+    // 정상이다(실측: 신한은행 '땡겨요 회원 1000만' vs '퇴직연금 국채' — 제목유사 0.064).
+    // 같은 기관 + 주제까지 겹칠 때만 같은 사건으로 본다(하나은행 퇴직연금 2건 — 0.205).
+    const DUP_T = 0.28, DUP_TD = 0.3, DUP_ORG_T = 0.12;
     const takenLinks = new Set(), takenSigs = [], chosen = {};
     [...DIGEST_MODES].sort((a, b) => a.prio - b.prio).forEach(m => {
       const picked = [];
       for (const r of cand[m.mode] || []) {
         if (picked.length >= DIGEST_PER) break;
         if (takenLinks.has(r.n.link)) continue;
-        const g = titleBigrams(r.n.title);
-        if (takenSigs.some(p => bgJaccard(g, p) >= 0.5)) continue;
-        takenLinks.add(r.n.link); takenSigs.push(g); picked.push(r);
+        const gt = titleBigrams(r.n.title);
+        const gtd = titleBigrams(r.n.title + ' ' + (r.n.desc || '').slice(0, 120));
+        const sj = leadSubject(r.n.title), og = orgNames(r.n.title);
+        if (takenSigs.some(p => bgJaccard(gt, p.t) >= DUP_T || bgJaccard(gtd, p.td) >= DUP_TD
+                              || (sj.length >= 2 && sj === p.sj)
+                              || (shareOrg(og, p.og) && bgJaccard(gt, p.t) >= DUP_ORG_T))) continue;
+        takenLinks.add(r.n.link); takenSigs.push({ t: gt, td: gtd, sj, og }); picked.push(r);
       }
       chosen[m.mode] = picked;
     });
