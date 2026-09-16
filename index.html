@@ -610,11 +610,32 @@
   // 자녀 금융 전용 제외 — 공직자 재산 논란·가족 분쟁 사연·지자체 행정 기사가
   // '자녀'와 '금융' 단어를 함께 갖고 있어 점수만으로는 안 걸러진다.
   // (네이버가 제목을 잘라 보내므로 '이해충돌'은 '이해충'까지만 매칭해야 한다)
-  const CHILDFIN_NOISE = /이해\s?충|재산\s?(신고|공개|내역|뜯어)|공직자|인사청문|장관|후보자|의혹|가족센터|다문화|결혼이민|한국어교육|교육청|유류분|소송|분쟁|재판|피소|고소|숨진|사망보험금|학대|실종|주민등록|등\s?·?\s?초본|재혼가정/;
+  // 보험 민원·분쟁 기사도 뺀다. '자녀'와 '보험'이 제목에서 만나면 보너스(+4)까지 붙어
+  // 상품·교육 기사와 점수가 같아진다 — '임신부 고지의무 위반해도…금감원 "자녀 보험 보장은
+  // 유지해야"'가 15점으로 3위에 올라왔다 (2026-09-16 제보).
+  // '금감원'으로 막으면 안 된다 — 후보 3건 중 2건이 '토스뱅크, 금감원과 어린이 금융스쿨'로
+  // 정상 기사다. 기관이 아니라 기사의 성격(분쟁·민원)을 겨냥한다.
+  // 실측 599건(중복제거) 노출후보 105건 중 아래 패턴에 걸리는 건 이 1건뿐이다(오탈락 0).
+  const CHILDFIN_NOISE = /이해\s?충|재산\s?(신고|공개|내역|뜯어)|공직자|인사청문|장관|후보자|의혹|가족센터|다문화|결혼이민|한국어교육|교육청|유류분|소송|분쟁|재판|피소|고소|숨진|사망보험금|학대|실종|주민등록|등\s?·?\s?초본|재혼가정|고지\s?의무|부지급|지급\s?거절|불완전\s?판매|약관\s?위반|보험사기/;
   const REALTY_KW = ['부동산','아파트','주택','빌딩','상가','토지','오피스텔','건물'];
-  function isOwnerNews(t, mode) {
+  // 본문에만 오너 표지가 있는 기사 — 제목만 보면 놓친다.
+  // '최태원 \'김희영에 1000억\' 어떻게 나왔나…노소영·자녀 지출·기부금까지'는 제목에 직함이
+  // 없지만 본문이 '최 회장 명의 자산'이라 한다. 자녀 금융 5위에 올라왔다 (2026-09-16 제보).
+  // 단, 제목 주어가 기관이면 검사하지 않는다 — 기업 활동 보도는 본문에 회장이 스쳐도 정상이다
+  // ('장애아동 재활부터 가족 자산 관리까지..하나금융, 장애인 통합 지원' 17점이 그 경우).
+  // 실측 838건 중 9건 제외(1.1%), 오탈락 0. 걸린 9건은 전부 오너·인물 중심 기사다
+  // (최태원·노소영 / 이장한 종근당 주식 세 자녀 승계 18점 / 진옥동 / 은행장 인사 / 김동선).
+  const OWNER_DESC_RE = /(^|[^사협])회장|총수|오너/;
+  function ownerByDesc(title, desc) {
+    ORG_RE.lastIndex = 0;
+    if (ORG_RE.test((title || '').replace(/<[^>]*>/g, ''))) { ORG_RE.lastIndex = 0; return false; }
+    ORG_RE.lastIndex = 0;
+    return OWNER_DESC_RE.test(desc || '');
+  }
+  function isOwnerNews(t, mode, desc) {
     const s = t || '';
     const m = mode || currentMode;
+    if (desc && ownerByDesc(s, desc)) return true;
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
     if (isCelebNews(s)) return true;
     if (EXEC_RE.test(s)) return true;
@@ -701,7 +722,7 @@
         const n = cleanItem(item);
         if (!links.has(n.link)) {
           if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
-          if (isOwnerNews(n.title)) return;
+          if (isOwnerNews(n.title, null, n.desc)) return;
           links.add(n.link);
           if (assignGroup(n)) { n._rank = rankCounter++; allNews.push(n); }
         }
@@ -748,7 +769,7 @@
           const n = cleanItem(item);
           if (!existingLinks.has(n.link)) {
             if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
-            if (isOwnerNews(n.title)) return;
+            if (isOwnerNews(n.title, null, n.desc)) return;
             existingLinks.add(n.link);
             if (assignGroup(n)) { n._rank = rankCounter++; allNews.push(n); }
           }
@@ -1472,7 +1493,7 @@
       (byMode[m.mode] || []).forEach(item => {
         const n = cleanItem(item);
         if (!n.link || seen.has(n.link)) return;
-        if (isOwnerNews(n.title, m.mode)) return;
+        if (isOwnerNews(n.title, m.mode, n.desc)) return;
         if (!(n.pubDate instanceof Date) || isNaN(n.pubDate) || n.pubDate < cut) return;
         if (m.mode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
         seen.add(n.link);
