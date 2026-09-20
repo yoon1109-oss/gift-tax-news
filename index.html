@@ -1710,7 +1710,7 @@
 
     const note = document.createElement('div');
     note.className = 'event-note';
-    note.innerHTML = `<b>자녀계좌 개설 이벤트</b>${updatedAt ? ` · 정리 기준 ${esc(updatedAt)}` : ''}${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`;
+    note.innerHTML = `<b>자녀계좌 개설 이벤트</b>${updatedAt ? ` · 정리 기준 ${esc(updatedAt)}` : ''}${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 9시 자동 갱신`;
     grid.appendChild(note);
     const sv = surveyedBlock([...new Set(events.map(e => e.broker))], pending);
     if (sv) grid.appendChild(sv);
@@ -1821,7 +1821,7 @@
     const note = document.createElement('div');
     note.className = 'event-note';
     note.innerHTML = `<b>절세 3종 계좌 이벤트</b> — ISA · 연금저축 · IRP` +
-      `${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`;
+      `${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 9시 자동 갱신`;
     grid.appendChild(note);
     const svr = surveyedBlock([...new Set(list.map(e => e.broker))], pend);
     if (svr) grid.appendChild(svr);
@@ -1856,7 +1856,7 @@
 
     const note = document.createElement('div');
     note.className = 'event-note';
-    note.innerHTML = `<b>친구 초대·추천 이벤트</b>${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 10시 자동 갱신`;
+    note.innerHTML = `<b>친구 초대·추천 이벤트</b>${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 9시 자동 갱신`;
     grid.appendChild(note);
     // refPending은 그동안 빈 목록 판정에만 쓰이고 화면에 그려지지 않았다 (탭 분리 때 누락)
     const svr = surveyedBlock([...new Set(referral.map(e => e.broker))], refPending);
