@@ -709,11 +709,15 @@
     return { title: clean(item.title), desc: clean(item.description), link: item.originallink||item.link, pubDate: new Date(item.pubDate), source: extractSource(item.originallink||item.link) };
   }
 
+  // 네이버는 속도 제한에 걸려도 HTTP 200에 errorMessage만 담아 보낸다.
+  // 예전엔 items가 없으면 빈 배열로 반환해 '결과 없음'과 구분되지 않았고,
+  // 재시도도 걸리지 않아 키워드 하나가 통째로 비어 보였다 (2026-09-21 제보).
   async function fetchBatch(keyword, start) {
     const res = await fetch(`/api/news?keyword=${encodeURIComponent(keyword)}&display=100&start=${start}&sort=sim`);
     if (!res.ok) throw new Error(`API ${res.status}`);
     const data = await res.json();
-    return data.items || [];
+    if (!data.items) throw new Error(data.errorMessage || 'no items');
+    return data.items;
   }
 
   async function startLoad() {
@@ -743,16 +747,21 @@
     const modeAtStart = currentMode;
     // 배경 배치(101·201)는 병렬로 받되, 관련도(_rank) 보존을 위해 순서대로 처리
     // 연금·절세/장기투자 상품은 시장 현황을 보는 화면이라 더 깊이 받는다 (네이버 start 최대 1000)
+    // 예전엔 901까지 받았는데, 2차 질의까지 합치면 한 번에 20건이 몰려
+    // 네이버 속도 제한에 걸리고 그 결과가 '결과 없음'으로 보였다 (2026-09-21 제보).
     const starts = (modeAtStart === 'savenews' || modeAtStart === 'saving')
-      ? [101, 201, 301, 401, 501, 601, 701, 801, 901] : [101, 201];
+      ? [101, 201, 301, 401, 501] : [101, 201];
     // 한 번에 20개를 동시에 던지면 네이버가 일부를 거절한다 (catch로 삼켜져 조용히 유실됨).
     // 실측 2026-09-07: 병렬 20개 -> 364건만 수집, 4개씩 나눠 보내면 970건.
     // 실패한 요청은 한 번 더 시도한다.
     const fetchSafe = (kw, start) => fetchBatch(kw, start)
-      .catch(() => new Promise(r => setTimeout(r, 400)).then(() => fetchBatch(kw, start)).catch(() => []));
+      .catch(() => new Promise(r => setTimeout(r, 900)).then(() => fetchBatch(kw, start)))
+      .catch(() => new Promise(r => setTimeout(r, 2000)).then(() => fetchBatch(kw, start)))
+      .catch(() => []);
     async function runPooled(tasks, size) {
       const out = [];
       for (let i = 0; i < tasks.length; i += size) {
+        if (i) await new Promise(r => setTimeout(r, 300));   // 묶음 사이 간격 — 속도 제한 회피
         out.push(...await Promise.all(tasks.slice(i, i + size).map(f => f())));
       }
       return out;
@@ -762,10 +771,10 @@
     // ('해빗팩토리, AI 자산관리·노후설계' 류가 상위 700건에 아예 없었다 — 2026-09-07 제보)
     // 그래서 서비스 축 질의를 하나 더 받아 합친다.
     if (modeAtStart === 'saving' || modeAtStart === 'savenews') {
-      [1, 101, 201, 301, 401, 501, 601, 701, 801, 901]
+      [1, 101, 201, 301, 401]
         .forEach(start => jobs.push(() => fetchSafe(PEN_SECOND_QUERY, start)));
     }
-    const batches = await runPooled(jobs, 4);
+    const batches = await runPooled(jobs, 3);
     if (currentMode === modeAtStart) {
       for (const items of batches) {
         items.forEach(item => {
@@ -1475,17 +1484,22 @@
   // 한 번에 다 던지면 네이버가 일부를 거절하므로 4개씩 나눠 보낸다(loadRest와 같은 이유).
   async function buildDigest() {
     const jobs = [];
+    let failed = 0;
     const pull = (mode, kw, start) => jobs.push(() => fetchBatch(kw, start)
-      .catch(() => new Promise(r => setTimeout(r, 400))
-        .then(() => fetchBatch(kw, start)).catch(() => []))
+      .catch(() => new Promise(r => setTimeout(r, 900)).then(() => fetchBatch(kw, start)))
+      .catch(() => new Promise(r => setTimeout(r, 2000)).then(() => fetchBatch(kw, start)))
+      .catch(() => { failed++; return []; })
       .then(items => ({ mode, items })));
-    DIGEST_MODES.forEach(m => [1, 101, 201].forEach(start => pull(m.mode, getKeyword(m.mode), start)));
+    // 배치를 늘리면 한 번에 20건 넘는 요청이 몰려 네이버 속도 제한에 걸린다.
+    // 2배치(200건)면 대부분의 키워드가 10건을 채운다.
+    DIGEST_MODES.forEach(m => [1, 101].forEach(start => pull(m.mode, getKeyword(m.mode), start)));
     // savenews 칩은 질의를 둘 쓰는데(getKeyword + PEN_SECOND_QUERY) 모아보기는 1차만 받고 있었다.
     // 라벨이 '절세/장기투자'인데 장기투자 축을 통째로 놓치고 있어 2차 질의도 함께 받는다.
-    [1, 101, 201].forEach(start => pull('savenews', PEN_SECOND_QUERY, start));
+    [1, 101].forEach(start => pull('savenews', PEN_SECOND_QUERY, start));
     const out = [];
-    for (let i = 0; i < jobs.length; i += 4) {
-      out.push(...await Promise.all(jobs.slice(i, i + 4).map(f => f())));
+    for (let i = 0; i < jobs.length; i += 3) {
+      if (i) await new Promise(r => setTimeout(r, 300));   // 묶음 사이 간격 — 속도 제한 회피
+      out.push(...await Promise.all(jobs.slice(i, i + 3).map(f => f())));
     }
     const byMode = {};
     out.forEach(({ mode, items }) => {
@@ -1549,7 +1563,9 @@
       picked.forEach((r, i) => { r.top = i < 3 && top > 0 && r.s >= top * 0.8; });
       chosen[m.mode] = picked;
     });
-    return DIGEST_MODES.map(m => ({ ...m, items: chosen[m.mode] || [], total: (cand[m.mode] || []).length }));
+    const groups = DIGEST_MODES.map(m => ({ ...m, items: chosen[m.mode] || [], total: (cand[m.mode] || []).length }));
+    groups.failed = failed;
+    return groups;
   }
 
   async function showDigest() {
@@ -1574,7 +1590,9 @@
     const note = document.createElement('div');
     note.className = 'event-note';
     note.innerHTML = `<b>모아보기</b> · 키워드 ${groups.length}종의 최근 ${DIGEST_DAYS}일 연관도 상위 ${DIGEST_PER}건씩` +
-      ` · 키워드 칩을 누르면 그 주제만 자세히 볼 수 있습니다`;
+      ` · 키워드 칩을 누르면 그 주제만 자세히 볼 수 있습니다` +
+      // 속도 제한으로 일부가 비어 보이면 '기사가 없다'고 오해하게 된다. 사실대로 알린다.
+      (groups.failed ? `<br><span style="color:#f9a26c">일부 요청이 네이버 속도 제한에 걸려 ${groups.failed}건을 못 받았습니다. 새로고침하면 채워집니다.</span>` : '');
     grid.appendChild(note);
 
     groups.forEach(g => {
