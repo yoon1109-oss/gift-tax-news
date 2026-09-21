@@ -271,6 +271,13 @@
 
     /* 모아보기 — 기사 제목을 강조색으로 (키워드별 요약 화면임을 한눈에) */
 
+    /* 상품 / 플랫폼 구분 탭 */
+    .pen-filter { display: flex; gap: 6px; margin: 0 0 10px; flex-wrap: wrap; }
+    .pen-fchip { font-size: 12.5px; color: var(--muted2); cursor: pointer; padding: 5px 11px;
+      border: 1px solid var(--border); border-radius: 999px; user-select: none; }
+    .pen-fchip:hover { border-color: var(--border-strong, var(--border)); color: var(--text); }
+    .pen-fchip.active { border-color: #f9a26c; color: #f9a26c; font-weight: 600; }
+
     /* 연금 — 금융사 × 상품/플랫폼 카드 */
     .pen-card { background: var(--card); border: 1px solid var(--border); border-radius: 8px;
       padding: 13px 15px; margin-bottom: 8px; }
@@ -784,6 +791,10 @@
       [1, 101, 201, 301, 401]
         .forEach(start => jobs.push(() => fetchSafe(PEN_SECOND_QUERY, start)));
     }
+    // 목돈 만들기 축은 상품 목록 화면에서만 받는다 (기사 화면은 절세·장기투자 두 축이면 충분)
+    if (modeAtStart === 'saving') {
+      [1, 101, 201].forEach(start => jobs.push(() => fetchSafe(PEN_THIRD_QUERY, start)));
+    }
     const batches = await runPooled(jobs, 3);
     if (currentMode === modeAtStart) {
       for (const items of batches) {
@@ -864,6 +875,10 @@
   // 파이와 같은 영역(자녀·증여·자산관리)을 다루면 함께 가산되도록 했다.
   const REL_PLAT_HIGH = ['자녀','증여','미성년','자산관리','자산 관리','생애주기','연금','저축','슈퍼앱','MAU','금융앱','뱅킹'];
   const REL_PLAT = ['플랫폼','앱','핀테크','디지털','간편','비대면','이용자','가입자','출시','론칭','개편','고도화','페이','송금','결제','계좌','은행','증권','보험'];
+  // 플랫폼 사업자 이름과 서비스 어휘. 제목이 '카카오 첫 멤버십 출격'처럼 쓰이면
+  // 위 두 묶음에 하나도 걸리지 않아 본문 1점으로 밀려났다.
+  const REL_PLAT_FIRM = ['카카오','토스','네이버페이','네이버파이낸셜','케이뱅크','카카오뱅크','카카오페이','페이코','뱅크샐러드','핀다','핀크','쿠팡페이','당근'];
+  const REL_PLAT_SVC = ['멤버십','구독','슈퍼앱','생태계','마이데이터','오픈뱅킹','리워드','포인트','통합앱','간편결제','로보어드바이저','챗봇','리브랜딩'];
   // 절세/장기투자 모드(savenews·saving 공용): '연금' 단독 검색은 정치·기금운용 뉴스가
   // 대부분이라 검색어를 '절세 상품'+'장기 투자 상품'으로 잡았고(getKeyword),
   // 점수는 '개인이 드는 절세·연금 상품'을 축으로 본다.
@@ -905,7 +920,7 @@
   // 종류는 '목록에 있는 상품어를 찾았는가'가 아니라 **이름 자체로** 판정한다.
   // 목록만 보면 따옴표에서 뽑은 고유 상품명이 전부 플랫폼으로 떨어졌다
   // (삼성화재 '매일든든 가족생활보험' -> 플랫폼, 2026-09-07 사용자 제보)
-  const PEN_KIND_PLATFORM = /(앱|플랫폼|서비스|LAB|Lab|lab|MTS|HTS|로보|어드바이저|계산기|시뮬레이션|챗봇|뱅크|센터|라운지)$/;
+  const PEN_KIND_PLATFORM = /(앱|플랫폼|서비스|LAB|Lab|lab|MTS|HTS|로보|어드바이저|계산기|시뮬레이션|챗봇|뱅크|센터|라운지|멤버십|챌린지|모으기|만들기)$/;
   const PEN_KIND_PRODUCT  = /(보험|연금|저축|펀드|계좌|ETF|ETN|랩|신탁|플랜|채권|국채|적금|예금|카드)$/;
   function penKind(name, prod, plat) {
     if (prod) return '상품';
@@ -928,7 +943,7 @@
   // 제목 속 따옴표는 상품명만이 아니라 강조·인용에도 쓰인다.
   // ('연금 영토' 넓힌다 / '공부' / '잠자는 목돈 연금으로 받으세요' 가 상품명으로 잡혔다)
   // 그래서 상품·플랫폼처럼 끝나는 말일 때만 이름으로 채택한다.
-  const PEN_NAME_TAIL = /(보험|연금|랩|펀드|계좌|ETF|ETN|플랜|LAB|Lab|lab|케어|라이프|뱅크|앱|서비스|신탁|저축|솔루션|AI)$/;
+  const PEN_NAME_TAIL = /(보험|연금|랩|펀드|계좌|ETF|ETN|플랜|LAB|Lab|lab|케어|라이프|뱅크|앱|서비스|신탁|저축|솔루션|AI|적금|예금|멤버십|챌린지|모으기|라운지)$/;
   const penQuoted = t => {
     const m = t.match(/[‘'“"]([^’'”"]{2,22})[’'”"]/);
     if (!m) return null;
@@ -1018,8 +1033,16 @@
       return s;
     }
     if (cm === 'platform') {
-      return REL_PLAT_HIGH.reduce((s, k) => s + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
-           + REL_PLAT.reduce((s, k) => s + (t.includes(k) ? 2 : 0) + (d.includes(k) ? 1 : 0), 0);
+      let s = REL_PLAT_HIGH.reduce((a, k) => a + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
+            + REL_PLAT.reduce((a, k) => a + (t.includes(k) ? 2 : 0) + (d.includes(k) ? 1 : 0), 0);
+      // 사업자·서비스 축은 '개념당 1회'만 센다 (동의어 나열 제목이 점수를 배로 얻지 않도록)
+      const firmT = REL_PLAT_FIRM.some(k => t.includes(k));
+      const svcT = REL_PLAT_SVC.some(k => t.includes(k));
+      if (firmT) s += 3;
+      if (svcT) s += 3;
+      if (!svcT && REL_PLAT_SVC.some(k => d.includes(k))) s += 2;
+      if (firmT && (svcT || /금융/.test(t))) s += 3;   // 플랫폼 사업자 × 금융 서비스가 제목에서 만남
+      return s;
     }
     if (cm === 'savenews' || cm === 'saving') {
       // childfin과 같은 방식 — 등급마다 '개념당 1회'만 센다.
@@ -1139,11 +1162,29 @@
     const dv = document.createElement('div');
     dv.className = 'divider-label';
     dv.textContent = (all.length > groups.length ? `상품·플랫폼 ${groups.length}건 (전체 ${all.length}건 중)` : `상품·플랫폼 ${groups.length}건`)
-      + ` · 최신 보도순 (상품 ${prod} / 플랫폼 ${groups.length - prod})`;
+      + ` · 최신 보도순`;
     put(dv);
+
+    // 상품 / 플랫폼 구분 탭 — 다시 받지 않고 화면에서만 걸러 보여준다
+    const bar = document.createElement('div');
+    bar.className = 'pen-filter';
+    const counts = { 전체: groups.length, 상품: prod, 플랫폼: groups.length - prod };
+    bar.innerHTML = ['전체', '상품', '플랫폼'].map((k, i) =>
+      `<span class="pen-fchip${i === 0 ? ' active' : ''}" data-kind="${k}">${k} ${counts[k]}</span>`).join('');
+    bar.onclick = e => {
+      const chip = e.target.closest('.pen-fchip');
+      if (!chip) return;
+      bar.querySelectorAll('.pen-fchip').forEach(c => c.classList.toggle('active', c === chip));
+      const want = chip.dataset.kind;
+      grid.querySelectorAll('.pen-card').forEach(c => {
+        c.hidden = want !== '전체' && c.dataset.kind !== want;
+      });
+    };
+    put(bar);
     groups.forEach(g => {
       const box = document.createElement('div');
       box.className = 'pen-card';
+      box.dataset.kind = g.kind;
       const lead = g.arts[0];
       const rest = g.arts.slice(1);
       box.innerHTML =
@@ -1387,6 +1428,11 @@
   // '절세/장기투자 상품' 칩이 절세 축과 함께 받는 두 번째 질의.
   // 실측(300건, 2026-09-09): 유효 68% · 노이즈 0. 절세 축과의 겹침 3%로 서로 다른 기사를 본다.
   const PEN_SECOND_QUERY = '장기 투자 상품';
+  // 목돈 만들기 축 — 적금 챌린지·모으기 서비스처럼 절세/장기투자 질의로는 안 잡히는 건들.
+  // '목돈 마련 금융상품'은 청년도약계좌·우리아이자립펀드 같은 정책 기사가 대부분이라
+  // 금융사 서비스가 3건밖에 안 나왔다. 실측(2026-09-21) 최근 30일 기준:
+  // 모으기 서비스 은행 98건→카드 24(플랫폼 16) · 저축 앱 서비스 153건→13(6) · 목돈 마련 서비스 38건→4(1).
+  const PEN_THIRD_QUERY = '모으기 서비스 은행';
 
   const BLOG_PI_CHIP = '한화생명 파이';
   const BLOG_PI_RE = /한화생명[^가-힣]{0,6}파이|파이\s*\(\s*[Pp]i\s*\)|파이\s*앱|파이앱|['"“”‘’]파이['"“”‘’]/;
