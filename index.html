@@ -377,9 +377,6 @@
       word-break: keep-all; overflow-wrap: anywhere; transition: color 0.15s;
     }
     a:hover .card-title { color: #fbb98c; }
-    /* 연관도가 특히 높은 기사에만 다는 라벨 */
-    .top-badge { font-size: 9.5px; font-weight: 700; letter-spacing: .04em; padding: 1px 5px;
-      border-radius: 3px; border: 1px solid #f9a26c; color: #f9a26c; }
     /* 12px/1.8 → 14px/1.75. 한글은 같은 크기의 로마자보다 획이 촘촘해 더 큰 치수가 필요하다 */
     .card-desc { font-size: 14px; color: var(--muted2); line-height: 1.75; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 
@@ -1557,10 +1554,6 @@
                               || (shareOrg(og, p.og) && bgJaccard(gt, p.t) >= DUP_ORG_T))) continue;
         takenLinks.add(r.n.link); takenSigs.push({ t: gt, td: gtd, sj, og }); picked.push(r);
       }
-      // 라벨은 '아주 높은 것'에만 — 그룹 최고점의 80% 이상이면서 상위 3건까지.
-      // 절대 점수로 자르면 키워드마다 점수 상한이 달라 어떤 그룹은 전부, 어떤 그룹은 0건이 된다.
-      const top = picked.length ? picked[0].s : 0;
-      picked.forEach((r, i) => { r.top = i < 3 && top > 0 && r.s >= top * 0.8; });
       chosen[m.mode] = picked;
     });
     const groups = DIGEST_MODES.map(m => ({ ...m, items: chosen[m.mode] || [], total: (cand[m.mode] || []).length }));
@@ -1613,7 +1606,6 @@
           <div class="card-meta">
             <span class="card-source">[${esc(n.source)}]</span>
             <span class="card-date">${formatDate(n.pubDate)}</span>
-            ${r.top ? '<span class="top-badge">연관도 높음</span>' : ''}
             ${r.fresh ? '<span class="new-badge">NEW</span>' : ''}
           </div>
           <div class="card-title">${esc(n.title)}</div>
