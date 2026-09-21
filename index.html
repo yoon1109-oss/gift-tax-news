@@ -613,6 +613,10 @@
   // 금융사 사회공헌·봉사 기사. 계절마다 같은 내용이 수십 건씩 쏟아져 목록을 뒤덮는다.
   // (실측: 자녀 금융 200건 중 35건이 하나금융 '송편 빚기' 류였다)
   const CSR_KW = /봉사|나눔|기부|후원|사회공헌|성금|연탄|김장|송편|행복상자|헌혈|장학/;
+  // 금융 플랫폼 전용 — '금융 플랫폼'은 검색어가 넓어 통신·미디어 기사가 섞인다.
+  // (KT 드라마 제작비, KTX 통신설비 등. 실측 2026-09-21: 200건 중 4건)
+  // 금융보안(취약점·해킹)은 금융 인프라라 제외하지 않는다.
+  const PLATFORM_NOISE = /드라마|예능|영화|제작비|웹툰|KTX|통신설비|귀성|귀경|자금세탁|통신사|5G|위성|기지국/;
 
   // 자녀 금융 전용 제외 — 공직자 재산 논란·가족 분쟁 사연·지자체 행정 기사가
   // '자녀'와 '금융' 단어를 함께 갖고 있어 점수만으로는 안 걸러진다.
@@ -647,6 +651,7 @@
     if (isCelebNews(s)) return true;
     if (EXEC_RE.test(s)) return true;
     if (SCANDAL_KW.test(s) || NOMINEE_KW.test(s) || CSR_KW.test(s)) return true;
+    if (m === 'platform' && PLATFORM_NOISE.test(s)) return true;
     if (m === 'childfin' && CHILDFIN_NOISE.test(s)) return true;
     const noise = (m === 'savenews' || m === 'saving') ? NOISE_KW.filter(k => !REALTY_KW.includes(k)) : NOISE_KW;
     return OWNER_KW.some(k => s.includes(k)) || noise.some(k => s.includes(k));
