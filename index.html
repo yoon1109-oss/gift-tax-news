@@ -153,6 +153,20 @@
       display: flex; align-items: center; gap: 10px;
       border-bottom: 1px solid var(--border-strong); margin-bottom: 14px;
     }
+    /* 모아보기는 키워드 구간이 여섯 번 반복돼 어디서 주제가 바뀌는지가 잘 안 보인다.
+       기사 제목이 이미 주황색이라 라벨은 크기와 왼쪽 막대로 구분한다. */
+    .divider-label.digest-label { font-size: 20px; padding: 10px 0 11px; gap: 0; }
+    .divider-label.digest-label .dl-kw {
+      font-size: 20px; font-weight: 800; letter-spacing: -0.3px; color: var(--text);
+      border-left: 4px solid #f9a26c; padding-left: 10px; line-height: 1.25;
+    }
+    .divider-label.digest-label .dl-sub {
+      font-size: 12.5px; font-weight: 500; color: var(--muted); margin-left: 10px; white-space: nowrap;
+    }
+    @media (max-width: 520px) {
+      .divider-label.digest-label, .divider-label.digest-label .dl-kw { font-size: 18px; }
+      .divider-label.digest-label .dl-sub { font-size: 12px; margin-left: 8px; }
+    }
     /* 탭 미확인 배지 — 이벤트 데이터가 갱신됐는데 아직 열어보지 않았을 때 */
     .tab-badge {
       display: inline-flex; align-items: center; justify-content: center;
@@ -576,11 +590,37 @@
   //   '절세 전략부터 1:1 맞춤 상담까지…하나은행, 퇴직연금 세미나 열어'  → leadSubject '절세전략부터1:1맞춤상'
   //   '하나은행, 퇴직연금 \'수익률 관리\' 강화…일대일 은퇴 상담'        → leadSubject '하나은행'
   // 같은 하나은행 퇴직연금 건인데 주체가 어긋나 둘 다 모아보기에 실렸다.
-  const ORG_RE = /[가-힣A-Za-z]{2,8}?(?:저축은행|은행|증권|생명|화재|손보|금융지주|금융|카드|자산운용|캐피탈|투자운용)/g;
+  // 약칭은 접미사 규칙으로 안 잡힌다. '한투, 미성년 계좌…'와 '한국투자증권, 미성년 주식계좌…'가
+  // 같은 사건인데 기관이 안 겹쳐 모아보기에 둘 다 올라왔다 (2026-09-23 제보).
+  const ORG_RE = /[가-힣A-Za-z]{2,8}?(?:저축은행|은행|증권|생명|화재|손보|금융지주|금융|카드|자산운용|캐피탈|투자운용)|한투(?:증권)?|카뱅|케뱅|토스뱅크|카카오페이|네이버페이/g;
+  const ORG_ALIAS = { '한투': '한국투자증권', '한투증권': '한국투자증권', 'NH농협은행': '농협은행',
+    'KB국민은행': '국민은행', '카뱅': '카카오뱅크', '케뱅': '케이뱅크', '신한금융': '신한은행' };
   function orgNames(t) {
-    return new Set((((t || '').replace(/<[^>]*>/g, '')).match(ORG_RE) || []).map(x => x.replace(/\s+/g, '')));
+    return new Set((((t || '').replace(/<[^>]*>/g, '')).match(ORG_RE) || [])
+      .map(x => x.replace(/\s+/g, '')).map(x => ORG_ALIAS[x] || x));
   }
   function shareOrg(a, b) { for (const x of a) if (b.has(x)) return true; return false; }
+  // 제목 bigram은 같은 사건이라도 표현이 다르면 뚝 떨어진다(한투 기사 쌍 실측 0.06).
+  // 같은 기관 기사끼리 '무슨 이야기인가'를 한 번 더 보려고 내용어를 뽑는다.
+  // 기관명·서술어·기사 형식어는 어느 기사에나 있어 신호가 안 되므로 뺀다.
+  const DUP_STOP = new Set(['단독','종합','속보','오늘','이번','우리','최근','관련','대한','위한','있다','했다',
+    '한다','밝혔다','전망','금융','증권','은행','생명','보험','서비스','강화','확대','출시','시대','대상','영역',
+    '효과','방법','고객','국내','시장','업계','기사','뉴스','소식','브리핑','이모저모']);
+  function contentTokens(t) {
+    return [...new Set((String(t || '').replace(/<[^>]*>/g, '').replace(/\[[^\]]*\]/g, ' ')
+      .replace(/[“”"'‘’]/g, ' ').match(/[가-힣]{2,}|[A-Za-z]{3,}/g) || [])
+      .map(w => w.replace(/(으로|에서|에게|보다|처럼|까지|부터|이나|라도|마저|조차|한테|께서|이라|라는|하는|되는|한다는)$/, ''))
+      .filter(w => w.length >= 2 && !DUP_STOP.has(w)))];
+  }
+  // '계좌' ⊂ '주식계좌'처럼 한쪽이 다른 쪽을 품으면 같은 말로 본다. 한 토큰은 한 번만 센다.
+  function shareTokens(a, b) {
+    let n = 0; const used = new Set();
+    for (const x of a) for (const y of b) {
+      if (used.has(y)) continue;
+      if (x === y || x.includes(y) || y.includes(x)) { n++; used.add(y); break; }
+    }
+    return n;
+  }
 
   // 기업 오너·재벌 승계성 증여/재산 뉴스 제외 (세무사회장·협회장 등 정보성은 예외)
   const OWNER_KW = ['오너','총수','창업주','창업자','일가','블록딜','대주주','최대주주','경영권','지분','株','2세','3세','4세','오너가','가업승계','기업승계'];
@@ -635,7 +675,7 @@
   // '금감원'으로 막으면 안 된다 — 후보 3건 중 2건이 '토스뱅크, 금감원과 어린이 금융스쿨'로
   // 정상 기사다. 기관이 아니라 기사의 성격(분쟁·민원)을 겨냥한다.
   // 실측 599건(중복제거) 노출후보 105건 중 아래 패턴에 걸리는 건 이 1건뿐이다(오탈락 0).
-  const CHILDFIN_NOISE = /이해\s?충|재산\s?(신고|공개|내역|뜯어)|공직자|인사청문|장관|후보자|의혹|가족센터|다문화|결혼이민|한국어교육|교육청|유류분|소송|분쟁|재판|피소|고소|숨진|사망보험금|학대|실종|주민등록|등\s?·?\s?초본|재혼가정|고지\s?의무|부지급|지급\s?거절|불완전\s?판매|약관\s?위반|보험사기/;
+  const CHILDFIN_NOISE = /이해\s?충|재산\s?(신고|공개|내역|뜯어)|공직자|인사청문|장관|후보자|의혹|가족센터|다문화|결혼이민|한국어교육|교육청|유류분|소송|분쟁|재판|피소|고소|숨진|사망보험금|학대|실종|주민등록|등\s?·?\s?초본|재혼가정|(원장|국장|위원장|청장|처장|본부장)\s?자녀|고강도\s?검사|제재\s?심의|고지\s?의무|부지급|지급\s?거절|불완전\s?판매|약관\s?위반|보험사기/;
   const REALTY_KW = ['부동산','아파트','주택','빌딩','상가','토지','오피스텔','건물'];
   // 본문에만 오너 표지가 있는 기사 — 제목만 보면 놓친다.
   // '최태원 \'김희영에 1000억\' 어떻게 나왔나…노소영·자녀 지출·기부금까지'는 제목에 직함이
@@ -1600,7 +1640,10 @@
     // 기관명만 같으면 무조건 접으면 안 된다. 한 은행이 서로 다른 사건으로 여러 번 나오는 건
     // 정상이다(실측: 신한은행 '땡겨요 회원 1000만' vs '퇴직연금 국채' — 제목유사 0.064).
     // 같은 기관 + 주제까지 겹칠 때만 같은 사건으로 본다(하나은행 퇴직연금 2건 — 0.205).
-    const DUP_T = 0.28, DUP_TD = 0.3, DUP_ORG_T = 0.12;
+    // 실측(2026-09-23, 모아보기 51건): 진짜 중복쌍은 0.195~0.273에, 서로 다른 기사는
+    // 0.147~0.149에 몰려 있었다. 0.19로 내려 8쌍을 잡고 오검출은 0.
+    // (미술품 자산관리 3건 · 코인 증여 2건 · 추석 용돈 2건 · 한투 미성년 계좌 2건 등)
+    const DUP_T = 0.19, DUP_TD = 0.3, DUP_ORG_T = 0.12, DUP_ORG_TOK = 2;
     const takenLinks = new Set(), takenSigs = [], chosen = {};
     [...DIGEST_MODES].sort((a, b) => a.prio - b.prio).forEach(m => {
       const picked = [];
@@ -1609,11 +1652,13 @@
         if (takenLinks.has(r.n.link)) continue;
         const gt = titleBigrams(r.n.title);
         const gtd = titleBigrams(r.n.title + ' ' + (r.n.desc || '').slice(0, 120));
-        const sj = leadSubject(r.n.title), og = orgNames(r.n.title);
+        const sj = leadSubject(r.n.title), og = orgNames(r.n.title), tk = contentTokens(r.n.title);
         if (takenSigs.some(p => bgJaccard(gt, p.t) >= DUP_T || bgJaccard(gtd, p.td) >= DUP_TD
                               || (sj.length >= 2 && sj === p.sj)
-                              || (shareOrg(og, p.og) && bgJaccard(gt, p.t) >= DUP_ORG_T))) continue;
-        takenLinks.add(r.n.link); takenSigs.push({ t: gt, td: gtd, sj, og }); picked.push(r);
+                              || (shareOrg(og, p.og)
+                                  && (bgJaccard(gt, p.t) >= DUP_ORG_T || shareTokens(tk, p.tk) >= DUP_ORG_TOK))
+        )) continue;
+        takenLinks.add(r.n.link); takenSigs.push({ t: gt, td: gtd, sj, og, tk }); picked.push(r);
       }
       chosen[m.mode] = picked;
     });
@@ -1651,8 +1696,9 @@
 
     groups.forEach(g => {
       const dv = document.createElement('div');
-      dv.className = 'divider-label';
-      dv.textContent = g.items.length ? `${g.label} · ${g.total}건 중 상위 ${g.items.length}` : `${g.label} · 최근 ${DIGEST_DAYS}일 해당 기사 없음`;
+      dv.className = 'divider-label digest-label';
+      dv.innerHTML = `<span class="dl-kw">${esc(g.label)}</span><span class="dl-sub">` +
+        (g.items.length ? `${g.total}건 중 상위 ${g.items.length}` : `최근 ${DIGEST_DAYS}일 해당 기사 없음`) + `</span>`;
       dv.style.cursor = 'pointer';
       dv.onclick = () => {
         const chip = document.querySelector(`#newsKeywords .kw-chip[data-mode="${g.mode}"]`);
