@@ -709,12 +709,20 @@
   function assignGroup(n) {
     const subj = leadSubject(n.title);
     const sig = titleBigrams(n.title + ' ' + (n.desc || '').slice(0, 120));
+    // 머리 꼬리표([욜로은퇴 시즌3] 등)는 빼고 본다 — 연재물 두 편이 꼬리표만으로 0.35가 나와 묶였다.
+    const gt = titleBigrams(n.title.replace(/^\s*\[[^\]]*\]\s*/, '')), og = orgNames(n.title), tk = contentTokens(n.title);
     let g = null;
     if (subj.length >= 2) g = groups.find(x => x.subj === subj);
     if (!g && sig.size >= 4) g = groups.find(x => bgJaccard(sig, x.sig) >= 0.5);
+    // 같은 보도자료를 매체마다 제목을 달리 뽑으면 위 두 규칙을 빠져나간다.
+    // 가족 자산 관리 목록 맨 위에 '한국투자증권 미성년 계좌 급증…가족 자산관리' 기사가 6장 따로 깔렸다
+    // (2026-09-28). 같은 기관 + 내용어 3개 이상 겹침, 또는 제목 유사도 0.3 이상이면 한 묶음으로 본다.
+    // 모아보기(0.19 / 내용어 2개)보다 보수적으로 잡았다 — 목록은 후보가 수백 건이라 우연히 겹칠 일이 많다.
+    if (!g) g = groups.find(x => bgJaccard(gt, x.gt) >= 0.3
+                              || (shareOrg(og, x.og) && shareTokens(tk, x.tk) >= 3));
     if (g) { g.rep.dupes.push(n); return false; }
     n.dupes = [];
-    groups.push({ subj, sig, rep: n });
+    groups.push({ subj, sig, gt, og, tk, rep: n });
     return true;
   }
 
@@ -787,6 +795,7 @@
         if (!links.has(n.link)) {
           if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
           if (isOwnerNews(n.title, null, n.desc)) return;
+          if (currentMode === 'family' && relatedScore(n) <= 0) return;
           links.add(n.link);
           if (assignGroup(n)) { n._rank = rankCounter++; allNews.push(n); }
         }
@@ -843,6 +852,9 @@
           if (!existingLinks.has(n.link)) {
             if (currentMode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
             if (isOwnerNews(n.title, null, n.desc)) return;
+            // 가족 자산 관리는 검색어가 넓어('가족 자산관리 금융') 최신 목록에 운세·카드사 영업정지·
+            // PF 약정·전통시장 캠페인이 섞였다. 이 칩만 연관도 0점 이하를 목록에서도 뺀다.
+            if (currentMode === 'family' && relatedScore(n) <= 0) return;
             existingLinks.add(n.link);
             if (assignGroup(n)) { n._rank = rankCounter++; allNews.push(n); }
           }
@@ -892,16 +904,39 @@
   // 핵심은 '금융 자산관리'다. 상속·증여·절세는 인접 축(REL_FAM_NEAR)으로 한 단계 내렸다 —
   // 핵심에 두면 금투협 '신탁 절세법' 교육 같은 세무 강좌가 상위를 점령한다 (2026-09-11).
   const REL_FAM_CORE = [/자산\s?관리/, /\bWM\b/, /\bPB\b/, /프라이빗\s?뱅킹/, /패밀리\s?오피스/,
-    /신탁/, /펀드/, /계좌/, /포트폴리오/, /자산\s?배분/, /투자\s?상품/, /일임/];
+    /신탁/, /펀드/, /계좌/, /포트폴리오/, /자산\s?배분/, /자산\s?재배치/, /투자\s?상품/, /일임/, /가족\s?상품/];
   const REL_FAM_NEAR = [/상속/, /증여/, /절세/, /세액공제/, /자산\s?이전/, /자산\s?승계/, /부의\s?이전/,
-    /승계/, /투자/, /주식/, /ETF/, /연금/, /보험/, /적금/, /예금/, /저축/];
-  const REL_FAM_WHO = [/가족/, /부부/, /배우자/, /자녀/, /부모/, /손주/, /3대/, /가구/, /노후/];
-  // 사회공헌·정치성 기사는 '가족'이 들어가도 자산 관리와 무관하다 (재단 특강, 정당 논란 등)
-  // 지자체 주민 프로그램(은평구 중장년 노후자산 클래스 등)도 자산 관리 동향이 아니다.
+    /승계/, /투자/, /주식/, /ETF/, /연금/, /보험/, /적금/, /예금/, /저축/, /은퇴/, /금융\s?생활/];
+  // 가족 축 — 이 칩의 뜻은 '가족 단위'의 금융 자산관리다.
+  // 예전엔 가족 신호가 가산점일 뿐이라, 가족과 무관한 자산관리 기사(역이민 세미나·미술품 고액자산가)가
+  // 자산관리 한 단어로 12점을 받아 상위를 차지했다 (2026-09-28 점검).
+  // 이제 제목에 가족 축이 없으면 0점이다.
+  // '노후'는 뺐다 — 노후 자산은 가족이 아니라 개인 은퇴 주제고 절세/장기투자 칩과 겹친다.
+  // '1인가구'는 가족 단위가 아니므로 '가구'에서 뺀다 ('일하는 1인가구…자산관리 수요'가 걸렸다)
+  const REL_FAM_WHO = [/가족/, /부부/, /배우자/, /자녀/, /부모/, /손주/, /3대/, /(?<!1인\s?)가구/, /맞벌이/, /세대/,
+    /아들/, /자식/, /손자/, /손녀/, /조부모/];
+  // 그 자체로 가족 간 자산 이동을 뜻하는 말 — 제목에 '가족'이 없어도 가족 축으로 본다.
+  // ('불어난 자산 놓고 자식들 싸울라…유언장 대신 상속신탁' 12점 → 21점)
+  const REL_FAM_UNIT = [/가족\s?신탁/, /패밀리\s?오피스/, /유언/, /상속/, /증여/, /가업/, /부의\s?이전/,
+    /자산\s?이전/, /자산\s?승계/];
+  // 사회공헌·정치성 기사는 '가족'이 들어가도 자산 관리와 무관하다 (재단 특강, 정당 논란 등).
+  // 선도기업·표창류는 사회공헌 인증 보도다 ('치매극복선도기업 인증… 노후자산 관리도 연계').
+  // 같은 사건을 '치매 친화 영업점 60곳…자산승계 잇는다'로 쓴 기사도 있어 영업점 인증까지 본다.
+  // 여기 걸리면 바로 0점이다. 감점(-8, -15)으로는 부족했다 — 가족·자산관리·신탁이 다 붙은 제목은
+  // 기본 점수가 21점까지 나와 '박현주재단 가족돌봄청년 금융특강…자산관리 지원'이 6점으로 목록에 남았다.
+  // 가족돌봄청년·취약계층·장병 지원은 금융사 사회공헌 프로그램의 대상이지 가족 자산관리 수요층이 아니다.
+  const REL_FAM_CSR = /재단|기부|후원|봉사|사회공헌|캠페인|특강|장학|나눔|공모전|선도기업|친화인증|인증기업|친화\s?영업점|영업점.{0,8}인증|표창|공로|감사패|가족\s?돌(봄|보)|돌봄\s?청년|취약\s?계층|교육협의회|장병|논란|고발|의원|정당|당직|출마|구청|시청|주민센터|복지관/;
+  // 협약·지자체 강좌는 가족신탁 업무협약처럼 정당한 경우가 있어 한 단계만 내린다.
   // '[가-힣]{1,3}[시군구],' 는 '은평구,' '김제시,' 를 잡고 '삼성증권,' '금투협,' 은 안 잡는다.
-  // 선도기업·표창류는 사회공헌 인증 보도다. '치매극복선도기업 인증… 노후자산 관리도 연계'처럼
-  // 제목에 자산관리·노후가 같이 붙으면 16점까지 올라와 상단을 차지했다.
-  const REL_FAM_CSR = /재단|기부|후원|봉사|사회공헌|캠페인|특강|장학|나눔|위촉|협약|MOU|공모전|선도기업|친화인증|인증기업|표창|공로|감사패|논란|고발|의원|정당|당직|출마|구청|시청|주민센터|복지관|클래스|수강|강좌|아카데미|[가-힣]{1,3}[시군구],/;
+  const REL_FAM_SOFT = /위촉|협약|MOU|클래스|수강|강좌|아카데미|[가-힣]{1,3}[시군구],/;
+  // 여러 소식을 한 줄에 묶은 브리핑 — 가족 신호가 곁다리 한 줄에서 온다
+  // ('[금융권 이모저모]한국투자신탁운용, 추석 맞아 ACE ETF' 12점, '[더밸류 브리핑] 오늘의 한국투자증권 소식' 12점)
+  const REL_FAM_BRIEF = /^\s*\[[^\]]*(이모저모|브리핑|단신|소식|HOT|Talk|톡톡|zip|家|모음|Pick|픽|풍향계|경제소식)[^\]]*\]|오늘의\s?\S+\s?소식|\s外$|\S+\s\/\s\S+.*\s\/\s/;
+  // 교육·행사 보도 — 자산관리 '동향'이 아니라 행사 알림이다. 패밀리오피스 세미나처럼
+  // 주제가 맞으면 목록에는 남되 '연관도 높음'(REL_MIN 10점)에는 못 오르게 내린다.
+  const REL_FAM_EVENT = /금융\s?교육|교육협의회|세미나|설명회|로드쇼|힐링|초청|체험관|팝업|페스타|페스티벌/;
+  // 금융사기·명의도용 예방 — 가족 금융이긴 하나 자산 '관리'는 아니다
+  const REL_FAM_GUARD = /사기|피싱|명의\s?도용|안심\s?차단|부정\s?사용/;
 
   // 자녀 금융 모드: '자녀 대상'과 '금융 수단'이 제목에서 만나는 기사를 축으로 본다.
   // 검색어가 넓어 'KB금융 소방공무원 지원' 같은 금융사 사회공헌 기사가 다수 섞이는데,
@@ -1045,16 +1080,24 @@
     if (cm === 'family') {
       const coreT = REL_FAM_CORE.some(r => r.test(t)), nearT = REL_FAM_NEAR.some(r => r.test(t));
       if (!coreT && !nearT) return 0;          // 금융 신호가 제목에 없으면 이 칩의 기사가 아니다
+      if (REL_FAM_CSR.test(t)) return 0;         // 사회공헌·정치성 — 점수와 무관하게 제외
+      const famT = REL_FAM_WHO.some(r => r.test(t)) || REL_FAM_UNIT.some(r => r.test(t));
+      const famD = REL_FAM_WHO.some(r => r.test(d)) || REL_FAM_UNIT.some(r => r.test(d));
+      // 가족 축은 제목에 있어야 한다. 본문에만 있을 때 하위 점수로 남겼더니, 목록이 날짜순이라
+      // '미술품 고액자산가'·'치매 이후 자산관리' 같은 개인 자산관리 기사가 맨 위에 5장씩 깔렸다.
+      if (!famT) return 0;
       let s = 0;
-      const whoT = REL_FAM_WHO.some(r => r.test(t));
       if (coreT) s += 5;
       if (REL_FAM_CORE.some(r => r.test(d))) s += 2;
       if (nearT) s += 3;
       if (REL_FAM_NEAR.some(r => r.test(d))) s += 1;
-      if (whoT) s += 3;
-      if (REL_FAM_WHO.some(r => r.test(d))) s += 1;
-      if (coreT && whoT) s += 5;                                  // 금융 자산관리 × 가족이 제목에서 만남
-      if (REL_FAM_CSR.test(t)) s -= 8;                             // 사회공헌·정치성·지자체 기사 강등
+      if (famT) s += 4;
+      if (famD) s += 1;
+      if (coreT && famT) s += 5;                                  // 금융 자산관리 × 가족이 제목에서 만남
+      if (REL_FAM_SOFT.test(t)) s -= 6;
+      if (REL_FAM_BRIEF.test(t)) s -= 10;
+      if (REL_FAM_EVENT.test(t)) s -= 8;
+      if (REL_FAM_GUARD.test(t)) s -= 4;
       return s;
     }
     if (cm === 'childfin') {
@@ -1117,7 +1160,12 @@
   // 안 차면 14→30일→무제한으로 넓힌다 (키워드가 한산한 주에 섹션이 비지 않게).
   const RELATED_WINDOWS = [7, 14, 30, null];   // null = 기간 제한 없음
 
+  // '연관도 높음'에 오를 최소 점수. 0점만 넘으면 되던 시절, 가족 자산 관리는 최근 7일에
+  // 가족 기사가 2건뿐이면 남은 2칸을 3점짜리(미술품 고액자산가)로 채워 기간을 넓히지 않았다.
+  // 문턱을 두면 7일 안에서 못 채울 때 14·30일로 넓혀 제대로 된 기사를 찾는다.
+  const REL_MIN = { family: 10 };
   function pickRelated(items, days, mode) {
+    const floor = REL_MIN[mode || currentMode] || 0;
     const pool = days == null ? items : items.filter(n =>
       n.pubDate instanceof Date && !isNaN(n.pubDate) && (Date.now() - n.pubDate) <= days * 864e5);
     // 연관도 점수 내림차순(동점이면 sim 순서), 단 같은 사건 중복 배제하고 상위 4건
@@ -1125,19 +1173,23 @@
     // 무관한 기사가 상단에 올라왔다 — 기간을 넓혀서(7→14→30→무제한) 채우는 편이 낫다.
     const scored = pool
       .map(n => ({ n, s: relatedScore(n, mode) }))
-      .filter(c => c.s > 0)
+      .filter(c => c.s >= Math.max(floor, 1))
       .sort((a, b) => b.s - a.s || (a.n._rank ?? 1e9) - (b.n._rank ?? 1e9));
-    const candidates = [], pT = [], pTD = [], pSubj = [];
+    const candidates = [], pT = [], pTD = [], pSubj = [], pOg = [], pTk = [];
     for (const c of scored) {
       if (candidates.length >= 4) break;
       const gt = titleBigrams(c.n.title);
       const gtd = titleBigrams(c.n.title + ' ' + (c.n.desc || '').slice(0, 120));
       const subj = leadSubject(c.n.title);
-      // 같은 사건/주체 배제: 제목 유사 or 제목+본문 유사 or 동일 주체(회사명) → 서로 다른 4건 확보
+      const og = orgNames(c.n.title), tk = contentTokens(c.n.title);
+      // 같은 사건/주체 배제: 제목 유사 or 제목+본문 유사 or 동일 주체(회사명) → 서로 다른 4건 확보.
+      // 같은 기관이 같은 주제로 두 번 오르는 것도 막는다 — '한투, 미성년 계좌 비중 8.6%'와
+      // '자녀 명의 장기투자 증가…한국투자증권'이 4칸 중 2칸을 차지했다 (2026-09-28).
       const dup = pT.some((s, k) =>
-        bgJaccard(gt, s) >= 0.2 || bgJaccard(gtd, pTD[k]) >= 0.3 || (subj.length >= 2 && subj === pSubj[k]));
+        bgJaccard(gt, s) >= 0.2 || bgJaccard(gtd, pTD[k]) >= 0.3 || (subj.length >= 2 && subj === pSubj[k])
+        || (shareOrg(og, pOg[k]) && shareTokens(tk, pTk[k]) >= 1));
       if (dup) continue;
-      pT.push(gt); pTD.push(gtd); pSubj.push(subj); candidates.push(c);
+      pT.push(gt); pTD.push(gtd); pSubj.push(subj); pOg.push(og); pTk.push(tk); candidates.push(c);
     }
     return candidates;
   }
