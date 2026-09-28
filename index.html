@@ -2394,7 +2394,7 @@
     if (d.summary && (d.summary.items || []).length) {
       const sb = document.createElement('div');
       sb.className = 'stat-summary';
-      sb.innerHTML = `<div class="ss-head">${esc(d.summary.title || '한눈에 보기')}</div>` +
+      sb.innerHTML = `<div class="ss-head">${esc(d.summary.title || '핵심 요약')}</div>` +
         d.summary.items.map(t => `<div class="ss-row">${t}</div>`).join('');
       grid.appendChild(sb);
     }
@@ -2403,7 +2403,7 @@
     const ag = d.allGift;
     if (ag && (ag.tiles || []).length) {
       const dvA = document.createElement('div');
-      dvA.className = 'divider-label'; dvA.textContent = ag.title || '세금 0원 신고까지 합친 전체';
+      dvA.className = 'divider-label'; dvA.textContent = ag.title || '전체 증여 현황 (과세미달 포함)';
       grid.appendChild(dvA);
       const gb = document.createElement('div');
       gb.className = 'stat-group';
@@ -2509,7 +2509,7 @@
     // 규모별 분포 막대
     if ((d.dist || []).length) {
       const dv = document.createElement('div');
-      dv.className = 'divider-label'; dv.textContent = '규모별 분포';
+      dv.className = 'divider-label'; dv.textContent = '금액 구간별 분포';
       grid.appendChild(dv);
       d.dist.forEach(t => {
         const max = Math.max(...(t.rows || []).map(r => Number(r.pct) || 0), 1);
@@ -2528,7 +2528,7 @@
 
     if ((d.metrics || []).length) {
       const dv3 = document.createElement('div');
-      dv3.className = 'divider-label'; dv3.textContent = '요약 지표';
+      dv3.className = 'divider-label'; dv3.textContent = '주요 지표';
       grid.appendChild(dv3);
     }
     (d.metrics || []).forEach(g => {
@@ -2544,7 +2544,7 @@
     // 로우 데이터 테이블
     if ((d.raw || []).length) {
       const dv = document.createElement('div');
-      dv.className = 'divider-label'; dv.textContent = '로우 데이터';
+      dv.className = 'divider-label'; dv.textContent = '원자료';
       grid.appendChild(dv);
       d.raw.forEach(t => {
         const box = document.createElement('div');
@@ -2573,10 +2573,20 @@
       const divider = document.createElement('div');
       divider.className = 'divider-label'; divider.textContent = '공식 통계 바로가기';
       grid.appendChild(divider);
+      // 국세통계포털은 WebSquare 스크립트로 화면을 그린다. 회사 보안 프로그램(TLS 검사 프록시 등)이
+      // 이 스크립트를 막으면 'WebSquare is not defined'만 뜬다 (2026-09-28 제보 — 이 환경은 Forcepoint 경유).
+      // 우리 쪽에서 고칠 수 없으므로, 같은 표가 올라와 있는 공공데이터포털 링크를 대체 경로로 둔다.
+      const tip = document.createElement('div');
+      tip.className = 'event-note';
+      tip.innerHTML = '국세통계포털 링크가 <b>WebSquare is not defined</b> 오류로 열리지 않는 경우, 사내 보안 프로그램이 해당 사이트의 스크립트를 차단했을 가능성이 있습니다. 이때는 <b>공공데이터포털</b> 링크를 이용해 주십시오.';
+      grid.appendChild(tip);
       d.sources.forEach(s => {
-        const el = document.createElement('a');
-        el.className = 'news-card'; el.href = s.link; el.target = '_blank'; el.rel = 'noopener';
-        el.innerHTML = `<div class="card-title">${esc(s.title)}</div><div class="card-desc">${esc(s.desc)}</div><div class="event-link">바로가기 →</div>`;
+        const el = document.createElement('div');
+        el.className = 'news-card';
+        el.innerHTML = `<a class="card-main" href="${esc(s.link)}" target="_blank" rel="noopener">` +
+          `<div class="card-title">${esc(s.title)}</div><div class="card-desc">${esc(s.desc)}</div>` +
+          `<div class="event-link">국세통계포털에서 보기 →</div></a>` +
+          (s.alt ? `<a class="event-link" style="display:inline-block;margin-top:6px" href="${esc(s.alt)}" target="_blank" rel="noopener">공공데이터포털에서 보기 →</a>` : '');
         grid.appendChild(el);
       });
     }
