@@ -2161,6 +2161,8 @@
     renderTaxNews(taxData || {});
   }
 
+  // NEW 라벨 기준은 모아보기와 같다 — 보도 후 2일(48시간) 이내
+  const isFresh = d => { const t = new Date(d); return !isNaN(t) && (Date.now() - t) <= 2 * 864e5; };
   function renderTaxNews(d) {
     const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
     const items = d.items || [], byOutlet = d.byOutlet || {};
@@ -2186,6 +2188,7 @@
         <div class="card-meta">
           <span class="card-source">[${esc(n.outlet)}]</span>
           <span class="card-date">${formatDate(new Date(n.pubDate))}</span>
+          ${isFresh(n.pubDate) ? '<span class="new-badge">NEW</span>' : ''}
           ${n._more ? `<span class="dup-badge">같은 내용 ${n._more + 1}건</span>` : ''}
         </div>
         <div class="card-title">${esc(n.title)}</div>
