@@ -2142,7 +2142,7 @@
     '증여','상속','유산','가업승계','물려','세대생략','자산 이전','대물림',
     '미성년','자녀','혼인','출산',
     // 세무대리 시장 이슈 (스크래핑 제한·개보법 시행령·세무플랫폼 계열)
-    '세무대리','세무사법','세무플랫폼','오인광고','스크래핑',
+    '세무대리','세무사법','세무플랫폼','세무 플랫폼','삼쩜삼','오인광고','스크래핑',
   ];
   let taxLoaded = false, taxData = null;
   async function showTaxNews() {
@@ -2168,7 +2168,9 @@
     const note = document.createElement('div');
     note.className = 'event-note';
     note.innerHTML = '<b>세법 뉴스</b> · 조세 전문지 4곳 · 최신순'
-      + `<span class="event-note-brokers">${(d.outlets || []).map(o => `${esc(o)} ${esc(byOutlet[o] || 0)}건`).join(' · ')}</span>`;
+      + (d.issueCount ? ` · 세무플랫폼 규제 이슈는 일반 매체 포함` : '')
+      + `<span class="event-note-brokers">${(d.outlets || []).map(o => `${esc(o)} ${esc(byOutlet[o] || 0)}건`).join(' · ')}`
+      + (d.issueCount ? ` · 일반 매체 ${esc(d.issueCount)}건` : '') + `</span>`;
     grid.appendChild(note);
 
     if (!items.length) {
@@ -2184,6 +2186,7 @@
         <div class="card-meta">
           <span class="card-source">[${esc(n.outlet)}]</span>
           <span class="card-date">${formatDate(new Date(n.pubDate))}</span>
+          ${n._more ? `<span class="dup-badge">같은 내용 ${n._more + 1}건</span>` : ''}
         </div>
         <div class="card-title">${esc(n.title)}</div>
         ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0,200))}</div>` : ''}`;
@@ -2191,8 +2194,18 @@
     };
 
     const isRel = t => TAX_REL_KW.some(k => (t || '').includes(k));
-    const rel = items.filter(n => isRel(n.title));
-    const rest = items.filter(n => !isRel(n.title));
+    // 세무플랫폼 규제 이슈(n.issue)는 연관도 높음 맨 위에 둔다. 여러 매체가 같은 보고서를 다루므로
+    // 같은 사건은 한 장으로 접고 '같은 내용 N건'만 적는다 (연합 속보·종합, 이데일리, 국제신문 등).
+    const issue = [];
+    items.filter(n => n.issue).forEach(n => {
+      const gt = titleBigrams(n.title), tk = contentTokens(n.title);
+      const g = issue.find(x => bgJaccard(gt, x.gt) >= 0.25 || shareTokens(tk, x.tk) >= 3);
+      if (g) g.more++; else issue.push({ n, gt, tk, more: 0 });
+    });
+    const issueLinks = new Set(items.filter(n => n.issue).map(n => n.link));
+    const rel = [...issue.map(x => Object.assign({}, x.n, { _more: x.more })),
+                 ...items.filter(n => !issueLinks.has(n.link) && isRel(n.title))];
+    const rest = items.filter(n => !issueLinks.has(n.link) && !isRel(n.title));
 
     if (rel.length) {
       const sec = document.createElement('div');
