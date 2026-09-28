@@ -59,8 +59,16 @@ async function search(keyword, start, sort = 'sim') {
     }}
   );
   if (!r.ok) throw new Error('naver ' + r.status);
-  return (await r.json()).items || [];
+  const j = await r.json();
+  // 네이버는 속도 제한에 걸려도 200에 errorMessage만 보낸다 — 빈 배열로 삼키면 재시도가 안 걸린다
+  if (!j.items) throw new Error(j.errorMessage || 'no items');
+  return j.items;
 }
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const searchRetry = (kw, start, sort) => search(kw, start, sort)
+  .catch(() => wait(800).then(() => search(kw, start, sort)))
+  .catch(() => wait(1800).then(() => search(kw, start, sort)))
+  .catch(() => []);
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -69,11 +77,16 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
 
-  const jobs = [];
-  for (const kw of KEYWORDS) for (const start of PAGES) jobs.push(search(kw, start).catch(() => []));
-  // 이슈 질의는 최신순 — 관련도순이면 몇 달 전 기사가 위에 온다
-  const issueJobs = ISSUE_KEYWORDS.map(kw => search(kw, 1, 'date').catch(() => []));
-  const [batches, issueBatches] = await Promise.all([Promise.all(jobs), Promise.all(issueJobs)]);
+  // 15건을 한꺼번에 보내면 네이버가 일부를 조용히 거절한다(배포 직후 이슈 기사 0건으로 실측).
+  // 이슈 질의를 먼저 받고(최신순 — 관련도순이면 몇 달 전 기사가 위에 온다), 나머지는 4개씩 나눠 보낸다.
+  const issueBatches = await Promise.all(ISSUE_KEYWORDS.map(kw => searchRetry(kw, 1, 'date')));
+  const tasks = [];
+  for (const kw of KEYWORDS) for (const start of PAGES) tasks.push(() => searchRetry(kw, start));
+  const batches = [];
+  for (let i = 0; i < tasks.length; i += 4) {
+    await wait(250);
+    batches.push(...await Promise.all(tasks.slice(i, i + 4).map(f => f())));
+  }
 
   const byLink = new Map();
   for (const items of batches) {
