@@ -2198,9 +2198,13 @@
     // 같은 사건은 한 장으로 접고 '같은 내용 N건'만 적는다 (연합 속보·종합, 이데일리, 국제신문 등).
     const issue = [];
     items.filter(n => n.issue).forEach(n => {
-      const gt = titleBigrams(n.title), tk = contentTokens(n.title);
-      const g = issue.find(x => bgJaccard(gt, x.gt) >= 0.25 || shareTokens(tk, x.tk) >= 3);
-      if (g) g.more++; else issue.push({ n, gt, tk, more: 0 });
+      const gt = titleBigrams(n.title), tk = contentTokens(n.title), at = new Date(n.pubDate);
+      // 사흘 안 기사는 내용어 2개만 겹쳐도 같은 사건 — '발주보고서' vs '용역보고서'처럼
+      // 매체마다 단어가 달라 3개 기준으로는 연합·국제신문이 따로 떴다. 기간을 안 두면
+      // 한 달 전 '삼쩜삼 광고·수수료 논란'까지 삼쩜삼+수수료로 묶인다.
+      const g = issue.find(x => bgJaccard(gt, x.gt) >= 0.25 || shareTokens(tk, x.tk) >= 3
+        || (Math.abs(at - x.at) <= 3 * 864e5 && shareTokens(tk, x.tk) >= 2));
+      if (g) g.more++; else issue.push({ n, gt, tk, at, more: 0 });
     });
     const issueLinks = new Set(items.filter(n => n.issue).map(n => n.link));
     const rel = [...issue.map(x => Object.assign({}, x.n, { _more: x.more })),
