@@ -2198,7 +2198,10 @@
     // 같은 사건은 한 장으로 접고 '같은 내용 N건'만 적는다 (연합 속보·종합, 이데일리, 국제신문 등).
     const issue = [];
     items.filter(n => n.issue).forEach(n => {
-      const gt = titleBigrams(n.title), tk = contentTokens(n.title), at = new Date(n.pubDate);
+      // 플랫폼 이름(삼쩜삼·세무플랫폼)은 이슈 기사 전부에 있어 같은 사건의 신호가 못 된다 —
+      // 빼지 않으면 '환급 먼저, 이용료는 나중'과 '삼쩜삼 광고·수수료 논란'이 삼쩜삼+환급으로 묶였다.
+      const gt = titleBigrams(n.title), at = new Date(n.pubDate),
+            tk = contentTokens(n.title).filter(w => !/삼쩜삼|플랫폼|세무$/.test(w));
       // 사흘 안 기사는 내용어 2개만 겹쳐도 같은 사건 — '발주보고서' vs '용역보고서'처럼
       // 매체마다 단어가 달라 3개 기준으로는 연합·국제신문이 따로 떴다. 기간을 안 두면
       // 한 달 전 '삼쩜삼 광고·수수료 논란'까지 삼쩜삼+수수료로 묶인다.
