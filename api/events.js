@@ -250,7 +250,7 @@ const TAX_PENDING = [
   { broker: 'KB증권', status: '확인필요', note: 'ISA·연금 이벤트 상시 운영으로 보이나 공식 페이지에서 기간·혜택 확정 못함 (2026-09-11)', link: 'https://www.kbsec.com/cs/notice/jsp/CUST_09_0003.jsp' },
   { broker: '삼성증권', status: '확인필요', note: '이벤트 목록이 비로그인 상태에서 조회되지 않아 판독 불가 (2026-09-11)', link: 'https://www.samsungpop.com/customer/event.do' },
   { broker: 'NH투자증권', status: '확인필요', note: '퇴직연금 개인투자용 국채 판매 등 상품 뉴스는 있으나 계좌 유치 이벤트는 미확인 (2026-09-11)', link: 'https://www.nhqv.com' },
-  { broker: '한국투자증권', status: '확인필요', note: '이벤트 목록에 ISA 검색 결과 있으나 기간·혜택 미확정 (2026-09-11)', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
+  { broker: '한국투자증권', status: '확인필요', note: "진행중 목록에 '뱅키스 ISA중개형 이벤트'(08.01~09.30)·'ISA중개형X 금융상품 슬기로운 투자생활'(07.10~09.30) 있음. 혜택 상세 미판독·9/30 종료라 후속 이벤트 확인 후 반영 (2026-09-28)", link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
   { broker: '키움증권', status: '확인필요', note: 'robots 차단으로 크롤링 불가, 뉴스로만 판단 — 절세계좌 이벤트 미확인 (2026-09-11)', link: 'https://www.kiwoom.com/e/m/common/event/VIngEventView' },
   // 아래 10개사는 계좌 이벤트 탭과 조사 범위를 맞추기 위해 추가했다 (2026-09-11).
   // 조사했는데 확인이 안 되더라는 사실도 결과이므로 목록에 남긴다.
