@@ -2399,6 +2399,43 @@
       grid.appendChild(sb);
     }
 
+    // 세금 0원 신고까지 합친 전체 (6-4-3). 연령 구분이 없는 표라 연령 카드와 섞지 않고 따로 둔다
+    const ag = d.allGift;
+    if (ag && (ag.tiles || []).length) {
+      const dvA = document.createElement('div');
+      dvA.className = 'divider-label'; dvA.textContent = ag.title || '세금 0원 신고까지 합친 전체';
+      grid.appendChild(dvA);
+      const gb = document.createElement('div');
+      gb.className = 'stat-group';
+      gb.innerHTML = (ag.note ? `<div class="sg-title" style="font-weight:400;line-height:1.55">${esc(ag.note)}</div>` : '') +
+        `<div class="sg-tiles">` + ag.tiles.map(it => `<div class="s-tile"><div class="st-label">${esc(it.label)}</div><div class="st-value">${esc(it.value)}</div><div class="st-delta">${esc(it.delta)}</div></div>`).join('') + `</div>`;
+      grid.appendChild(gb);
+      if (ag.dist && (ag.dist.rows || []).length) {
+        const t = ag.dist;
+        const max = Math.max(...t.rows.map(r => Number(r.pct) || 0), 1);
+        const box = document.createElement('div');
+        box.className = 'dist-box hl';
+        box.innerHTML = `<div class="dist-title">${esc(t.title)}</div>` +
+          (t.note ? `<div class="dist-note">${esc(t.note)}</div>` : '') +
+          t.rows.map(r => `<div class="dist-row"><div class="dist-label">${esc(r.label)}</div>` +
+            `<div class="dist-track"><div class="dist-fill" style="width:${(Number(r.pct) / max * 100).toFixed(1)}%"></div></div>` +
+            `<div class="dist-val">${esc(r.value)}<span>${esc(r.pct)}%</span></div></div>`).join('');
+        grid.appendChild(box);
+      }
+      (ag.tables || []).forEach(t => {
+        const box = document.createElement('div');
+        box.className = 'raw-box';
+        box.innerHTML = `<div class="raw-title">${esc(t.title)}</div>` +
+          (t.note ? `<div class="raw-note">${esc(t.note)}</div>` : '') +
+          `<div class="raw-scroll"><table class="raw-table"><thead><tr>` +
+          (t.columns||[]).map((c,i) => `<th${i ? ' class="num"' : ''}>${esc(c)}</th>`).join('') +
+          `</tr></thead><tbody>` +
+          (t.rows||[]).map(r => `<tr>` + r.map((c,i) => `<td${i ? ' class="num"' : ''}>${esc(String(c))}</td>`).join('') + `</tr>`).join('') +
+          `</tbody></table></div>`;
+        grid.appendChild(box);
+      });
+    }
+
     const age = d.age;
     if (age && (age.items||[]).length) {
       const dv0 = document.createElement('div');

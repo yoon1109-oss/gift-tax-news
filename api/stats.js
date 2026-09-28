@@ -252,11 +252,92 @@ const DIST = [
     rows: distRows(ALL, TOTAL) },
 ];
 
+// ── 세금 0원 신고까지 합친 전체 (국세통계 6-4-3 과세유형별 증여세 결정 현황 '합계' 열) ──
+// 6-3 계열(위 연령별 수치)은 전부 '과세미달 제외'다. 과세미달까지 합친 전체는 6-4-3 하나뿐이라
+// 이 표의 합계 열(과세 + 과세미달)만 쓴다. 과세/과세미달 구분은 보여주지 않는다 (사용자 요청 2026-09-28).
+// 주의: ① '결정' 기준(국세청이 세액을 확정한 해)이라 신고 기준 6-3과 연도·건수가 다르다 — 한 표에 섞지 말 것
+//       ② 연령 구분이 없다 (규모 구간·납세지만)  ③ 단위: 건수 = 건, 금액 = 백만원
+//       ④ 연도 합계 금액에는 전년도 이전 결정분의 경정(구간 미배정)이 포함돼 구간 합과 다르다
+// 추출: TASIS sttsMtaInfrId 20251203F01202622989, 발간연도 2022~2026 시계열(ATWEPEAA001R03) — 2026-09-28
+const DEC_YEARS = [2021, 2022, 2023, 2024, 2025];
+const DEC_CNT = [800109, 711875, 530004, 542843, 633061];
+const DEC_AMT = [117486960, 92370763, 77967412, 71735488, 79735685];   // 경정 포함
+const DEC_FIX = [178575, -97995, 659076, 186426, 442245];               // 경정분(구간 미배정)
+const DEC_BAND_CNT = [   // 구간 × 연도 (건)
+  [216613, 210588, 138657, 150039, 170459],
+  [280956, 250236, 186156, 189146, 216212],
+  [92889, 81745, 64774, 68025, 83159],
+  [119707, 99991, 82170, 86075, 104832],
+  [41171, 32457, 27650, 24168, 28504],
+  [38691, 28115, 23441, 19076, 23357],
+  [7165, 6054, 4787, 4134, 4491],
+  [1310, 1248, 1059, 970, 943],
+  [649, 701, 632, 561, 505],
+  [958, 740, 678, 649, 599],
+];
+const DEC_BAND_AMT = [   // 구간 × 연도 (백만원)
+  [809998, 714543, 496697, 519586, 605554],
+  [8876138, 7803962, 5805932, 5870981, 6698360],
+  [6934369, 6137219, 4852739, 5208908, 6490249],
+  [21072200, 17494408, 14429857, 14946995, 18049510],
+  [16335512, 12910174, 10966311, 9585819, 11306448],
+  [25355612, 18390946, 15340012, 12529798, 14951498],
+  [9477879, 8072533, 6372809, 5507301, 5964484],
+  [3186874, 3049312, 2585488, 2370240, 2293014],
+  [2454926, 2650582, 2334543, 2120355, 1898677],
+  [22804878, 15245078, 14123948, 12889080, 11035646],
+];
+const DI = DEC_YEARS.length - 1;   // 2025
+const decBand = i => DEC_BAND_CNT.map(r => r[i]);
+const DEC_LO = troughOf(DEC_CNT);  // 저점 연도
+
+const ALLGIFT = {
+  title: '세금 0원 신고까지 합친 전체',
+  note: `위·아래 연령별 수치는 세금이 나온 신고만 셉니다. 여기는 공제 한도 안에서 받아 세금이 0원인 신고까지 합친 전체입니다. `
+    + `국세청이 세액을 확정한 해(결정 기준)로 집계한 표라 연령별 수치와 연도·건수가 조금 다르고, 연령 구분은 없습니다. · 출처 국세통계 6-4-3`,
+  tiles: [
+    { label: '2025년 전체 증여', value: `${nf(DEC_CNT[DI])}건`, delta: `전년 대비 ${signed(yoy(DEC_CNT, DI))} · ${DEC_LO.year}년 저점 대비 ${signed((DEC_CNT[DI] / DEC_LO.lo - 1) * 100)}` },
+    { label: '5천만 이하', value: pct(cum(decBand(DI), 1), DEC_CNT[DI]), delta: `${nf(cum(decBand(DI), 1))}건 · 1천만 이하만 ${pct(decBand(DI)[0], DEC_CNT[DI])}` },
+    { label: '1억 이하 누계', value: pct(cum(decBand(DI), 2), DEC_CNT[DI]), delta: `3억 이하 ${pct(cum(decBand(DI), 3), DEC_CNT[DI])}` },
+    { label: '받은 금액 합계(10년 합산)', value: jo(DEC_AMT[DI]), delta: `건당 평균 ${perOne(DEC_AMT[DI] - DEC_FIX[DI], DEC_CNT[DI])}` },
+  ],
+  dist: {
+    title: `2025년 전체 ${nf(DEC_CNT[DI])}건 — 얼마를 받았나`,
+    note: '세금 0원 신고 포함 · 단위 건 · 국세통계 6-4-3',
+    rows: BANDS.map((b, i) => ({ label: b, value: nf(decBand(DI)[i]), pct: (decBand(DI)[i] / DEC_CNT[DI] * 100).toFixed(1) })),
+  },
+  tables: [
+    { title: '2021~2025년 전체 증여 건수와 금액 (세금 0원 포함)',
+      note: '건수 단위 건 · 금액 단위 백만원 · 괄호는 전년 대비 · 금액은 이번 증여액 + 10년 안에 같은 사람에게 받은 금액 · 전년도 이전 결정분 경정 포함 · 출처 국세통계 6-4-3',
+      columns: ['연도', '건수', '받은 금액(10년 합산)', '건당 금액'],
+      rows: DEC_YEARS.map((y, i) => [`${y}년`,
+        i ? `${nf(DEC_CNT[i])} (${signed(yoy(DEC_CNT, i))})` : nf(DEC_CNT[i]),
+        i ? `${nf(DEC_AMT[i])} (${signed(yoy(DEC_AMT, i))})` : nf(DEC_AMT[i]),
+        perOne(DEC_AMT[i] - DEC_FIX[i], DEC_CNT[i])]) },
+  ],
+};
+// 구간별 상세 표는 아래 '로우 데이터'로 보낸다 — 위 섹션은 타일·막대·5개년 표만 두어 가볍게
+const ALLGIFT_RAW = [
+    { title: '2021~2025년 금액 구간별 전체 건수 (세금 0원 포함)',
+      note: '단위 건 · 괄호는 그해 전체 중 비중 · 출처 국세통계 6-4-3',
+      columns: ['구간', ...DEC_YEARS.map(y => `${y}년`), '2023→2025'],
+      rows: BANDS.map((b, bi) => [b,
+        ...DEC_YEARS.map((_, i) => `${nf(DEC_BAND_CNT[bi][i])} (${pct(DEC_BAND_CNT[bi][i], DEC_CNT[i])})`),
+        signed((DEC_BAND_CNT[bi][4] / DEC_BAND_CNT[bi][2] - 1) * 100)])
+        .concat([['합계', ...DEC_CNT.map(nf), signed((DEC_CNT[4] / DEC_CNT[2] - 1) * 100)]]) },
+    { title: '2025년 금액 구간별 전체 — 건당 얼마 받았나 (세금 0원 포함)',
+      note: '금액 단위 백만원 · 금액은 이번 증여액 + 10년 안에 같은 사람에게 받은 금액 · 출처 국세통계 6-4-3',
+      columns: ['구간', '건수', '비중', '이하 누계', '받은 금액(10년 합산)', '건당 금액'],
+      rows: BANDS.map((b, i) => [b, nf(decBand(DI)[i]), pct(decBand(DI)[i], DEC_CNT[DI]), pct(cum(decBand(DI), i), DEC_CNT[DI]),
+        nf(DEC_BAND_AMT[i][DI]), perOne(DEC_BAND_AMT[i][DI], decBand(DI)[i])]) },
+];
+
 // 맨 먼저 읽는 줄. 수치와 그 정의만 적고 해석은 붙이지 않는다.
 const SUMMARY = {
   title: '한눈에 보기',
   items: [
-    `2025년 증여세를 신고해 <b>세금이 나온 사람은 ${nf(TOTAL)}명</b>입니다. 이 중 <b>20세 미만이 ${nf(MINOR_TOTAL)}명</b>으로 전체의 ${pct(MINOR_TOTAL, TOTAL)}입니다. 공제 한도 안에서 받아 세금이 0원인 신고는 국세청이 이 통계에서 뺐습니다.`,
+    `<b>세금 0원 신고까지 합친 전체 증여는 2025년 ${nf(DEC_CNT[DI])}건</b>(전년 대비 ${signed(yoy(DEC_CNT, DI))})이고, 이 중 <b>5천만 이하가 ${pct(cum(decBand(DI), 1), DEC_CNT[DI])}</b>입니다. 나이별로는 나뉘지 않은 통계입니다.`,
+    `나이별로 볼 수 있는 통계는 <b>세금이 나온 신고만</b> 셉니다 — 2025년 <b>${nf(TOTAL)}명</b>, 이 중 <b>20세 미만이 ${nf(MINOR_TOTAL)}명</b>(${pct(MINOR_TOTAL, TOTAL)}). 공제 한도 안에서 받아 세금이 0원인 신고는 국세청이 이 통계에서 뺐습니다.`,
     `<b>10세 미만 ${nf(AGES[0].total)}명</b> — 5천만까지가 ${pct(cum(AGES[0].band, 1), AGES[0].total)}, 1억까지가 ${pct(cum(AGES[0].band, 2), AGES[0].total)}입니다.`,
     `<b>10대 ${nf(AGES[1].total)}명</b> — 5천만까지가 ${pct(cum(AGES[1].band, 1), AGES[1].total)}, 1억까지가 ${pct(cum(AGES[1].band, 2), AGES[1].total)}로 10세 미만보다 각각 ${ppDiff(cum(AGES[0].band,1), AGES[0].total, cum(AGES[1].band,1), AGES[1].total)}%p · ${ppDiff(cum(AGES[0].band,2), AGES[0].total, cum(AGES[1].band,2), AGES[1].total)}%p 낮습니다.`,
     `20세 미만이 전체에서 차지하는 몫은 2023년 ${pct(MINOR_YEARS[2], TREND_ALL[2])}에서 2025년 ${pct(MINOR_YEARS[4], TREND_ALL[4])}로 늘었고, 인원은 1년 새 ${signed(yoy(MINOR_YEARS, 4))} 늘었습니다 (전체 ${signed(yoy(TREND_ALL, 4))}).`,
@@ -316,6 +397,7 @@ const TREND_CHART = {
 };
 
 const RAW = [
+  ...ALLGIFT_RAW,
   { title: '2021~2025년 연령대별 증여세 신고인원과 증감율',
     note: '단위: 명 · 괄호는 전년 대비 증감율 · 출처 국세통계 6.3.3',
     columns: ['연령', ...TREND_YEARS.map(y => `${y}년`), '2021→2025'],
@@ -378,6 +460,7 @@ const SOURCES = [
   { title: '증여재산가액 등 규모별 신고인원 현황 — 2025년 신고분', desc: '이 탭의 기준 표 (규모별 × 납세지 / 수증인 연령)', link: 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/ui/ep/e/a/UTWEPEAA02.xml&sttPblYr=2026&sttsMtaInfrId=20251203F01202622979' },
   { title: '증여세 신고 현황Ⅱ(증여재산가액 등) — 2025년 신고분', desc: '같은 구간 체계의 금액·세액 — 구간별 산출세액 확인용', link: 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/ui/ep/e/a/UTWEPEAA02.xml&sttPblYr=2026&sttsMtaInfrId=20251203F01202622978' },
   { title: '증여세 신고 현황Ⅰ(납세지) — 2025년 신고분', desc: '보조 표 — 공제·과세표준·세액 등 금액 지표 원본', link: 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/ui/ep/e/a/UTWEPEAA02.xml&sttPblYr=2026&sttsMtaInfrId=20251203F01202622977' },
+  { title: '과세유형별 증여세 결정 현황 — 2025년 결정분', desc: '세금 0원 신고까지 합친 전체 증여 — 이 탭의 전체 통계 출처(결정 기준, 연령 구분 없음)', link: 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/ui/ep/e/a/UTWEPEAA02.xml&sttPblYr=2026&sttsMtaInfrId=20251203F01202622989' },
   { title: '국세통계포털(TASIS)', desc: '관계별·자산종류별 등 증여세 상세 통계', link: 'https://tasis.nts.go.kr/websquare/websquare.html?w2xPath=/cm/index.xml' },
 ];
 
@@ -389,6 +472,6 @@ export default function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   res.status(200).json({
     updatedAt: UPDATED_AT, basis: BASIS, source: SOURCE, notice: NOTICE,
-    summary: SUMMARY, age: PI_POINTS, dist: DIST, trend: TREND_CHART, metrics: METRICS, terms: TERMS, raw: RAW, sources: SOURCES,
+    summary: SUMMARY, allGift: ALLGIFT, age: PI_POINTS, dist: DIST, trend: TREND_CHART, metrics: METRICS, terms: TERMS, raw: RAW, sources: SOURCES,
   });
 }
