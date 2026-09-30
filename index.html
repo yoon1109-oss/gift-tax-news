@@ -959,18 +959,29 @@
   // 금융 플랫폼 모드: 검색어가 넓어 카카오 실적·AI 플랫폼 같은 비금융 기사가 다수 섞인다.
   // 그래서 '금융 서비스 플랫폼의 동향'(제목 +3 / 본문 +2)을 축으로 잡고,
   // 파이와 같은 영역(자녀·증여·자산관리)을 다루면 함께 가산되도록 했다.
-  const REL_PLAT_HIGH = ['자녀','증여','미성년','자산관리','자산 관리','생애주기','연금','저축','슈퍼앱','MAU','금융앱','뱅킹'];
-  const REL_PLAT = ['플랫폼','앱','핀테크','디지털','간편','비대면','이용자','가입자','출시','론칭','개편','고도화','페이','송금','결제','계좌','은행','증권','보험'];
-  // 플랫폼 사업자 이름과 서비스 어휘. 제목이 '카카오 첫 멤버십 출격'처럼 쓰이면
-  // 위 두 묶음에 하나도 걸리지 않아 본문 1점으로 밀려났다.
-  const REL_PLAT_FIRM = ['카카오','토스','네이버페이','네이버파이낸셜','케이뱅크','카카오뱅크','카카오페이','페이코','뱅크샐러드','핀다','핀크','쿠팡페이','당근',
-    '카뱅','케뱅','토뱅'];   // 약칭 — '카뱅앱 나중엔 대화창만 남을 것'이 카카오뱅크로 안 잡혔다
-  const REL_PLAT_SVC = ['멤버십','구독','슈퍼앱','생태계','마이데이터','오픈뱅킹','리워드','포인트','통합앱','간편결제','로보어드바이저','챗봇','리브랜딩'];
-  // AI 축 — 금융 플랫폼 칩에서 가장 중요한 흐름이다 (2026-09-30 사용자). 예전엔 AI 단어가 점수 목록에
-  // 하나도 없어 '"AI비서가 모임 관리·투자 분석 척척, 카뱅앱 나중엔 대화창만 남을 겁니다"'(이데일리)가 2점이었다.
-  // AI만 있고 금융 신호가 없는 일반 AI 기사(반도체·빅테크)는 올리지 않는다 — 금융 신호와 만날 때만 가산.
-  const REL_PLAT_AI = /AI|인공지능|\bAX\b|에이전트|에이전틱|비서|초개인화|생성형|LLM/;
-  const REL_PLAT_FIN = /금융|은행|뱅크|뱅킹|증권|보험|카드|페이|핀테크|자산|투자|예금|대출|앱|카뱅|케뱅|토뱅|토스/;
+  // 금융 플랫폼 점수 (2026-09-30 재설계) — 축은 '금융회사가 고객에게 내놓은 플랫폼 서비스'다.
+  // AI 가산점을 크게 줬더니 카카오 공공행정 AI·LG AI연구원·KT 대국민 AI 같은 비금융 AI 기사가 상위를 채웠다
+  // ("너무 AI만 아냐? 실제 금융 기업 플랫폼 서비스 관련한 게 연관도 상위야" — 사용자).
+  // 그렇다고 금융사 이름만 보면 BC카드 준법업무 플랫폼·JB금융 전사 AX 같은 사내 시스템 기사가 올라온다.
+  // 그래서 ① 금융사 × 고객용 서비스가 제목에서 만나야 기본 10점, ② 출시·개편 +3, 플랫폼 어휘 +2,
+  // ③ AI는 금융사 고객 서비스일 때만 +1, ④ 사내·B2B·행사·정부·인사·사회공헌은 감점/제외.
+  const PLAT_FIRM = /토스|카카오뱅크|카카오페이|케이뱅크|네이버페이|네이버파이낸셜|페이코|뱅크샐러드|핀다|핀크|쿠팡페이|카뱅|케뱅|토뱅|현대카드|롯데카드|BC카드|비씨카드|삼성카드|신한카드|KB국민카드|하나카드|우리카드|(KB|신한|하나|우리|NH|농협|IBK|iM|BNK|DGB|JB|미래에셋|삼성|한화|교보|키움|한투|한국투자|메리츠|대신|유안타|DB|SK|현대차|카카오)\s?(은행|금융|증권|투자증권|카드|생명|손보|손해보험|화재|페이|뱅크)|슈퍼SOL|SOL|쏠|WON뱅킹|원큐|스타뱅킹|올원뱅크/;
+  // 업권 전체를 다룬 기사('증권사 앱도 AI 시대…투자 비서 경쟁')는 회사명이 없어도 금융사 기사로 본다 — 한 단계 낮게
+  const PLAT_SECTOR = /은행권|증권사|카드사|보험사|금융사|금융권|인터넷\s?은행|인뱅|빅테크|핀테크/;
+  const PLAT_CUST = /앱|애플리케이션|플랫폼|출시|선봬|선보|오픈|론칭|개편|리뉴얼|새\s?단장|업데이트|서비스|뱅킹|MTS|슈퍼앱|멤버십|구독|마이데이터|간편|비대면|비교|추천|금융비서|AI\s?비서|챗봇|고객|이용자|가입자|회원|MAU/;
+  const PLAT_LAUNCH = /출시|선봬|선보|오픈|론칭|개편|리뉴얼|새\s?단장|업데이트|탑재|도입/;
+  const PLAT_WORD = /앱|슈퍼앱|MAU|플랫폼|뱅킹|MTS|멤버십|마이데이터|간편결제|금융비서/;
+  const PLAT_AI = /AI|인공지능|\bAX\b|에이전트|에이전틱|생성형|LLM|초개인화/;
+  const PLAT_MONEY = /금융|결제|송금|대출|투자|자산|보험|카드|예금|적금|뱅킹|핀테크/;
+  const PLAT_INTERNAL = /업무|준법|법률|리걸|내부통제|전사|사내|계열사|현업|임직원|직원|인프라|데이터센터|AX\s?혁신|업무협약|MOU|모펀드|펀드\s?결성|출연|\bPE\b|채용|노조|사옥|본사|협업\s?플랫폼|HQ/;
+  const PLAT_EVENT = /개최|세미나|페스타|페스티벌|축제|핀테크\s?위크|컨퍼런스|콘퍼런스|포럼|시상|수상|공모전|해커톤|박람회|엑스포|설명회|UIS|KBW/;
+  // 금융사에 솔루션·데이터를 파는 업체 기사, 가상자산 제휴는 금융사 고객 서비스가 아니다 — 한 단계 내림
+  const PLAT_VENDOR = /공급|마켓플레이스|솔루션|크립토|코인|가상자산|스테이블코인|디지털자산/;
+  const PLAT_PUBLIC = /정부|공공|행정|국민비서|장관|부처|과기정통부|위원장/;
+  const PLAT_CSR = /재단|기부|후원|봉사|사회공헌|캠페인|나눔|장학|상생/;
+  const PLAT_PEOPLE = /선임|신임\s?(대표|행장|사장|CEO)|임명|취임|내정|인사\s?(단행|발령)|승진|이끈다|수장|궤적/;
+  // '토큰증권'·'증권가'는 회사가 아니다 — ORG_RE가 'OO증권'으로 잡는다
+  const platOrg = x => orgNames(String(x || '').replace(/토큰\s?증권|증권가|증권사|은행권/g, ' ')).size > 0;
   // 절세/장기투자 모드(savenews·saving 공용): '연금' 단독 검색은 정치·기금운용 뉴스가
   // 대부분이라 검색어를 '절세 상품'+'장기 투자 상품'으로 잡았고(getKeyword),
   // 점수는 '개인이 드는 절세·연금 상품'을 축으로 본다.
@@ -1133,20 +1144,23 @@
       return s;
     }
     if (cm === 'platform') {
-      let s = REL_PLAT_HIGH.reduce((a, k) => a + (t.includes(k) ? 3 : 0) + (d.includes(k) ? 2 : 0), 0)
-            + REL_PLAT.reduce((a, k) => a + (t.includes(k) ? 2 : 0) + (d.includes(k) ? 1 : 0), 0);
-      // 사업자·서비스 축은 '개념당 1회'만 센다 (동의어 나열 제목이 점수를 배로 얻지 않도록)
-      const firmT = REL_PLAT_FIRM.some(k => t.includes(k));
-      const svcT = REL_PLAT_SVC.some(k => t.includes(k));
-      if (firmT) s += 3;
-      if (svcT) s += 3;
-      if (!svcT && REL_PLAT_SVC.some(k => d.includes(k))) s += 2;
-      if (firmT && (svcT || /금융/.test(t))) s += 3;   // 플랫폼 사업자 × 금융 서비스가 제목에서 만남
-      const aiT = REL_PLAT_AI.test(t), aiD = REL_PLAT_AI.test(d);
-      const finT = REL_PLAT_FIN.test(t), finD = REL_PLAT_FIN.test(d);
-      if (aiT && (finT || finD)) s += 5;                // 금융 × AI
-      else if (aiD && finT) s += 2;
-      if (aiT && (finT || firmT)) s += 4;               // 제목에서 AI와 금융·사업자가 만남
+      if (PLAT_CSR.test(t) || PLAT_PEOPLE.test(t)) return 0;
+      const firmT = PLAT_FIRM.test(t) || platOrg(t), sectorT = PLAT_SECTOR.test(t);
+      const custT = PLAT_CUST.test(t);
+      let s = 0;
+      if (firmT && custT) s += 10;                       // 금융사 × 고객용 서비스 — 이 칩의 축
+      else if (sectorT && custT) s += 8;                 // 업권 전체 동향
+      else if (firmT) s += 4;
+      else if (custT && PLAT_MONEY.test(t)) s += 4;
+      if ((firmT || sectorT) && PLAT_LAUNCH.test(t)) s += 3;
+      if (PLAT_WORD.test(t)) s += 2;
+      if (PLAT_FIRM.test(d) || platOrg(d)) s += 1;
+      if (PLAT_CUST.test(d)) s += 1;
+      if (PLAT_AI.test(t) && (firmT || sectorT) && custT) s += 1;   // AI는 금융사 고객 서비스일 때만, 작게
+      if (PLAT_INTERNAL.test(t)) s -= 6;                 // 사내 시스템·B2B·펀드 조성
+      if (PLAT_EVENT.test(t)) s -= 6;
+      if (PLAT_VENDOR.test(t)) s -= 4;
+      if (PLAT_PUBLIC.test(t)) s -= 4;
       return s;
     }
     if (cm === 'savenews' || cm === 'saving') {
@@ -1183,9 +1197,16 @@
   // '연관도 높음'에 오를 최소 점수. 0점만 넘으면 되던 시절, 가족 자산 관리는 최근 7일에
   // 가족 기사가 2건뿐이면 남은 2칸을 3점짜리(미술품 고액자산가)로 채워 기간을 넓히지 않았다.
   // 문턱을 두면 7일 안에서 못 채울 때 14·30일로 넓혀 제대로 된 기사를 찾는다.
-  const REL_MIN = { family: 10 };
+  const REL_MIN = { family: 10, platform: 10 };
+  // 칩별 '연관도 높음' 건수. 금융 플랫폼은 업계 동향을 넓게 보는 칩이라 10건 (2026-09-30 사용자)
+  const REL_COUNT = { platform: 10 };
   function pickRelated(items, days, mode) {
     const floor = REL_MIN[mode || currentMode] || 0;
+    // 목록은 같은 회사 기사를 한 장으로 묶는다(assignGroup). 대표 기사만 보면, 점수 높은 기사가
+    // 점수 낮은 대표 밑에 숨어 연관도에 못 오른다 — 'KB AI 금융비서 출시'가 'KB국민은행·카카오
+    // 디지털자산 인프라 논의' 밑에 묶여 빠졌다 (2026-09-30). 묶인 기사까지 후보로 본다.
+    // 같은 사건 중복은 아래 배제 규칙이 거른다.
+    items = items.flatMap(n => [n, ...(n.dupes || [])]);
     const pool = days == null ? items : items.filter(n =>
       n.pubDate instanceof Date && !isNaN(n.pubDate) && (Date.now() - n.pubDate) <= days * 864e5);
     // 연관도 점수 내림차순(동점이면 sim 순서), 단 같은 사건 중복 배제하고 상위 4건
@@ -1197,7 +1218,7 @@
       .sort((a, b) => b.s - a.s || (a.n._rank ?? 1e9) - (b.n._rank ?? 1e9));
     const candidates = [], pT = [], pTD = [], pSubj = [], pOg = [], pTk = [];
     for (const c of scored) {
-      if (candidates.length >= 4) break;
+      if (candidates.length >= (REL_COUNT[mode || currentMode] || 4)) break;
       const gt = titleBigrams(c.n.title);
       const gtd = titleBigrams(c.n.title + ' ' + (c.n.desc || '').slice(0, 120));
       const subj = leadSubject(c.n.title);
@@ -1219,7 +1240,7 @@
     for (const d of RELATED_WINDOWS) {
       const got = pickRelated(items, d);
       if (got.length > candidates.length) { candidates = got; usedDays = d; }
-      if (candidates.length >= 4) break;
+      if (candidates.length >= (REL_COUNT[currentMode] || 4)) break;
     }
     if (!candidates.length) return;
     candidates.forEach(({n}) => relatedLinks.add(n.link));
