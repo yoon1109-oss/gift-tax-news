@@ -1006,18 +1006,21 @@
   // 긴 이름을 앞에 둬야 한다 — 'KB국민은행'이 'KB'보다 먼저 걸려야 정확히 잡힌다.
   const PEN_FIRMS = ['KB국민은행','KB증권','KB라이프','KB손해보험','국민은행','신한투자증권','신한은행','신한라이프',
     '하나금융','하나은행','하나증권','하나생명','우리은행','우리투자증권','NH투자증권','농협은행','기업은행','IBK투자증권',
-    '미래에셋증권','미래에셋생명','미래에셋자산운용','삼성증권','삼성생명','삼성화재','한화생명','한화투자증권','한화손해보험',
-    '한국투자증권','교보생명','교보증권','키움증권','메리츠증권','메리츠화재','DB손해보험','DB증권','유안타증권','신영증권',
+    '미래에셋증권','미래에셋생명','미래에셋자산운용','삼성자산운용','한화자산운용','KB자산운용','신한자산운용','카카오페이증권',
+    '삼성증권','삼성생명','삼성화재','한화생명','한화투자증권','한화손해보험',
+    '한국투자신탁운용','한국투자증권','한투증권','교보생명','교보증권','키움증권','메리츠증권','메리츠화재','DB손해보험','DB증권','유안타증권','신영증권',
     '대신증권','현대차증권','유진투자증권','토스증권','토스뱅크','카카오뱅크','카카오페이','케이뱅크','흥국생명','동양생명',
     'ABL생명','푸본현대생명','iM증권','부산은행','SK증권','LS증권','다올투자증권','한투운용',
     // 핀테크·자산관리 플랫폼 사업자 — 전통 금융사만 넣으면 '해빗팩토리, AI 노후설계' 류가 통째로 빠진다
     '해빗팩토리','뱅크샐러드','핀다','두물머리','파운트','콴텍','불릴레오','쿼터백','핀트','디셈버앤컴퍼니',
     '한국포스증권','SK텔레콤','네이버페이','토스','신한플러스','하나원큐',
     '미래에셋','한국투자','삼성','한화'];
-  const PEN_PRODUCTS = ['연금저축랩','연금저축펀드','연금저축보험','연금저축','개인형퇴직연금','퇴직연금','IRP','개인연금',
+  // 앞에 둘수록 먼저 잡힌다 — 구체적인 이름을 분류어보다 앞에
+  const PEN_PRODUCTS = ['개인투자용 국채','개인투자용국채','중개형 ISA','중개형ISA','연금저축랩','연금저축펀드','연금저축보험','연금저축','개인형퇴직연금','퇴직연금','IRP','개인연금','연금자산',
     '연금보험','변액연금','주택연금','내집연금','연금계좌','TDF','디폴트옵션','ISA','연금펀드','연금ETF','즉시연금','종신연금'];
   // 같은 상품의 다른 이름 (안 묶으면 'KB국민은행 | IRP'와 'KB국민은행 | 개인형퇴직연금'이 갈라진다)
-  const PEN_PROD_ALIAS = { '개인형퇴직연금': 'IRP', '개인형 퇴직연금': 'IRP', '연금저축펀드': '연금저축' };
+  const PEN_PROD_ALIAS = { '개인형퇴직연금': 'IRP', '개인형 퇴직연금': 'IRP', '연금저축펀드': '연금저축', '연금자산': '연금계좌',
+    '개인투자용국채': '개인투자용 국채', '중개형ISA': '중개형 ISA' };
   const PEN_PLATFORMS = ['로보어드바이저','슈퍼앱','플랫폼','MTS','HTS','실물이전','계산기','시뮬레이션','챗봇','앱',
     '노후설계','자산관리','마이데이터','에이전트','솔루션','컨설팅'];
   // 종류는 '목록에 있는 상품어를 찾았는가'가 아니라 **이름 자체로** 판정한다.
@@ -1032,16 +1035,8 @@
     return '상품';   // 금융사가 이름 붙여 내놓는 것은 대개 상품이다
   }
 
-  // 제목 앞쪽에 나온 금융사를 우선한다.
-  // ('미래에셋자산운용 연금, 브랜드평판 1위… 하나은행·신한은행 제쳤다'가 신한은행으로 잡혔다)
-  function penFirm(t, d) {
-    let best = null, at = 1e9;
-    for (const f of PEN_FIRMS) { const i = t.indexOf(f); if (i >= 0 && i < at) { at = i; best = f; } }
-    if (!best) for (const f of PEN_FIRMS) if (d.includes(f)) { best = f; break; }
-    return best ? (PEN_FIRM_ALIAS[best] || best) : null;
-  }
   // 같은 회사가 다른 표기로 갈라지지 않게 통일한다 ('국민은행 | IRP'와 'KB국민은행 | IRP')
-  const PEN_FIRM_ALIAS = { '국민은행': 'KB국민은행', '한국투자': '한국투자증권', '한투': '한국투자증권',
+  const PEN_FIRM_ALIAS = { '국민은행': 'KB국민은행', '한국투자': '한국투자증권', '한투': '한국투자증권', '한투증권': '한국투자증권',
     '한투운용': '한국투자신탁운용', '하나금융': '하나은행' };
   // 제목 속 따옴표는 상품명만이 아니라 강조·인용에도 쓰인다.
   // ('연금 영토' 넓힌다 / '공부' / '잠자는 목돈 연금으로 받으세요' 가 상품명으로 잡혔다)
@@ -1050,7 +1045,8 @@
   const penQuoted = t => {
     const m = t.match(/[‘'“"]([^’'”"]{2,22})[’'”"]/);
     if (!m) return null;
-    const q = m[1].trim();
+    // '국민참여형 국민성장펀드 2차' · '주식모으기 시즌2'처럼 회차가 붙으면 떼고 본다
+    const q = m[1].trim().replace(/\s?(\d+차|시즌\s?\d+)$/, '');
     if (/(요|다|까|자|죠|네|군|나|함|중)$/.test(q)) return null;              // 문장 조각
     if (/(이라더니|라더니|했더니|하더니|인데|지만|면서|라며|하며|는데)/.test(q)) return null;  // 연결어미가 낀 인용
     return PEN_NAME_TAIL.test(q) ? q : null;
@@ -1060,24 +1056,65 @@
   const penNorm = (name, firm) => name.replace(/\s+/g, '')
     .replace(new RegExp('^' + (firm || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), '');
 
+  // ── 카드 재료 거르기 (2026-09-30 점검) ──
+  // 72장 중 상당수가 '회사 × 분류어'(NH투자증권 | 퇴직연금)였고, 그 기사는 칼럼·ETF 시장 기사·CEO 인터뷰였다.
+  // 회사명이 본문에만 있어도, 상품어가 본문에만 있어도 카드가 만들어졌기 때문이다.
+  const PEN_MAX_DAYS = 120;   // 시장 현황 화면이다 — 2025년 10월 기사까지 남아 있었다
+  // 여러 소식을 묶은 기사는 회사와 상품이 엉뚱하게 짝지어진다 ('농협은행 | 26주 ETF 모으기'가 AI 포럼 기사에 붙음)
+  const PEN_BRIEF = /^\s*\[[^\]]*(소식|브리핑|이모저모|zip|톡톡|데일리|Pick|픽|단신|리포트|이슈)[^\]]*\]|오늘의\s?\S+\s?소식|\s外$/;
+  const PEN_EVENTISH = /세미나|웨비나|설명회|강연|교육|순회|로드쇼|돌며|포럼|콘서트|특강/;
+  // 절세·장기투자와 무관한 모으기·서비스 (코인모으기·외화 모으기·AI 금융비서·외국인 전용 적금·보험사 인수)
+  const PEN_OFFTOPIC = /코인|가상자산|비트코인|외화|환전|송금|대출|인수|외국인|데이터센터|금융비서|AI\s?비서|배상|손실|분쟁|제재|불완전\s?판매|사고/;
+  // 분류어만으로 된 이름 — 제목에 회사·분류어·동작어가 함께 있을 때만 카드로 인정한다
+  const PEN_GENERIC = /^(퇴직연금|IRP|ISA|중개형 ISA|개인투자용 국채|연금저축|연금계좌|개인연금|연금보험|자산관리|플랫폼|MTS|HTS|앱|솔루션|컨설팅|서비스|노후설계|마이데이터|에이전트)$/;
+  const PEN_ACTION = /출시|선봬|선보|개편|이벤트|판매|혜택|특판|상장|개시|도입|오픈|론칭|가입|이전|청약|탑재|강화|확대|편입|완판|돌파|넓|늘리|늘린|지원|제공|출격|공개|시작|라인업|투자\s?폭|우대/;
+  // 따옴표 없는 ETF 이름 — 'TIGER 나스닥100', '미국S&P500미국채혼합50 ETF'. 브랜드가 있으면 브랜드부터 최대 3어절
+  const PEN_ETF = /((?:TIGER|KODEX|ACE|RISE|SOL|PLUS|KIWOOM|HANARO|TIME|KoAct|WON|BNK|1Q)\s?[^\s…·,'‘’"“”]+(?:\s[^\s…·,'‘’"“”]+){0,2}?\s?ETF|(?:TIGER|KODEX|ACE|RISE|SOL|PLUS|KIWOOM|HANARO|TIME|KoAct)\s[^\s…·,'‘’"“”]+|(?=[^\s]*[A-Za-z0-9])[A-Za-z0-9가-힣&]{4,24}\s?ETF)/;   // 마지막 갈래는 지수명처럼 영문·숫자가 있어야 — '자산관리부터 ETF' 방지
+  const PEN_THEME = /연금|IRP|ISA|퇴직|절세|비과세|적립|모으기|ETF|펀드|채권|국채|랩|신탁|TDF|디폴트옵션|장기|노후|목돈|적금|저축/;
+  // 짧은 그룹명은 맥락으로 계열사를 가른다 — '삼성 | 퇴직연금'은 증권인지 운용인지 알 수 없었고,
+  // '토스 | 연금저축'과 '토스증권 | 연금저축'이 같은 상품인데 두 장으로 갈라졌다
+  function penResolveFirm(firm, t) {
+    if (firm === '삼성') return /ETF|KODEX|운용/.test(t) ? '삼성자산운용' : /생명|보험/.test(t) ? '삼성생명' : '삼성증권';
+    if (firm === '미래에셋') return /TIGER|ETF|운용/.test(t) ? '미래에셋자산운용' : /생명|보험/.test(t) ? '미래에셋생명' : '미래에셋증권';
+    if (firm === '한화') return /생명|보험/.test(t) ? '한화생명' : /PLUS|ETF|운용/.test(t) ? '한화자산운용' : '한화투자증권';
+    if (firm === '토스') return /뱅크|통장|예금|적금|모으기/.test(t) && !/증권|연금|ISA|ETF|주식/.test(t) ? '토스뱅크' : '토스증권';
+    if (firm === '카카오페이' && /증권|연금|ISA|ETF|주식|펀드/.test(t)) return '카카오페이증권';
+    return firm;
+  }
+
   function buildPensionGroups(items) {
     const map = new Map();
+    const cut = Date.now() - PEN_MAX_DAYS * 864e5;
     items.forEach(n => {
       const t = n.title || '', d = n.desc || '';
-      let firm = penFirm(t, d);
-      if (!firm) return;                                   // 금융사를 못 뽑으면 카드로 만들지 않는다
-      const prod = penFind(PEN_PRODUCTS, t) || penFind(PEN_PRODUCTS, d);
+      if (!(n.pubDate instanceof Date) || n.pubDate < cut) return;
+      if (PEN_BRIEF.test(t) || PEN_EVENTISH.test(t) || PEN_OFFTOPIC.test(t)) return;
+      // 회사는 제목에 있어야 하고, 제목 앞쪽에 나온 회사를 우선한다. 본문에만 있는 회사는 주인공이 아닌 경우가 많다
+      // ('미래에셋자산운용 연금, 브랜드평판 1위… 하나은행·신한은행 제쳤다'가 신한은행으로 잡혔었다)
+      let firm = null, at = 1e9;
+      for (const f of PEN_FIRMS) { const i = t.indexOf(f); if (i >= 0 && i < at) { at = i; firm = f; } }
+      if (!firm) return;
+      firm = PEN_FIRM_ALIAS[firm] || firm;
+      const prodT = penFind(PEN_PRODUCTS, t);
       const plat = penFind(PEN_PLATFORMS, t);
-      // 본문 따옴표까지 보면 고유 상품명이 크게 늘어난다 (실측 39 → 61건).
-      // 제목에서 유형만 뽑는 방식(복합어 추출)은 '노후 대비연금보험' 같은 문장 조각을 만들어 쓰지 않는다.
-      let name = penQuoted(t) || penQuoted(d) || prod || (plat ? plat : null);
+      // 고유 이름(따옴표) 우선 — 제목, 그다음 본문. 분류어는 제목에 있을 때만 쓴다
+      const etf = (t.match(PEN_ETF) || [])[1];
+      let name = penQuoted(t) || (etf && etf.replace(/\s+/g, ' ').trim()) || penQuoted(d) || prodT || plat || null;
       name = name ? (PEN_PROD_ALIAS[name] || name) : null;   // IRP = 개인형퇴직연금
       if (!name) return;
+      if (name.split(/\s+/).length > 3) return;             // '부모님 생신 선물 비용 모으기' 같은 문장 조각
+      if (PEN_OFFTOPIC.test(name)) return;
+      if (!PEN_THEME.test(name) && !PEN_THEME.test(t)) return;   // 절세·장기투자와 닿지 않는 이름
+      if (PEN_GENERIC.test(name) && !PEN_ACTION.test(t)) return;  // 분류어뿐이면 제목에 출시·이벤트 같은 동작이 있어야
+      if (/^(자산관리|플랫폼|MTS|HTS|앱|솔루션|컨설팅|서비스|노후설계|마이데이터|에이전트)$/.test(name)
+          && !/연금|IRP|ISA|절세|퇴직|장기|적립|모으기/.test(t)) return;   // 일반 플랫폼어는 절세·장기투자 맥락일 때만
+      firm = penResolveFirm(firm, t + ' ' + name);
+      const prod = prodT;
       // 상품명 안에 회사 이름이 들어 있으면 그 회사를 쓴다.
       // 제목 첫 회사만 보면 본문에서 뽑은 이름과 어긋난다
       // ('미래에셋증권 | 신한 SOL 로보 연금', 'KB국민은행 | NH올원더풀…치매안심신탁')
       const inName = penFind(PEN_FIRMS, name);
-      if (inName) firm = PEN_FIRM_ALIAS[inName] || inName;
+      if (inName) firm = penResolveFirm(PEN_FIRM_ALIAS[inName] || inName, t + ' ' + name);
       const kind = penKind(name, prod, plat);
       const key = firm + '|' + penNorm(name, firm);
       // 포함관계면 기존 그룹에 합친다 ('연금보험' ⊂ '한번에내는연금보험')
