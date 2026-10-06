@@ -2122,8 +2122,9 @@
     const svr = surveyedBlock([...new Set(referral.map(e => e.broker))], refPending);
     if (svr) grid.appendChild(svr);
 
-    if (!referral.length && !refPending.length) {
-      grid.insertAdjacentHTML('beforeend', '<p style="color:var(--muted);text-align:center;padding:40px">확인된 이벤트가 없습니다.</p>');
+    // 진행 중인 건이 없어도 조사 대상은 남아 있다 — 빈 화면 대신 사실을 적는다 (신한 슈퍼SOL 9/30 종료 후 0건)
+    if (!referral.length) {
+      grid.insertAdjacentHTML('beforeend', '<p style="color:var(--muted);text-align:center;padding:40px">현재 진행 중인 친구 초대 이벤트가 확인되지 않았습니다.</p>');
       return;
     }
 
