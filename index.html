@@ -745,6 +745,7 @@
     { mode: 'hanwha',   label: '한화생명 파이',  prio: 0 },
   ];
   const DIGEST_DAYS = 30, DIGEST_PER = 10;
+  const DIGEST_PLAT_MIN = 10;  // 모아보기 금융 플랫폼 최소 점수 (아래 buildDigest 참고)
   let digestLoaded = false, digestData = null;
 
   function getKeyword(mode) {
@@ -978,7 +979,13 @@
   const PLAT_INTERNAL = /업무|준법|법률|리걸|내부통제|전사|사내|계열사|현업|임직원|직원|인프라|데이터센터|AX\s?혁신|업무협약|MOU|모펀드|펀드\s?결성|출연|\bPE\b|채용|노조|사옥|본사|협업\s?플랫폼|HQ/;
   const PLAT_EVENT = /개최|세미나|페스타|페스티벌|축제|핀테크\s?위크|컨퍼런스|콘퍼런스|포럼|시상|수상|공모전|해커톤|박람회|엑스포|설명회|UIS|KBW/;
   // 금융사에 솔루션·데이터를 파는 업체 기사, 가상자산 제휴는 금융사 고객 서비스가 아니다 — 한 단계 내림
-  const PLAT_VENDOR = /공급|마켓플레이스|솔루션|크립토|코인|가상자산|스테이블코인|디지털자산/;
+  // 운세·퀴즈·룰렛 같은 앱 내 마케팅 이벤트 — 은행명+'플랫폼'+'운영'이 다 들어가 고객 서비스로 잡혔다
+  // ('전북은행, JB플랫폼 가을 머니운세 31일까지 운영' 12점 — 2026-10-07 사용자 '연관도 없음')
+  const PLAT_PROMO = /운세|사주|타로|퀴즈|룰렛|출석\s?체크|미니\s?게임|경품|추첨|만보기|래플/;
+  const PLAT_VENDOR = /공급|마켓플레이스|솔루션|크립토|코인|가상자산|스테이블코인|디지털자산|공략|수주|블록체인/;
+  // 해킹·보안 사고 기사 — 금융사 고객 서비스가 아니다. 모아보기에 문턱을 두자 금융 플랫폼 10칸 중 5칸이
+  // 'AI 해킹 공포'·'핀테크 해킹 위협'·'금융사기 탐지 플랫폼' 류로 찼다 (2026-10-07)
+  const PLAT_SECURITY = /해킹|보안|사기|피싱|유출|침해|랜섬|사이버|탐지/;
   const PLAT_PUBLIC = /정부|공공|행정|국민비서|장관|부처|과기정통부|위원장/;
   const PLAT_CSR = /재단|기부|후원|봉사|사회공헌|캠페인|나눔|장학|상생/;
   const PLAT_PEOPLE = /선임|신임\s?(대표|행장|사장|CEO)|임명|취임|내정|인사\s?(단행|발령)|승진|이끈다|수장|궤적/;
@@ -1198,7 +1205,9 @@
       if (PLAT_AI.test(t) && (firmT || sectorT) && custT) s += 1;   // AI는 금융사 고객 서비스일 때만, 작게
       if (PLAT_INTERNAL.test(t)) s -= 6;                 // 사내 시스템·B2B·펀드 조성
       if (PLAT_EVENT.test(t)) s -= 6;
-      if (PLAT_VENDOR.test(t)) s -= 4;
+      if (PLAT_VENDOR.test(t)) s -= 6;
+      if (PLAT_PROMO.test(t)) s -= 10;
+      if (PLAT_SECURITY.test(t)) s -= 8;
       if (PLAT_PUBLIC.test(t)) s -= 4;
       return s;
     }
@@ -1750,7 +1759,11 @@
         if (m.mode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
         seen.add(n.link);
         const sc = relatedScore(n, m.mode);
-        if (sc <= 0) return;
+        // 금융 플랫폼은 문턱을 둔다 — 0점 초과만 보면 운세 이벤트·해킹 사고 기사가 10칸을 채웠다.
+        // 8점으로 낮추면 '알테오젠 투자 유치…플랫폼 다각화'·'신세계 워너브라더스 인수' 같은 비금융 기사가
+        // '투자'+'플랫폼'만으로 들어왔다. 칸이 덜 차더라도 칩의 '연관도 높음'과 같은 10점을 쓴다 (2026-10-07).
+        // 다른 키워드는 후보가 적어(자녀 금융 10건 등) 0점 초과만 본다
+        if (sc <= 0 || (m.mode === 'platform' && sc < DIGEST_PLAT_MIN)) return;
         // 최신성 가중 — 점수만 보면 30일 창 안의 옛 고득점 기사가 한 달 내내 자리를 지켜
         // 목록이 매일 거의 같아진다. 오래될수록 점수를 최대 절반까지 깎는다.
         // (실측: 5건 중 3건 교체, 1일 전 기사가 상위로 올라옴 — 2026-09-15)
