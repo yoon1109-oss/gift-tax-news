@@ -280,6 +280,8 @@
     .related-card .card-desc b { color: var(--text); font-weight: 600; }
 
     /* 모아보기 — 최근 2일 내 기사 표시 */
+    /* 모아보기 '새로 나온 기사'에서 어느 키워드 기사인지 표시 */
+    .dl-kwtag { font-size: 11px; font-weight: 700; color: var(--text); background: var(--border); border-radius: 4px; padding: 1px 6px; }
     .new-badge { font-size: 9.5px; font-weight: 700; letter-spacing: .04em; padding: 1px 5px;
       border-radius: 3px; background: #f9a26c; color: #0d1220; }
 
@@ -1826,31 +1828,48 @@
       (groups.failed ? `<br><span style="color:#f9a26c">일부 요청이 네이버 속도 제한에 걸려 ${groups.failed}건을 못 받았습니다. 새로고침하면 채워집니다.</span>` : '');
     grid.appendChild(note);
 
-    groups.forEach(g => {
-      const dv = document.createElement('div');
-      dv.className = 'divider-label digest-label';
-      dv.innerHTML = `<span class="dl-kw">${esc(g.label)}</span><span class="dl-sub">` +
-        (g.items.length ? `${g.total}건 중 상위 ${g.items.length}` : `최근 ${DIGEST_DAYS}일 해당 기사 없음`) + `</span>`;
-      dv.style.cursor = 'pointer';
-      dv.onclick = () => {
-        const chip = document.querySelector(`#newsKeywords .kw-chip[data-mode="${g.mode}"]`);
-        if (chip) selectNewsKeyword(g.mode, chip);
-      };
-      grid.appendChild(dv);
-      g.items.forEach(r => {
-        const n = r.n;
-        const el = document.createElement('a');
-        el.className = 'related-card digest-card'; el.href = n.link; el.target = '_blank'; el.rel = 'noopener';
-        el.innerHTML = `
+    const digestCard = (r, kwLabel) => {
+      const n = r.n;
+      const el = document.createElement('a');
+      el.className = 'related-card digest-card'; el.href = n.link; el.target = '_blank'; el.rel = 'noopener';
+      el.innerHTML = `
           <div class="card-meta">
+            ${kwLabel ? `<span class="dl-kwtag">${esc(kwLabel)}</span>` : ''}
             <span class="card-source">[${esc(n.source)}]</span>
             <span class="card-date">${formatDate(n.pubDate)}</span>
             ${r.fresh ? '<span class="new-badge">NEW</span>' : ''}
           </div>
           <div class="card-title">${esc(n.title)}</div>
           ${n.desc ? `<div class="card-desc">${esc(n.desc.slice(0, 160))}</div>` : ''}`;
-        grid.appendChild(el);
-      });
+      return el;
+    };
+
+    // NEW(보도 2일 이내)는 맨 위에 따로 모은다 — 키워드 구간마다 흩어져 있으면 '오늘 뭐가 새로 나왔나'를
+    // 여섯 구간을 다 내려봐야 알 수 있었다 (2026-10-07 사용자). 아래 키워드 구간에서는 빼서 중복을 없앤다.
+    const fresh = groups.flatMap(g => g.items.filter(r => r.fresh).map(r => ({ r, label: g.label })))
+      .sort((a, b) => b.r.n.pubDate - a.r.n.pubDate);
+    if (fresh.length) {
+      const dvN = document.createElement('div');
+      dvN.className = 'divider-label digest-label';
+      dvN.innerHTML = `<span class="dl-kw">새로 나온 기사</span><span class="dl-sub">최근 2일 · ${fresh.length}건 · 최신순</span>`;
+      grid.appendChild(dvN);
+      fresh.forEach(({ r, label }) => grid.appendChild(digestCard(r, label)));
+    }
+
+    groups.forEach(g => {
+      const rest = g.items.filter(r => !r.fresh);
+      const nFresh = g.items.length - rest.length;
+      const dv = document.createElement('div');
+      dv.className = 'divider-label digest-label';
+      dv.innerHTML = `<span class="dl-kw">${esc(g.label)}</span><span class="dl-sub">` +
+        (g.items.length ? `${g.total}건 중 상위 ${g.items.length}${nFresh ? ` · 새 기사 ${nFresh}건은 위에` : ''}` : `최근 ${DIGEST_DAYS}일 해당 기사 없음`) + `</span>`;
+      dv.style.cursor = 'pointer';
+      dv.onclick = () => {
+        const chip = document.querySelector(`#newsKeywords .kw-chip[data-mode="${g.mode}"]`);
+        if (chip) selectNewsKeyword(g.mode, chip);
+      };
+      grid.appendChild(dv);
+      rest.forEach(r => grid.appendChild(digestCard(r)));
     });
   }
 
