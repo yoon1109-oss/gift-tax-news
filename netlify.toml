@@ -14,3 +14,7 @@
   to = "https://gift-tax-news.vercel.app/:splat"
   status = 200   # 200 = 주소창은 그대로 두고 내용만 대신 받아 온다(리다이렉트 아님)
   force = true   # publish 폴더에 같은 이름 파일이 있어도 항상 Vercel로 전달
+  # 주소창으로 직접 연 화면 요청(Sec-Fetch-Mode: navigate)을 Netlify 서버가 대신 보내면
+  # Vercel 봇 차단이 '브라우저인 척하는 서버'로 보고 빈 400을 돌려준다 (2026-10-07 재현:
+  # navigate + Sec-Fetch-Site 조합만 400, cors/no-cors는 200). 전달할 때 값을 바꿔 보낸다.
+  headers = {Sec-Fetch-Mode = "cors"}
