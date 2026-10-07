@@ -595,6 +595,9 @@ Apps Script를 쓰지 않고 서버에서 직접 보내고 싶을 때만 쓴다.
 회사망(Forcepoint)에서 `*.vercel.app` **전체**가 차단된다(다른 vercel.app 이름도 막힘). `*.netlify.app`·`*.github.io`·`*.onrender.com`은 열린다.
 - `netlify.toml` — 모든 경로를 `https://gift-tax-news.vercel.app/:splat`로 **status 200 전달**(프록시). 본체·API 키·cron은 Vercel 그대로
 - `netlify-front/index.html` — Netlify가 공개 폴더를 요구해서 둔 자리표시. 전달 실패 시에만 보인다
+- **실제 전달은 `netlify/edge-functions/proxy.js`** — 주소창 직접 접속(`Sec-Fetch-Mode: navigate`)을 Netlify 서버가 그대로
+  넘기면 Vercel 봇 차단이 빈 400을 준다(크롬 'HTTP ERROR 400'). `netlify.toml`의 `headers`는 값을 덧붙이기만 해서
+  (`navigate,cors`) 소용없었다. 함수에서 `sec-*`·cookie·accept-encoding 등을 **지우고** 넘긴다. redirects 규칙은 예비 경로
 - Netlify에 비밀값을 넣지 말 것. 코드를 Netlify Functions로 옮기지 말 것(전달만 한다)
 - 프로젝트명 `wm-monitor`(WM = 자산관리). 새 팀 프로젝트는 Visitor access가 '팀 전용'이 기본이라 Public으로 바꿔야 401이 풀린다
 - 메일 링크(`api/review-alert.js`·`.gs`의 APP_URL)와 `scripts/event-sync.sh verify`는 Netlify 주소를 쓴다.

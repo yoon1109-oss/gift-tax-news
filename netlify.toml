@@ -9,20 +9,10 @@
   publish = "netlify-front"
   command = ""
 
-# [임시 진단] Netlify가 전달할 때 실제로 어떤 헤더를 보내는지 확인용 — 확인 후 삭제
-[[redirects]]
-  from = "/__echo/*"
-  to = "https://httpbin.org/anything/:splat"
-  status = 200
-  force = true
-  headers = {Sec-Fetch-Mode = "cors"}
-
 [[redirects]]
   from = "/*"
   to = "https://gift-tax-news.vercel.app/:splat"
   status = 200   # 200 = 주소창은 그대로 두고 내용만 대신 받아 온다(리다이렉트 아님)
   force = true   # publish 폴더에 같은 이름 파일이 있어도 항상 Vercel로 전달
-  # 주소창으로 직접 연 화면 요청(Sec-Fetch-Mode: navigate)을 Netlify 서버가 대신 보내면
-  # Vercel 봇 차단이 '브라우저인 척하는 서버'로 보고 빈 400을 돌려준다 (2026-10-07 재현:
-  # navigate + Sec-Fetch-Site 조합만 400, cors/no-cors는 200). 전달할 때 값을 바꿔 보낸다.
-  headers = {Sec-Fetch-Mode = "cors"}
+  # 실제 전달은 netlify/edge-functions/proxy.js가 한다(브라우저 표시를 지우고 넘김).
+  # 이 규칙은 전달 함수가 실패했을 때의 예비 경로다. 주소창 직접 접속은 이 경로로는 400이 날 수 있다.
