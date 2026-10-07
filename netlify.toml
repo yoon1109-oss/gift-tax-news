@@ -1,0 +1,16 @@
+# Netlify '앞문' — 사이트 본체는 Vercel 그대로, 이 주소는 받은 요청을 Vercel로 대신 전달만 한다.
+# 회사망(Forcepoint)에서 *.vercel.app 전체가 막혀 netlify.app 주소를 따로 둔다 (2026-10-07).
+# 전달은 Netlify 서버가 하므로 회사망 브라우저에는 netlify.app만 보인다.
+# 코드·API 키·예약 작업(cron)은 모두 Vercel에 있다 — 여기에 비밀값을 넣지 말 것.
+
+[build]
+  # 빌드할 것이 없다. 아래 전달 규칙이 모든 경로를 가져가므로 이 폴더 내용은 사실상 보이지 않는다
+  # (Netlify가 '공개 폴더'를 반드시 요구해서 둔다).
+  publish = "netlify-front"
+  command = ""
+
+[[redirects]]
+  from = "/*"
+  to = "https://gift-tax-news.vercel.app/:splat"
+  status = 200   # 200 = 주소창은 그대로 두고 내용만 대신 받아 온다(리다이렉트 아님)
+  force = true   # publish 폴더에 같은 이름 파일이 있어도 항상 Vercel로 전달

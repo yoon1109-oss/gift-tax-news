@@ -589,3 +589,11 @@ Apps Script를 쓰지 않고 서버에서 직접 보내고 싶을 때만 쓴다.
 - **배포 후 라이브 확인**: `curl -s https://gift-tax-news.vercel.app/api/... ` 로 실제 반영 확인 (브라우저 캐시 때문에 사용자 화면이 늦을 수 있음)
 - 커밋·푸시는 요청 없어도 진행 (사용자가 "묻지 말고 배포까지" 지시함)
 - 로직을 바꾸면 `guide.html`(공개 정의서)도 같이 갱신
+
+## Netlify 앞문 (2026-10-07)
+
+회사망(Forcepoint)에서 `*.vercel.app` **전체**가 차단된다(다른 vercel.app 이름도 막힘). `*.netlify.app`·`*.github.io`·`*.onrender.com`은 열린다.
+- `netlify.toml` — 모든 경로를 `https://gift-tax-news.vercel.app/:splat`로 **status 200 전달**(프록시). 본체·API 키·cron은 Vercel 그대로
+- `netlify-front/index.html` — Netlify가 공개 폴더를 요구해서 둔 자리표시. 전달 실패 시에만 보인다
+- Netlify에 비밀값을 넣지 말 것. 코드를 Netlify Functions로 옮기지 말 것(전달만 한다)
+- 회사망에서 배포 확인은 netlify.app 주소로 하거나 GitHub 커밋 상태(`gh api repos/yoon1109-oss/gift-tax-news/commits/<sha>/status`)로 한다
