@@ -12,7 +12,8 @@
 set -euo pipefail
 
 REPO="$HOME/gift-tax-news"
-API="https://gift-tax-news.vercel.app/api/events"
+# 회사망에서 *.vercel.app이 막혀 Netlify 앞문 주소로 확인한다 (2026-10-07). 내용은 같은 Vercel에서 온다
+API="https://wm-monitor.netlify.app/api/events"
 cd "$REPO"
 
 summary() {

@@ -35,7 +35,7 @@
 var TO = 'name1@example.com,name2@example.com';
 
 var API = 'https://gift-tax-news.vercel.app/api/reviews';
-var APP_URL = 'https://gift-tax-news.vercel.app/#reviews';
+var APP_URL = 'https://wm-monitor.netlify.app/#reviews';   // 메일 링크 — 회사망에서 열리는 주소 (2026-10-07)
 var PROP_KEY = 'sentReviewIds';
 var KEEP = 200;   // 기록해 둘 리뷰 수. 저장소 한도(9KB)를 넘지 않게 제한한다
 

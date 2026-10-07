@@ -17,7 +17,8 @@
 //   CRON_SECRET     Vercel Cron이 Authorization 헤더로 보내는 값 (외부 호출 차단용)
 const REVIEWS_URL = '/api/reviews';
 const STORE_NAME = { play: 'Google Play', apple: 'App Store' };
-const APP_URL = 'https://gift-tax-news.vercel.app/#reviews';
+// 회사망에서 vercel.app이 막혀 메일 속 링크는 Netlify 앞문 주소로 연다 (2026-10-07)
+const APP_URL = 'https://wm-monitor.netlify.app/#reviews';
 
 // 리뷰를 누르면 갈 곳. 개별 리뷰 고유 주소는 두 스토어 모두 제공하지 않아
 // 각 스토어의 '평가 및 리뷰' 화면까지가 최선이다.
