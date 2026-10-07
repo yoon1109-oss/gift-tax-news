@@ -9,6 +9,14 @@
   publish = "netlify-front"
   command = ""
 
+# [임시 진단] Netlify가 전달할 때 실제로 어떤 헤더를 보내는지 확인용 — 확인 후 삭제
+[[redirects]]
+  from = "/__echo/*"
+  to = "https://httpbin.org/anything/:splat"
+  status = 200
+  force = true
+  headers = {Sec-Fetch-Mode = "cors"}
+
 [[redirects]]
   from = "/*"
   to = "https://gift-tax-news.vercel.app/:splat"
