@@ -25,4 +25,7 @@ export default async (request) => {
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers: out });
 };
 
-export const config = { path: '/*' };
+// API(/api/*)는 브라우저 fetch라 navigate 표시가 없어 netlify.toml의 직접 전달(redirects)로도 200이다.
+// 함수를 거치면 요청당 2~3초 늘어 모아보기(요청 십수 개)가 느려졌다 — 화면 요청에만 쓴다 (2026-10-07 실측:
+// 함수 경유 /api/events 2.4초 vs 직접 전달 0.6~1.4초)
+export const config = { path: '/*', excludedPath: ['/api/*'] };
