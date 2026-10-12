@@ -1625,9 +1625,58 @@
   const BLOG_PI_RE = /한화생명[^가-힣]{0,6}파이|파이\s*\(?\s*[Pp][Ii]\b\s*\)?|파이\s*앱|파이앱|['"“”‘’]파이['"“”‘’]|한화생명[^.。!?]{0,30}(앱|플랫폼|서비스)인?\s*['"“”‘’]?파이/;
   const blogQuery = () => blogKeyword;
   const blogSort = () => (blogKeyword === BLOG_PI_CHIP ? 'date' : 'sim');
+  // 파이코인(Pi Network)·인포파이·파이 데이 같은 동음이의어, 그리고 파이 출시(2026-02-05) 이전 글은 뺀다
+  const PI_NOISE_RE = /파이\s*코인|Pi\s*Network|파이\s*네트워크|메인넷|채굴|인포파이|파이\s*데이|암호화폐|크립토/i;
+  const PI_SINCE = '20260201';
   function blogRelevant(b) {
     if (blogKeyword !== BLOG_PI_CHIP) return true;   // 다른 키워드는 결과가 깨끗해 거르지 않는다
-    return BLOG_PI_RE.test(`${b.title} ${b.desc}`);
+    const t = `${b.title} ${b.desc}`;
+    if (PI_NOISE_RE.test(t)) return false;
+    if (b.postdate && b.postdate < PI_SINCE) return false;
+    return BLOG_PI_RE.test(t);
+  }
+
+  // '한화생명 파이' 칩은 검색어 하나를 30건씩 이어 받지 않고, 여러 검색어를 한 번에 받아 합친다 (2026-10-12).
+  // '한화생명 파이'(최신순)는 1,000건 중 관련 글 27건이고 앞 120건엔 하나도 없어, 무한스크롤이 420건쯤에서
+  // 멈추면 화면에 4건만 남았다(사용자: "검색결과가 4개뿐"). 실측(관련 글 합집합 60건 기준):
+  //   '파이 Pi 증여' 최신순 2요청 41건 → + '파이 앱 증여' 최신순 3요청 47건 → + '한화생명 파이 증여' 관련도순 4요청 52건
+  const PI_BLOG_PLAN = [
+    ['파이 Pi 증여', 'date', [1, 101]],
+    ['파이 앱 증여', 'date', [1, 101, 201]],
+    ['한화생명 파이 증여', 'sim', [1, 101, 201, 301]],
+  ];
+  async function loadPiBlogAll() {
+    if (blogEnd || blogLoading) return false;
+    blogLoading = true;
+    const kwAtStart = blogKeyword;
+    try {
+      const jobs = PI_BLOG_PLAN.flatMap(([q, sort, starts]) => starts.map(st => () =>
+        fetch(`/api/blog?keyword=${encodeURIComponent(q)}&display=100&start=${st}&sort=${sort}`)
+          .then(r => r.ok ? r.json() : null).catch(() => null)));
+      const results = [];
+      for (let i = 0; i < jobs.length; i += 3) {          // 한꺼번에 던지면 네이버가 일부를 거절한다
+        if (i) await new Promise(r => setTimeout(r, 250));
+        results.push(...await Promise.all(jobs.slice(i, i + 3).map(f => f())));
+      }
+      if (blogKeyword !== kwAtStart) { blogLoading = false; return false; }
+      if (!results.some(d => d && d.items)) throw new Error('blog fetch failed');
+      const seen = new Set(), out = [];
+      results.forEach(d => ((d && d.items) || []).forEach(item => {
+        const b = { title: cleanHtml(item.title), desc: cleanHtml(item.description), link: item.link, source: item.bloggername||'블로그', postdate: item.postdate||'', likeId: naverBlogId(item.link), likes: null };
+        if (!b.link || seen.has(b.link) || !blogRelevant(b)) return;
+        seen.add(b.link); out.push(b);
+      }));
+      out.sort((a, b) => (b.postdate || '').localeCompare(a.postdate || ''));   // 최신순
+      blogItems = out; blogEnd = true; blogLoading = false;
+      if (currentMode === 'blog') { appendBlogItems(out); loadBlogLikes(out); }
+      updateBlogStats();
+      if (currentMode === 'blog') setBlogPlaceholder();
+      return true;
+    } catch (e) {
+      blogLoading = false;
+      if (!blogItems.length) document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">블로그를 불러오지 못했습니다.</p>';
+      return false;
+    }
   }
 
   // 다음 30개 블로그 글을 start 파라미터로 이어서 불러와 그리드에 추가
@@ -1643,6 +1692,7 @@
   }
 
   async function loadBlogPage(depth = 0) {
+    if (blogKeyword === BLOG_PI_CHIP) return loadPiBlogAll();
     if (blogEnd || blogLoading) return false;
     blogLoading = true;
     try {
