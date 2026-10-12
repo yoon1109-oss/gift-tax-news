@@ -1734,6 +1734,14 @@
     }
   }
 
+  // 블로그 NEW — 네이버 블로그 날짜는 일 단위(YYYYMMDD)라 '최근 2일'을 오늘·어제 두 날짜로 본다
+  // (뉴스·모아보기·세법 뉴스의 48시간 기준과 맞춤, 2026-10-12)
+  function blogIsFresh(postdate) {
+    if (!postdate || postdate.length !== 8) return false;
+    const ymd = d => `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+    const now = new Date(), yest = new Date(now.getTime() - 864e5);
+    return postdate >= ymd(yest) && postdate <= ymd(now);
+  }
   function appendBlogItems(items) {
     if (!items.length) return;
     const grid = document.getElementById('newsGrid');
@@ -1750,6 +1758,7 @@
         <div class="card-meta">
           ${item.source ? `<span class="card-source-blog">[${esc(item.source)}]</span>` : ''}
           ${dateStr ? `<span class="card-date">${dateStr}</span>` : ''}
+          ${blogIsFresh(item.postdate) ? '<span class="new-badge">NEW</span>' : ''}
           ${item.likeId ? `<span class="card-like" data-lk="${esc(item.likeId)}">♥ …</span>` : ''}
         </div>
         <div class="card-title">${esc(item.title)}</div>
