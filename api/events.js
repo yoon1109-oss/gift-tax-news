@@ -1,14 +1,16 @@
 // 증권사 자녀계좌 개설 이벤트 — 수기 큐레이션 데이터.
 // 대부분 증권사 이벤트 페이지가 봇 차단/동적렌더/EUC-KR/앱전용이라 자동 수집이 불가하여
 // 여기 배열을 직접 갱신한다. (매주 월요일 10시 스케줄 갱신 대상)
-const UPDATED_AT = '2026-10-07'; // 데이터가 실제 바뀐 날 (정리 기준)
-const CHECKED_AT = '2026-10-07';
+const UPDATED_AT = '2026-10-12'; // 데이터가 실제 바뀐 날 (정리 기준)
+const CHECKED_AT = '2026-10-12';
 // 친구 초대는 계좌 이벤트와 점검 시점이 다르다. 한 값으로 묶으면 한쪽이 실제보다
 // 최신인 것처럼 보이므로 따로 둔다.
 const REFERRAL_CHECKED_AT = '2026-10-07'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
 
 // 업데이트 메모 — 이벤트 '내용이 실제로 바뀐 것'만 최신순으로 기록 (배치가 변경 시 맨 앞에 추가)
 const CHANGES = [
+  { date: '2026-10-12', text: '한국투자증권 주식모으기 시즌2가 10월 8일로 끝나 목록에서 내렸어요. 후속 시즌은 아직 나오지 않았어요' },
+  { date: '2026-10-12', text: '절세 3종 계좌에 유진투자증권 연말 절세·자산관리 이벤트(~12월 31일)를 추가했어요. 중개형 ISA·연금저축을 새로 열면 상품권 1만원, 500만원 입금마다 2만원(최대 40만원)을 받을 수 있어요' },
   { date: '2026-10-07', text: 'SK증권 우리 아이 미래 투자 이벤트가 10월분(10월 1일~31일)으로 새로 열렸어요. 혜택은 같고, 9월분에 있던 1천만원 이상 거래 조건이 빠졌으며 자산은 11월 30일까지 유지하시면 돼요' },
   { date: '2026-10-07', text: '한국투자증권 주식모으기 시즌2의 종료일을 공식 이벤트 목록 기준인 10월 8일로 바로잡았어요' },
   { date: '2026-10-07', text: '키움증권 미성년자 계좌개설 이벤트가 9월 30일로 끝나 확인 대상으로 옮겼어요. 후속 이벤트가 나오면 다시 올려드릴게요' },
@@ -83,20 +85,6 @@ const EVENTS = [
     link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i&cmd=TF04gb010002&currentPage=1&num=6518',
   },
   {
-    broker: '한국투자증권',
-    title: '주식모으기 이벤트 시즌2 — 함께 모으면 더블 혜택',
-    period: '2026.08.10 ~ 2026.10.08',
-    benefits: [
-      '미성년계좌로 이벤트 신청 시 용돈 투자지원금 1만원 즉시 지급 (선착순 5천명, 30일 내 미사용 시 회수)',
-      '주식모으기 10회 이상(소수점 포함) 축하금 3만원 500명 / 2회 이상 & 50만원 이상 5만원 500명 추첨',
-      '자녀 + 부모가 각각 신청해 모으기 1건씩 체결하면 100쌍(200명) 추첨해 각 1만원씩 (미성년 계좌개설 시 등록된 부모만 인정)',
-      '조건 충족 시 최대 10만원',
-    ],
-    domesticFee: '',
-    usFee: '',
-    link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i',
-  },
-  {
     broker: 'SK증권',
     title: '우리 아이 미래 투자',
     period: '2026.10.01 ~ 2026.10.31',
@@ -136,7 +124,7 @@ const REFERRAL_PENDING = [
 // 절세 3종 계좌(ISA·연금저축·IRP) 이벤트 — 2026-09-11 신설
 // 계좌 이벤트(미성년 자녀)와 성격이 다르다. 여기는 성인 대상 절세계좌 유치 경쟁이고
 // 이전(타사→당사) 혜택이 중심이라, 금액도 자릿수가 다르다(최대 100만~200만원).
-const TAX_CHECKED_AT = '2026-10-07';
+const TAX_CHECKED_AT = '2026-10-12';
 const TAX_ACCOUNTS = [
   {
     broker: '하나증권',
@@ -225,6 +213,19 @@ const TAX_ACCOUNTS = [
     ],
     link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i&cmd=TF04gb010002&currentPage=1&num=6798',
   },
+  {
+    broker: '유진투자증권',
+    title: '연말 절세·자산관리 이벤트',
+    period: '2026.10.06 ~ 2026.12.31',
+    kinds: ['ISA', '연금저축'],
+    benefits: [
+      '중개형 ISA·연금저축 신규 개설 시 상품권 1만원 (연금저축은 1원 이상 거래 조건, 2030 고객은 커피 추가)',
+      '순입금 500만원마다 2만원 — 계좌별 최대 40만원 (1억원 입금 시)',
+      '중개형 ISA에서 제휴 운용사 ETF 순매수 시 최대 12만원 추가',
+      '별도: 국내자산 순증 이벤트 최대 200만원 (삼성전자·SK하이닉스·현대차 순입고는 2배 인정)',
+    ],
+    link: 'https://www.eugenefn.com',
+  },
 ];
 
 // 절세 3종 계좌 — 추가 조사 대상
@@ -241,7 +242,6 @@ const TAX_PENDING = [
   { broker: '교보증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://www.iprovest.com' },
   { broker: '메리츠증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://home.imeritz.com' },
   { broker: '신영증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://www.shinyoung.com' },
-  { broker: '유진투자증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://www.eugenefn.com' },
   { broker: '우리투자증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://www.wooriib.com' },
   { broker: 'IBK투자증권', status: '확인필요', note: '절세계좌 이벤트 공식 확인 안 됨 (2026-09-11)', link: 'https://www.ibks.com' },
   { broker: 'DB증권 (구 DB금융투자)', status: '확인필요', note: '이벤트 페이지가 로그인 필요라 판독 불가 (2026-09-11)', link: 'https://www.dbsec.co.kr/custcenter/notices/cu_NoticesEvent_lst.do' },
