@@ -1150,7 +1150,17 @@
       .sort((a, b) => b.arts[0].pubDate - a.arts[0].pubDate || b.arts.length - a.arts.length);
   }
 
+  // 모든 칩 공통 '연관도 낮음' (2026-10-14 사용자) — 목록에는 남기되 '연관도 높음'·모아보기에서는 뺀다.
+  //  · 신탁 상품 기사: 유언대용신탁·장애인 신탁·하나은행 자녀 신탁 출시 등. '한국투자신탁운용' 같은 회사명은 제외
+  //  · 지역 소식: '[부산소식] 부산형 디지털금융 플랫폼', '부산금융주간 개막' 같은 지자체·지역 행사 기사
+  const LOW_REL_TRUST = /신탁(?!운용)/;
+  const LOW_REL_LOCAL = /^\s*\[[^\]]*(?:부산|대구|광주|대전|울산|인천|경남|경북|전남|전북|충남|충북|강원|제주|경기|지역)[^\]]*\]|\[[^\]]*소식\]|부산\s?금융\s?주간|부산형|부산시|부산국제금융센터/;
+  const isLowRel = t => LOW_REL_TRUST.test(t) || LOW_REL_LOCAL.test(t);
   function relatedScore(n, mode) {
+    const s = relatedScoreBase(n, mode);
+    return s > 0 && isLowRel(n.title || '') ? Math.min(s - 12, 1) : s;
+  }
+  function relatedScoreBase(n, mode) {
     const cm = mode || currentMode;
     const t = n.title || '', d = n.desc || '';
     if (cm === 'family') {
@@ -1824,6 +1834,7 @@
         if (!(n.pubDate instanceof Date) || isNaN(n.pubDate) || n.pubDate < cut) return;
         if (m.mode === 'hanwha' && !n.title.includes('한화생명') && !n.desc.includes('한화생명')) return;
         seen.add(n.link);
+        if (isLowRel(n.title)) return;          // 신탁·지역 소식은 모아보기에서 뺀다 (2026-10-14)
         const sc = relatedScore(n, m.mode);
         // 금융 플랫폼은 문턱을 둔다 — 0점 초과만 보면 운세 이벤트·해킹 사고 기사가 10칸을 채웠다.
         // 8점으로 낮추면 '알테오젠 투자 유치…플랫폼 다각화'·'신세계 워너브라더스 인수' 같은 비금융 기사가
