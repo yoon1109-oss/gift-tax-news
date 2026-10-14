@@ -594,7 +594,7 @@
   // 같은 하나은행 퇴직연금 건인데 주체가 어긋나 둘 다 모아보기에 실렸다.
   // 약칭은 접미사 규칙으로 안 잡힌다. '한투, 미성년 계좌…'와 '한국투자증권, 미성년 주식계좌…'가
   // 같은 사건인데 기관이 안 겹쳐 모아보기에 둘 다 올라왔다 (2026-09-23 제보).
-  const ORG_RE = /[가-힣A-Za-z]{2,8}?(?:저축은행|은행|증권|생명|화재|손보|금융지주|금융|카드|자산운용|캐피탈|투자운용)|한투(?:증권)?|카뱅|케뱅|토스뱅크|카카오페이|네이버페이/g;
+  const ORG_RE = /[가-힣A-Za-z]{2,8}?(?:저축은행|은행|증권|생명|화재|손보|금융지주|금융|카드|자산운용|캐피탈|투자운용)|한투(?:증권)?|카뱅|케뱅|토스뱅크|토스증권|카카오뱅크|케이뱅크|카카오페이|네이버페이|네이버파이낸셜/g;
   const ORG_ALIAS = { '한투': '한국투자증권', '한투증권': '한국투자증권', 'NH농협은행': '농협은행',
     'KB국민은행': '국민은행', '카뱅': '카카오뱅크', '케뱅': '케이뱅크', '신한금융': '신한은행' };
   function orgNames(t) {
@@ -1921,14 +1921,33 @@
 
     // NEW(보도 2일 이내)는 맨 위에 따로 모은다 — 키워드 구간마다 흩어져 있으면 '오늘 뭐가 새로 나왔나'를
     // 여섯 구간을 다 내려봐야 알 수 있었다 (2026-10-07 사용자). 아래 키워드 구간에서는 빼서 중복을 없앤다.
-    const fresh = groups.flatMap(g => g.items.filter(r => r.fresh).map(r => ({ r, label: g.label })))
+    const freshAll = groups.flatMap(g => g.items.filter(r => r.fresh).map(r => ({ r, label: g.label })))
       .sort((a, b) => b.r.n.pubDate - a.r.n.pubDate);
+    // 새로 나온 기사는 키워드 구간을 가로질러 모이므로 같은 발표가 여러 매체로 겹친다
+    // ('카카오뱅크 외국인 금융서비스' 3건, '하나은행 자녀교육신탁' 2건 — 2026-10-14 사용자).
+    // 모아보기 본 선정(키워드별 10칸)보다 느슨하게 본다: 최근 2일 안의 기사끼리라 우연히 겹칠 일이 적다.
+    //   ① 제목 바이그램 0.19↑  ② 같은 기관 + 내용어 1개↑  ③ 따옴표 속 고유명사(4자↑)가 같음
+    const quoted = t => (String(t).match(/[‘'“"]([^’'”"]{4,20})[’'”"]/g) || []).map(q => q.slice(1, -1).replace(/\s+/g, ''));
+    const fresh = [];
+    freshAll.forEach(x => {
+      const t = x.r.n.title, gt = titleBigrams(t), og = orgNames(t), tk = contentTokens(t), qt = quoted(t);
+      const hit = fresh.find(y => bgJaccard(gt, y.gt) >= 0.19
+        || (shareOrg(og, y.og) && shareTokens(tk, y.tk) >= 1)
+        || qt.some(q => y.qt.includes(q)));
+      if (hit) hit.more++;
+      else fresh.push({ ...x, gt, og, tk, qt, more: 0 });
+    });
     if (fresh.length) {
       const dvN = document.createElement('div');
       dvN.className = 'divider-label digest-label';
-      dvN.innerHTML = `<span class="dl-kw">새로 나온 기사</span><span class="dl-sub">최근 2일 · ${fresh.length}건 · 최신순</span>`;
+      const folded = freshAll.length - fresh.length;
+      dvN.innerHTML = `<span class="dl-kw">새로 나온 기사</span><span class="dl-sub">최근 2일 · ${fresh.length}건 · 최신순${folded ? ` · 같은 내용 ${folded}건은 접음` : ''}</span>`;
       grid.appendChild(dvN);
-      fresh.forEach(({ r, label }) => grid.appendChild(digestCard(r, label)));
+      fresh.forEach(({ r, label, more }) => {
+        const el = digestCard(r, label);
+        if (more) el.querySelector('.card-meta').insertAdjacentHTML('beforeend', `<span class="dup-badge">같은 내용 ${more + 1}건</span>`);
+        grid.appendChild(el);
+      });
     }
 
     groups.forEach(g => {
