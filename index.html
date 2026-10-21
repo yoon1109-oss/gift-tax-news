@@ -639,6 +639,10 @@
   // 사용자 지정 제외어 — 제목뿐 아니라 본문 요약까지 본다. 같은 상품을 제목에 이름 없이 다룬 기사
   // ('부모가 자녀에 "서울대 가면 1억"… 은행 신탁상품 나왔다')가 남았기 때문 (2026-10-14 '자녀교육신탁')
   const USER_EXCLUDE = ['자녀교육신탁', '자녀 교육신탁'];
+  // 제목 기준 사용자 제외 — 캐피탈(여신금융사·벤처캐피탈) 기사 (2026-10-21). 본문 요약까지 보면 해킹 피해사 나열·
+  // 제휴사 언급('카카오뱅크 앱에서 현대캐피탈 렌트')만으로 금융 플랫폼 기사가 빠지므로 제목만 본다.
+  // KB차차차는 KB캐피탈의 중고차 플랫폼이라 이름 없이 서비스명만 단 기사까지 함께 뺀다.
+  const USER_EXCLUDE_TITLE = /캐피[탈털]|KB\s?차차차/;
   // 연예 가십 제외 — '한가인 ♥연정훈에 6억 증여' 같은 기사가 연관도 상위에 올라왔다.
   // 연예인 이름은 무한해서 이름으로는 못 거른다. 기사 문맥의 표지만 본다.
   const CELEB_KW = ['연예','아이돌','개그맨','코미디언','방송인','유튜버','인플루언서','트로트',
@@ -702,6 +706,7 @@
     const s = t || '';
     const m = mode || currentMode;
     if (USER_EXCLUDE.some(k => s.includes(k) || (desc || '').includes(k))) return true;
+    if (USER_EXCLUDE_TITLE.test(s)) return true;
     if (desc && ownerByDesc(s, desc)) return true;
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
     if (isCelebNews(s)) return true;
