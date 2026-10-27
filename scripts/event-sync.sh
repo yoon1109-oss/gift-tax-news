@@ -8,6 +8,7 @@
 #   ./scripts/event-sync.sh pull            저장소 최신화 + 오늘 날짜 출력
 #   ./scripts/event-sync.sh check           api/events.js 문법 검사 + 현황 요약
 #   ./scripts/event-sync.sh commit "<메시지>"  검증 통과 시 커밋 + 푸시
+#   ./scripts/event-sync.sh img <url>       이미지 배너 받기 (Read 허용 경로에 저장)
 #   ./scripts/event-sync.sh verify          배포된 API에 오늘 확인일이 반영됐는지 확인
 set -euo pipefail
 
@@ -32,7 +33,8 @@ import('./api/events.js').then(m => {
 
 case "${1:-}" in
   pull)
-    git pull --rebase
+    # .bkit 등 다른 도구가 남긴 변경이 있어도 멈추지 않게 잠시 치워 두고 받는다 (2026-10-27)
+    git pull --rebase --autostash
     echo "오늘: $(date +%F)"
     ;;
   check)
@@ -43,7 +45,8 @@ case "${1:-}" in
     MSG="${2:?커밋 메시지가 필요합니다}"
     node --check api/events.js || { echo "✗ 문법 오류 — 커밋 중단"; exit 1; }
     summary
-    if git diff --quiet && git diff --cached --quiet; then
+    # events.js만 본다 — 다른 파일 변경을 '변경 있음'으로 잘못 세면 빈 커밋을 시도하다 실패한다
+    if git diff --quiet -- api/events.js && git diff --cached --quiet -- api/events.js; then
       echo "변경 없음 — 커밋 생략"
       exit 0
     fi
@@ -51,6 +54,13 @@ case "${1:-}" in
     git commit -m "$MSG"
     git push origin main
     echo "커밋: $(git rev-parse --short HEAD)"
+    ;;
+  img)
+    # 이미지 배너 판독용. 받은 파일을 Read(비전)로 연다
+    URL="${2:?이미지 주소가 필요합니다}"
+    mkdir -p /private/tmp/claude-501/-Users-yoon-yeojin
+    curl -sL --max-time 30 -A "Mozilla/5.0" "$URL" -o /private/tmp/claude-501/-Users-yoon-yeojin/ev.png
+    echo "저장: /private/tmp/claude-501/-Users-yoon-yeojin/ev.png ($(wc -c < /private/tmp/claude-501/-Users-yoon-yeojin/ev.png) bytes)"
     ;;
   verify)
     TODAY=$(date +%F)
@@ -64,7 +74,7 @@ case "${1:-}" in
     echo "✗ 배포 반영이 확인되지 않았습니다"; exit 1
     ;;
   *)
-    echo "사용법: $0 {pull|check|commit \"<메시지>\"|verify}" >&2
+    echo "사용법: $0 {pull|check|commit \"<메시지>\"|img <url>|verify}" >&2
     exit 2
     ;;
 esac
