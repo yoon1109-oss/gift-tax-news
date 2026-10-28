@@ -799,6 +799,32 @@
     return data.items;
   }
 
+  // 여러 요청을 서버에서 한 번에 받는다 (api/news.js의 batch). 요청마다 왕복 2~3초라
+  // 하나씩 보내면 모아보기가 20초 가까이 걸렸다 (2026-10-28). pairs = [[검색어, start], ...]
+  // 반환은 pairs 순서대로 items 배열, 못 받은 건 null. 묶음 요청 자체가 실패하면 하나씩 받는다.
+  async function fetchMany(pairs) {
+    const url = `/api/news?display=100&sort=sim&batch=${encodeURIComponent(JSON.stringify(pairs))}`;
+    for (const delay of [0, 1200]) {
+      if (delay) await new Promise(r => setTimeout(r, delay));
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`API ${res.status}`);
+        const data = await res.json();
+        if (Array.isArray(data.results) && data.results.length === pairs.length)
+          return data.results.map(r => r.items || null);
+      } catch (e) { /* 아래에서 다시 시도 */ }
+    }
+    const one = ([kw, st]) => fetchBatch(kw, st)
+      .catch(() => new Promise(r => setTimeout(r, 900)).then(() => fetchBatch(kw, st)))
+      .catch(() => null);
+    const out = [];
+    for (let i = 0; i < pairs.length; i += 3) {
+      if (i) await new Promise(r => setTimeout(r, 300));
+      out.push(...await Promise.all(pairs.slice(i, i + 3).map(one)));
+    }
+    return out;
+  }
+
   async function startLoad() {
     const keyword = getKeyword(); bgDone = false;
     try {
@@ -831,41 +857,28 @@
     // 네이버 속도 제한에 걸리고 그 결과가 '결과 없음'으로 보였다 (2026-09-21 제보).
     const starts = (modeAtStart === 'savenews' || modeAtStart === 'saving')
       ? [101, 201, 301, 401, 501] : [101, 201];
-    // 한 번에 20개를 동시에 던지면 네이버가 일부를 거절한다 (catch로 삼켜져 조용히 유실됨).
-    // 실측 2026-09-07: 병렬 20개 -> 364건만 수집, 4개씩 나눠 보내면 970건.
-    // 실패한 요청은 한 번 더 시도한다.
-    const fetchSafe = (kw, start) => fetchBatch(kw, start)
-      .catch(() => new Promise(r => setTimeout(r, 900)).then(() => fetchBatch(kw, start)))
-      .catch(() => new Promise(r => setTimeout(r, 2000)).then(() => fetchBatch(kw, start)))
-      .catch(() => []);
-    async function runPooled(tasks, size) {
-      const out = [];
-      for (let i = 0; i < tasks.length; i += size) {
-        if (i) await new Promise(r => setTimeout(r, 300));   // 묶음 사이 간격 — 속도 제한 회피
-        out.push(...await Promise.all(tasks.slice(i, i + size).map(f => f())));
-      }
-      return out;
-    }
-    const jobs = starts.map(start => () => fetchSafe(keyword, start));
+    // 배경 배치는 서버에서 한 번에 받는다(fetchMany). 서버가 4개씩 나눠 네이버 속도 제한을 피하고
+    // 실패한 요청은 다시 시도한다 (예전엔 화면에서 3개씩 보내며 묶음마다 왕복을 기다렸다).
+    const jobs = starts.map(start => [keyword, start]);
     // '절세/장기투자 상품'은 한 축 질의만으로는 놓치는 상품·플랫폼이 많다.
     // ('해빗팩토리, AI 자산관리·노후설계' 류가 상위 700건에 아예 없었다 — 2026-09-07 제보)
     // 그래서 서비스 축 질의를 하나 더 받아 합친다.
     if (modeAtStart === 'saving' || modeAtStart === 'savenews') {
       [1, 101, 201, 301, 401]
-        .forEach(start => jobs.push(() => fetchSafe(PEN_SECOND_QUERY, start)));
+        .forEach(start => jobs.push([PEN_SECOND_QUERY, start]));
     }
     // 금융 플랫폼은 AI 축 질의를 하나 더 받는다. '금융 플랫폼'만으로는 제목에 그 말이 없는
     // AI 금융 서비스 기사가 상위 300건에 안 들어온다 (이데일리 카뱅 AI비서 기사 — 2026-09-30).
     // 실측(최근 30일): '금융 AI 비서' 200건 · 기존 풀과 겹침 0 · 대상 기사 포함.
     //   '금융 AI' 200건 중 비금융 AI 기사 다수 / 'AI 금융 서비스'는 대상 기사 누락 / '금융권 AI 비서' 40건뿐
     if (modeAtStart === 'platform') {
-      [1, 101].forEach(start => jobs.push(() => fetchSafe(PLAT_AI_QUERY, start)));
+      [1, 101].forEach(start => jobs.push([PLAT_AI_QUERY, start]));
     }
     // 목돈 만들기 축은 상품 목록 화면에서만 받는다 (기사 화면은 절세·장기투자 두 축이면 충분)
     if (modeAtStart === 'saving') {
-      [1, 101, 201].forEach(start => jobs.push(() => fetchSafe(PEN_THIRD_QUERY, start)));
+      [1, 101, 201].forEach(start => jobs.push([PEN_THIRD_QUERY, start]));
     }
-    const batches = await runPooled(jobs, 3);
+    const batches = (await fetchMany(jobs)).map(items => items || []);
     if (currentMode === modeAtStart) {
       for (const items of batches) {
         items.forEach(item => {
@@ -1805,12 +1818,7 @@
   // 한 번에 다 던지면 네이버가 일부를 거절하므로 4개씩 나눠 보낸다(loadRest와 같은 이유).
   async function buildDigest() {
     const jobs = [];
-    let failed = 0;
-    const pull = (mode, kw, start) => jobs.push(() => fetchBatch(kw, start)
-      .catch(() => new Promise(r => setTimeout(r, 900)).then(() => fetchBatch(kw, start)))
-      .catch(() => new Promise(r => setTimeout(r, 2000)).then(() => fetchBatch(kw, start)))
-      .catch(() => { failed++; return []; })
-      .then(items => ({ mode, items })));
+    const pull = (mode, kw, start) => jobs.push({ mode, kw, start });
     // 배치를 늘리면 한 번에 20건 넘는 요청이 몰려 네이버 속도 제한에 걸린다.
     // 2배치(200건)면 대부분의 키워드가 10건을 채운다.
     DIGEST_MODES.forEach(m => [1, 101].forEach(start => pull(m.mode, getKeyword(m.mode), start)));
@@ -1818,11 +1826,10 @@
     // 라벨이 '절세/장기투자'인데 장기투자 축을 통째로 놓치고 있어 2차 질의도 함께 받는다.
     [1, 101].forEach(start => pull('savenews', PEN_SECOND_QUERY, start));
     pull('platform', PLAT_AI_QUERY, 1);   // AI 축 — 1배치만 (속도 제한 여유)
-    const out = [];
-    for (let i = 0; i < jobs.length; i += 3) {
-      if (i) await new Promise(r => setTimeout(r, 300));   // 묶음 사이 간격 — 속도 제한 회피
-      out.push(...await Promise.all(jobs.slice(i, i + 3).map(f => f())));
-    }
+    // 17건을 서버에서 한 번에 받는다 (fetchMany). 예전엔 화면에서 3개씩 6번 왕복해 20초 가까이 걸렸다
+    const got = await fetchMany(jobs.map(j => [j.kw, j.start]));
+    const failed = got.filter(x => !x).length;
+    const out = jobs.map((j, i) => ({ mode: j.mode, items: got[i] || [] }));
     const byMode = {};
     out.forEach(({ mode, items }) => {
       (byMode[mode] = byMode[mode] || []).push(...items);
