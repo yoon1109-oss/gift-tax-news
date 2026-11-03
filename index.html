@@ -654,6 +654,27 @@
   function isCelebNews(s) {
     return CELEB_RE.test(s) || CELEB_KW.some(k => s.includes(k));
   }
+  // 개인의 자녀 증여 사례 제외 (2026-11-04 사용자) — 특정인이 자녀에게 재산·주식을 넘긴 이야기.
+  // '전원주, 두 아들에 재산 절반 증여'가 매체마다 27건 깔렸고, 제목엔 '배우'가 없어 isCelebNews를 빠져나갔다.
+  // 이름으로는 못 거르므로 문맥 표지를 본다:
+  //   ① 제목이 증여·재산 이야기 + (본문의 연예 표지 · 방송 표지 · 제목의 '두 아들/세 자녀')
+  //   ② 제목 끝 방송 꼬리표 ('로또싱어') ③ 주식 'N만주' 증여·취득 공시 ④ 살배기·○○家·주주로·의혹
+  // 본문 연예 표지에서 '예능'은 뺀다 — 무형유산 '예능보유자'에 걸린다.
+  // 증여·재산을 제목 조건으로 거는 이유: 금융사 보도자료 본문에 광고모델('가수 아이유')이 자주 나온다.
+  // 실측(6키워드 996건): 35건 제외(전원주 27 · 주식 공시 5 · 정치 의혹 1 · 방송 1 · 중복 1), 오탈락 0
+  const PERSONAL_DESC_KW = CELEB_KW.filter(k => k !== '예능');
+  const PERSONAL_BROADCAST = /MBC|KBS|SBS|JTBC|tvN|TV조선|MBN|채널A|PD\s?수첩|방송(에서|서|된|되는|에 출연|분)|예능프로/;
+  const PERSONAL_HOUSEHOLD = /(?<![\d가-힣])(두|세)\s?(아들|딸|자녀)/;   // '0세 자녀'는 제외
+  const PERSONAL_SHOW_TAG = /\(\s*['‘"“][^)]*(['’"”]\s*\)|\.\.\.|…)\s*$/;
+  const PERSONAL_SHARES = /\d[\d,.]*\s?만?\s?주(?![가-힣])/;
+  function isPersonalGift(t, d) {
+    d = d || '';
+    if (/증여|재산|물려|상속/.test(t) && (CELEB_RE.test(d) || PERSONAL_DESC_KW.some(k => d.includes(k))
+        || PERSONAL_BROADCAST.test(t) || PERSONAL_BROADCAST.test(d) || PERSONAL_HOUSEHOLD.test(t))) return true;
+    if (PERSONAL_SHOW_TAG.test(t)) return true;
+    if (PERSONAL_SHARES.test(t) && /증여|취득|물려/.test(t)) return true;
+    return /살배기|[가-힣]家|주주로|의혹/.test(t);
+  }
 
   // 연금 모드에서는 부동산 계열을 막지 않는다 — 주택연금·'내집연금'·노후 상가 투자처럼
   // 정당한 연금 기사가 걸린다(300건 중 3건 오탈락 실측). 지분·정치·연예 제외는 그대로 적용.
@@ -710,6 +731,7 @@
     if (desc && ownerByDesc(s, desc)) return true;
     if (/(^|[^사협])회장/.test(s)) return true; // 회장·부회장 (세무사회장·협회장 제외)
     if (isCelebNews(s)) return true;
+    if (isPersonalGift(s, desc)) return true;
     if (EXEC_RE.test(s)) return true;
     if (SCANDAL_KW.test(s) || NOMINEE_KW.test(s) || CSR_KW.test(s)) return true;
     if (m === 'platform' && PLATFORM_NOISE.test(s)) return true;
