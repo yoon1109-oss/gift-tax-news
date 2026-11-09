@@ -227,6 +227,15 @@ const PENDING = [
   { broker: 'NH투자증권 (나무)', status: '확인필요', note: '우리아이 계좌개설 상시 안내만 있고 이벤트 없음. 8월 진행 이벤트는 타사 주식 이전 건으로 미성년 특화 아님 (2026-08-10 확인)', link: 'https://www.mynamuhbegin.com/children' },
 ];
 
+// 업데이트 메모는 최근 3개월치만 내보낸다 (2026-11-09 사용자 요청). 배열에는 기록으로 남겨 둔다
+const CHANGES_MONTHS = 3;
+function recentChanges() {
+  const d = new Date(Date.now() + 9 * 3600e3); // KST
+  d.setUTCMonth(d.getUTCMonth() - CHANGES_MONTHS);
+  const since = d.toISOString().slice(0, 10);
+  return CHANGES.filter(c => c.date >= since);
+}
+
 export default function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=1800'); // 이벤트: 주간 갱신
@@ -235,7 +244,7 @@ export default function handler(req, res) {
   if (req.method === 'OPTIONS') { res.status(200).end(); return; }
   res.status(200).json({
     updatedAt: UPDATED_AT, checkedAt: CHECKED_AT,
-    events: EVENTS, pending: PENDING, changes: CHANGES,
+    events: EVENTS, pending: PENDING, changes: recentChanges(),
     referral: REFERRAL, referralPending: REFERRAL_PENDING, referralCheckedAt: REFERRAL_CHECKED_AT,
     taxAccounts: TAX_ACCOUNTS, taxPending: TAX_PENDING, taxCheckedAt: TAX_CHECKED_AT,
   });
