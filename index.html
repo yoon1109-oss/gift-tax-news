@@ -123,6 +123,13 @@
     .stat-label { font-size: 12px; color: var(--muted); }
     .loading-badge { font-size: 12px; color: var(--muted); display: none; align-items: center; gap: 5px; margin-left: auto; }
     .loading-badge.active { display: flex; }
+    /* 자동 갱신 안내 — 읽는 중(스크롤을 내림)이면 목록을 갈아엎지 않고 이 버튼만 띄운다 */
+    .refresh-pill { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); z-index: 50;
+      display: none; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 999px;
+      background: var(--accent); color: var(--on-accent); border: 0; font-size: 13px; font-weight: 700; cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,.35); }
+    .refresh-pill.show { display: inline-flex; }
+    .refresh-pill:focus-visible { outline: 2px solid var(--mark); outline-offset: 2px; }
     .mini-spinner { width: 11px; height: 11px; border: 1.5px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
 
     .news-container { padding: 28px 48px 60px; max-width: 820px; margin: 0 auto; }
@@ -561,11 +568,22 @@
   <div class="end-msg" id="endMsg">모든 기사를 불러왔습니다.</div>
   <div class="init-loader" id="initLoader"><div class="loading-spinner"></div><p class="loading-text">뉴스를 불러오는 중...</p></div>
 </div>
+<button type="button" class="refresh-pill" id="refreshPill" onclick="doRefresh(); window.scrollTo({ top: 0 });">↻ 새 내용 불러오기</button>
 
 <script>
   const PAGE_SIZE = 30;
   let allNews = [], renderedCount = 0, currentMode = 'all', bgDone = false;
   let rankCounter = 0, relatedLinks = new Set(), groups = [];
+  // 로딩 세대 번호 — 목록을 비울 때마다(resetNews / 블로그 초기화) 1씩 올린다.
+  // 요청이 돌아왔을 때 번호가 바뀌어 있으면 그 사이 칩·탭이 바뀐 것이므로 결과를 버린다.
+  // 예전엔 '자녀 증여' 로딩 중 '금융 플랫폼'을 누르면 늦게 온 자녀 증여 기사가 새 목록에 섞였다 (2026-11-11).
+  let loadSeq = 0, blogSeq = 0;
+  let lastRefresh = Date.now();   // 자동 갱신 기준 시각 (맨 아래 refreshTick 참고). 탭·칩을 직접 바꿔도 새로 받은 것이므로 갱신한다
+  function markFresh() {
+    lastRefresh = Date.now();
+    const pill = document.getElementById('refreshPill');
+    if (pill) pill.classList.remove('show');
+  }
   let blogItems = [], cafeItems = [], blogLoaded = false, cafeLoaded = false;
   let eventsLoaded = false, eventsData = null;
   let pressLoaded = false, pressData = null;
@@ -849,8 +867,10 @@
 
   async function startLoad() {
     const keyword = getKeyword(); bgDone = false;
+    const seq = loadSeq;
     try {
       const items = await fetchBatch(keyword, 1);
+      if (seq !== loadSeq) return;               // 기다리는 사이 다른 칩으로 바뀜 — 버린다
       const links = new Set();
       items.forEach(item => {
         const n = cleanItem(item);
@@ -867,6 +887,7 @@
       renderNextPage(); updateStats(); updateTime();
       if (items.length < 100) { bgDone = true; checkEnd(); return; }
     } catch(e) {
+      if (seq !== loadSeq) return;
       document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">뉴스를 불러오지 못했습니다. 새로고침해주세요.</p>';
       return;
     }
@@ -901,6 +922,8 @@
       [1, 101, 201].forEach(start => jobs.push([PEN_THIRD_QUERY, start]));
     }
     const batches = (await fetchMany(jobs)).map(items => items || []);
+    // 그 사이 칩이 바뀌었거나 목록이 다시 시작됐으면 새 로딩이 배지·끝 표시를 맡는다 — 손대지 않는다
+    if (seq !== loadSeq) return;
     if (currentMode === modeAtStart) {
       for (const items of batches) {
         items.forEach(item => {
@@ -1590,6 +1613,8 @@
   });
 
   function onModeChange(mode) {
+    loadSeq++;                    // 다른 탭으로 가면 진행 중인 뉴스 로딩 결과는 버린다
+    markFresh();
     currentMode = mode;
     setHash(mode);
     document.querySelectorAll('.radio-wrap').forEach(w => w.classList.remove('checked'));
@@ -1599,7 +1624,7 @@
     document.getElementById('newsKeywords').style.display = (mode === 'all') ? 'flex' : 'none';
     document.getElementById('eventTabs').style.display = (mode === 'event') ? 'flex' : 'none';
     document.getElementById('taxTabs').style.display = (mode === 'taxnews') ? 'flex' : 'none';
-    if (mode === 'blog') { blogItems = []; blogStart = 1; blogEnd = false; blogPrefetch = null; showBlog(); }
+    if (mode === 'blog') { blogSeq++; blogItems = []; blogStart = 1; blogEnd = false; blogLoading = false; blogPrefetch = null; showBlog(); }
     else if (mode === 'cafe') { cafeLoaded = false; cafeItems = []; showCafe(); }
     else if (mode === 'event') { // 이벤트 탭 — 서브탭을 '계좌 이벤트'로 초기화
       document.querySelectorAll('#eventTabs .kw-chip').forEach(c => c.classList.toggle('active', c.dataset.mode === 'event'));
@@ -1702,7 +1727,7 @@
   async function loadPiBlogAll() {
     if (blogEnd || blogLoading) return false;
     blogLoading = true;
-    const kwAtStart = blogKeyword;
+    const seq = blogSeq;
     try {
       const jobs = PI_BLOG_PLAN.flatMap(([q, sort, starts]) => starts.map(st => () =>
         fetch(`/api/blog?keyword=${encodeURIComponent(q)}&display=100&start=${st}&sort=${sort}`)
@@ -1712,7 +1737,8 @@
         if (i) await new Promise(r => setTimeout(r, 250));
         results.push(...await Promise.all(jobs.slice(i, i + 3).map(f => f())));
       }
-      if (blogKeyword !== kwAtStart) { blogLoading = false; return false; }
+      // 그 사이 칩이 바뀌었다 — 새 로딩이 blogLoading을 쓰고 있을 수 있으니 건드리지 않는다
+      if (seq !== blogSeq) return false;
       if (!results.some(d => d && d.items)) throw new Error('blog fetch failed');
       const seen = new Set(), out = [];
       results.forEach(d => ((d && d.items) || []).forEach(item => {
@@ -1727,6 +1753,7 @@
       if (currentMode === 'blog') setBlogPlaceholder();
       return true;
     } catch (e) {
+      if (seq !== blogSeq) return false;
       blogLoading = false;
       if (!blogItems.length) document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">블로그를 불러오지 못했습니다.</p>';
       return false;
@@ -1749,6 +1776,7 @@
     if (blogKeyword === BLOG_PI_CHIP) return loadPiBlogAll();
     if (blogEnd || blogLoading) return false;
     blogLoading = true;
+    const seq = blogSeq;
     try {
       // 미리 받아둔 응답이 있으면 그대로 사용, 없으면 지금 요청
       const pending = (blogPrefetch && blogPrefetchStart === blogStart) ? blogPrefetch : null;
@@ -1758,6 +1786,7 @@
         if (!r.ok) throw new Error(`API ${r.status}`);
         return r.json();
       })();
+      if (seq !== blogSeq) return false;         // 기다리는 사이 칩이 바뀜 — 버린다
       if (!data) throw new Error('blog fetch failed');
       const fetched = (data.items||[]).map(item => ({ title: cleanHtml(item.title), desc: cleanHtml(item.description), link: item.link, source: item.bloggername||'블로그', postdate: item.postdate||'', likeId: naverBlogId(item.link), likes: null }));
       const seen = new Set(blogItems.map(b => b.link));
@@ -1782,6 +1811,7 @@
       }
       return true;
     } catch(e) {
+      if (seq !== blogSeq) return false;
       blogLoading = false;
       if (!blogItems.length) document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">블로그를 불러오지 못했습니다.</p>';
       return false;
@@ -1926,13 +1956,17 @@
   }
 
   async function showDigest() {
+    const seq = loadSeq;
     resetGrid('키워드별 주요 기사를 모으는 중...');
     document.querySelector('.stats-bar').style.display = 'flex';
     if (!digestLoaded) {
       try { digestData = await buildDigest(); digestLoaded = true; }
-      catch (e) { document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">기사를 불러오지 못했습니다.</p>'; return; }
+      catch (e) {
+        if (seq === loadSeq) document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">기사를 불러오지 못했습니다.</p>';
+        return;
+      }
     }
-    if (currentMode !== 'digest') return;
+    if (seq !== loadSeq || currentMode !== 'digest') return;   // 기다리는 사이 화면이 바뀜
     document.getElementById('initLoader').style.display = 'none';
     document.getElementById('endMsg').style.display = 'none';
     const groups = digestData || [];
@@ -2030,7 +2064,7 @@
     document.querySelectorAll('#newsKeywords .kw-chip').forEach(c => c.classList.remove('active'));
     if (el) el.classList.add('active');
     currentMode = mode; // 'all'=자녀 증여, 'hanwha'=한화생명 파이, 'digest'=모아보기
-    setHash(mode);
+    setHash(mode); markFresh();
     if (mode === 'digest') { resetNews(); showDigest(); return; }
     resetNews(); startLoad();
   }
@@ -2040,8 +2074,8 @@
     blogKeyword = kw;
     document.querySelectorAll('#blogKeywords .kw-chip').forEach(c => c.classList.remove('active'));
     if (el) el.classList.add('active');
-    blogItems = []; blogStart = 1; blogEnd = false; blogLoading = false; blogPrefetch = null;
-    showBlog();
+    blogSeq++; blogItems = []; blogStart = 1; blogEnd = false; blogLoading = false; blogPrefetch = null;
+    markFresh(); showBlog();
   }
 
   function updateBlogStats() {
@@ -2865,7 +2899,7 @@
 
   // 헤더의 새로고침 버튼은 없앴다. 10분마다 도는 자동 갱신이 이 함수를 계속 쓴다.
   function resetAndFetch() {
-    blogLoaded = false; cafeLoaded = false; blogItems = []; cafeItems = []; eventsLoaded = false; blogStart = 1; blogEnd = false; blogPrefetch = null;
+    blogSeq++; blogLoaded = false; cafeLoaded = false; blogItems = []; cafeItems = []; eventsLoaded = false; blogStart = 1; blogEnd = false; blogLoading = false; blogPrefetch = null;
     if (currentMode !== 'event') initEventBadge();       // 다른 탭에 있어도 배지는 최신으로
     if (currentMode !== 'reviews') initReviewBadge();
     if (currentMode === 'blog') showBlog().catch(()=>{});
@@ -2881,6 +2915,7 @@
   }
 
   function resetNews() {
+    loadSeq++;
     allNews = []; renderedCount = 0; bgDone = false; rankCounter = 0; relatedLinks = new Set(); groups = [];
     document.getElementById('newsGrid').innerHTML = '';
     document.getElementById('endMsg').style.display = 'none';
@@ -3054,7 +3089,31 @@
   if (!routeFromHash()) { currentMode = 'digest'; showDigest(); }
   initEventBadge();
   initReviewBadge();
-  setInterval(resetAndFetch, 10*60*1000);
+
+  // ── 자동 갱신 (2026-11-11 개편) ─────────────────────────────
+  // 예전엔 10분마다 무조건 resetAndFetch를 불러 ① 읽던 목록이 지워지고 맨 위로 튀었고
+  // ② 안 보는 탭에서도 계속 돌아 모아보기 기준 10분마다 네이버 요청 17건이 탭 수만큼 나갔다.
+  //  - 탭이 안 보이면 건너뛰고, 다시 보일 때 10분이 지났으면 그때 갱신한다
+  //  - 스크롤을 내려 읽는 중이면 목록은 그대로 두고 '새 내용 불러오기' 버튼만 띄운다 (배지는 갱신)
+  //  - 맨 위에 있으면 예전처럼 바로 갱신한다
+  const REFRESH_MS = 10 * 60 * 1000;
+  function doRefresh() { markFresh(); resetAndFetch(); }
+  function refreshTick() {
+    if (document.hidden) return;
+    if (Date.now() - lastRefresh < REFRESH_MS) return;
+    const pill = document.getElementById('refreshPill');
+    if (window.scrollY > 200) {
+      if (!pill.classList.contains('show')) {
+        pill.classList.add('show');
+        if (currentMode !== 'event') initEventBadge();
+        if (currentMode !== 'reviews') initReviewBadge();
+      }
+      return;
+    }
+    doRefresh();
+  }
+  setInterval(refreshTick, 60 * 1000);
+  document.addEventListener('visibilitychange', refreshTick);
 </script>
 </body>
 </html>

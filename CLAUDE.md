@@ -38,7 +38,7 @@ scripts/apps-script-review-alert.gs  ← 실제 운영: 30분마다 새 리뷰 �
 | 세무 | `taxnews` / `press` | 서브탭 2종 — 세법 뉴스(`api/taxnews.js`) / 세무사회 보도자료(`api/kacta.js`) |
 | 통계 | `stats` | 증여 규모별 분포 — 유의사항 + 주요 지표 + 분포 막대 + 요약 타일 + 용어 풀이 + 로우 데이터 |
 
-- 카페 탭은 삭제됨 (`api/cafe.js`는 미사용 잔존)
+- 카페 탭은 삭제됨 (`api/cafe.js`는 410을 돌려주도록 닫아 둠 — 열린 검색 통로였다)
 
 **주소로 탭 지정**: 해시에 mode 이름을 담는다 — `#reviews`, `#event`, `#referral`,
 `#childfin`, `#press`, `#stats` 등. 기본 화면(`all`=자녀 증여)만 해시 없이 둔다.
@@ -619,6 +619,23 @@ Apps Script를 쓰지 않고 서버에서 직접 보내고 싶을 때만 쓴다.
 - 폼 컨트롤은 폰트를 상속하지 않으므로 `button, input, select, textarea { font-family: inherit; }`
   규칙을 body 바로 밑에 따로 뒀다. 이 줄을 지우면 버튼만 시스템 폰트로 튄다
 - `guide.html`의 `code`·`.kw`는 **monospace 유지**가 맞다. 여기까지 통일하지 말 것
+
+## API 문지기 · 로딩 세대 · 자동 갱신 (2026-11-11)
+
+- **네이버 프록시(`api/news.js`·`api/blog.js`·`api/likes.js`)는 열린 통로가 아니다.**
+  예전엔 `Access-Control-Allow-Origin: *` + 검색어 무제한이라 아무 사이트나 우리 API 키 쿼터로 검색할 수 있었다.
+  - `Origin` 헤더가 있고 허용 목록(`wm-monitor.netlify.app` · `gift-tax-news(-*).vercel.app` · localhost) 밖이면 403.
+    우리 화면은 같은 주소라 Origin을 보내지 않는다
+  - 검색어 허용 목록: `news.js`의 `NEWS_KEYWORDS`, `blog.js`의 `BLOG_KEYWORDS`.
+    **뉴스 칩·보조 질의(`getKeyword`·`PEN_SECOND_QUERY`·`PLAT_AI_QUERY`·`PEN_THIRD_QUERY`)나
+    블로그 칩·`PI_BLOG_PLAN`을 추가·변경하면 허용 목록도 같이 고칠 것** — 빠지면 그 칩이 400으로 비어 보인다
+  - `display`≤100, `start`≤1000, `sort`는 sim/date로 자른다. `likes`는 `블로그ID_글번호` 형식만 받는다
+- **로딩 세대(`loadSeq` / `blogSeq`)**: `resetNews()`·`onModeChange()`·블로그 초기화 때 1씩 올린다.
+  `startLoad`·`showDigest`·`loadBlogPage`·`loadPiBlogAll`은 `await` 뒤에 번호가 바뀌었으면 결과를 버린다.
+  (예전엔 칩을 빨리 바꾸면 늦게 온 이전 키워드 기사가 새 목록에 섞였다.) 새 비동기 로더를 만들 때도 같은 패턴을 쓸 것
+- **자동 갱신(`refreshTick`, 1분마다 검사·10분 주기)**: 탭이 안 보이면 건너뛰고 다시 보일 때 갱신.
+  `scrollY > 200`(읽는 중)이면 목록은 두고 하단 `#refreshPill` 버튼만 띄운다(배지는 갱신). 맨 위면 바로 갱신.
+  탭·칩을 직접 바꾸면 `markFresh()`로 10분을 다시 센다
 
 ## 작업 규칙
 
