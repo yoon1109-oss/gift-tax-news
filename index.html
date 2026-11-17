@@ -526,6 +526,7 @@
 <div class="blog-keywords" id="eventTabs" style="display:none">
   <span class="filter-label">분류</span>
   <span class="kw-chip active" data-mode="event" onclick="selectEventTab('event', this)">계좌 이벤트</span>
+  <span class="kw-chip" data-mode="gift" onclick="selectEventTab('gift', this)">자녀 증여 이벤트</span>
   <span class="kw-chip" data-mode="taxacct" onclick="selectEventTab('taxacct', this)">절세 3종 계좌</span>
   <span class="kw-chip" data-mode="referral" onclick="selectEventTab('referral', this)">친구 초대 이벤트</span>
 </div>
@@ -1468,7 +1469,7 @@
   }
 
   function renderNextPage() {
-    if (currentMode === 'digest' || currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'taxacct' || currentMode === 'taxacct' || currentMode === 'reviews' || currentMode === 'taxnews' || currentMode === 'press' || currentMode === 'stats') return;
+    if (currentMode === 'digest' || currentMode === 'blog' || currentMode === 'cafe' || currentMode === 'event' || currentMode === 'referral' || currentMode === 'taxacct' || currentMode === 'gift' || currentMode === 'reviews' || currentMode === 'taxnews' || currentMode === 'press' || currentMode === 'stats') return;
     // '절세/장기투자 상품' 칩은 기사를 빼고 상품·플랫폼만 쭉 나열한다 (한 번만 그린다)
     if (currentMode === 'saving') {
       if (renderedCount === 0) {
@@ -1539,7 +1540,7 @@
   const observer = new IntersectionObserver(entries => {
     if (!entries[0].isIntersecting) return;
     if (currentMode === 'blog') { if (!blogEnd && !blogLoading) loadBlogPage(); return; }
-    if (currentMode==='digest' || currentMode==='cafe' || currentMode==='event' || currentMode==='referral' || currentMode==='taxacct' || currentMode==='reviews' || currentMode==='taxnews' || currentMode==='press' || currentMode==='stats') return;
+    if (currentMode==='digest' || currentMode==='cafe' || currentMode==='event' || currentMode==='referral' || currentMode==='taxacct' || currentMode==='gift' || currentMode==='reviews' || currentMode==='taxnews' || currentMode==='press' || currentMode==='stats') return;
     if (renderedCount < allNews.length) renderNextPage();
   }, { rootMargin: '400px' });
   observer.observe(document.getElementById('sentinel'));
@@ -1585,6 +1586,13 @@
       onModeChange('event');
       const chip = document.querySelector('#eventTabs .kw-chip[data-mode="taxacct"]');
       if (chip) selectEventTab('taxacct', chip);
+      return true;
+    }
+    if (m === 'gift') {                                    // 이벤트 탭의 서브탭
+      document.querySelector('input[value="event"]').checked = true;
+      onModeChange('event');
+      const chip = document.querySelector('#eventTabs .kw-chip[data-mode="gift"]');
+      if (chip) selectEventTab('gift', chip);
       return true;
     }
     if (m === 'referral') {                                // 이벤트 탭의 서브탭
@@ -1861,6 +1869,7 @@
     setHash(mode);
     if (mode === 'referral') showReferral();
     else if (mode === 'taxacct') showTaxAccounts();
+    else if (mode === 'gift') showGift();
     else showEvents();
   }
 
@@ -2297,6 +2306,58 @@
           <span class="event-period">${esc(ev.period)}</span>
         </div>
         ${(ev.kinds||[]).length ? `<div style="margin:4px 0 2px">${ev.kinds.map(k => `<span class="pen-kind" style="margin-right:4px">${esc(k)}</span>`).join('')}</div>` : ''}
+        ${ev.title ? `<div class="event-title">${esc(ev.title)}</div>` : ''}
+        <ul class="event-benefits">${(ev.benefits||[]).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
+        <div class="event-link">공식 페이지 바로가기 →</div>`;
+      grid.appendChild(el);
+    });
+  }
+
+  // 자녀 증여 이벤트 (2026-11-17 신설) — 계좌 '개설'이 아니라 부모가 자녀에게 '증여'하면 혜택을 주는 이벤트.
+  // 계좌 이벤트와 성격이 달라 서브탭을 나눴다(사용자 요청). api/events.js의 GIFT_EVENTS / GIFT_PENDING
+  async function showGift() {
+    resetGrid('자녀 증여 이벤트를 불러오는 중...');
+    document.querySelector('.stats-bar').style.display = 'none';
+    if (!eventsLoaded) {
+      try {
+        const res = await fetch('/api/events');
+        eventsData = await res.json();
+        eventsLoaded = true;
+      } catch(e) { document.getElementById('initLoader').innerHTML = '<p style="color:var(--muted)">이벤트를 불러오지 못했습니다.</p>'; return; }
+    }
+    if (currentMode !== 'gift') return;
+    document.getElementById('initLoader').style.display = 'none';
+    document.getElementById('endMsg').style.display = 'none';
+    renderGift(eventsData || {});
+  }
+
+  function renderGift(data) {
+    const grid = document.getElementById('newsGrid'); grid.innerHTML = '';
+    const list = data.gift || [], pend = data.giftPending || [];
+    const checkedAt = data.giftCheckedAt || data.checkedAt || '';
+
+    const note = document.createElement('div');
+    note.className = 'event-note';
+    note.innerHTML = `<b>자녀 증여 이벤트</b> — 자녀에게 증여하면 혜택을 주는 이벤트` +
+      `${checkedAt ? ` · 마지막 확인 ${esc(checkedAt)}` : ''} · 매주 월요일 오전 9시 자동 갱신`;
+    grid.appendChild(note);
+    const svr = surveyedBlock([...new Set(list.map(e => e.broker))], pend);
+    if (svr) grid.appendChild(svr);
+
+    if (!list.length) {
+      grid.insertAdjacentHTML('beforeend', '<p style="color:var(--muted);text-align:center;padding:40px">현재 진행 중인 자녀 증여 이벤트가 확인되지 않았습니다.</p>');
+      return;
+    }
+
+    list.forEach((ev, i) => {
+      const el = document.createElement('a');
+      el.className = 'news-card'; el.href = ev.link; el.target = '_blank'; el.rel = 'noopener';
+      el.style.animationDelay = `${Math.min(i*0.05,0.5)}s`;
+      el.innerHTML = `
+        <div class="card-meta">
+          <span class="event-broker">${esc(ev.broker)}</span>
+          <span class="event-period">${esc(ev.period)}</span>
+        </div>
         ${ev.title ? `<div class="event-title">${esc(ev.title)}</div>` : ''}
         <ul class="event-benefits">${(ev.benefits||[]).map(b => `<li>${esc(b)}</li>`).join('')}</ul>
         <div class="event-link">공식 페이지 바로가기 →</div>`;
@@ -2906,6 +2967,9 @@
     else if (currentMode === 'cafe') showCafe().catch(()=>{});
     else if (currentMode === 'event') showEvents().then(markEventChangesSeen).catch(()=>{});
     else if (currentMode === 'referral') showReferral().catch(()=>{});
+    // 이벤트 서브탭은 데이터를 다시 받아 그린다 (예전엔 taxacct가 여기서 빠져 뉴스 로딩으로 넘어갔다)
+    else if (currentMode === 'taxacct') showTaxAccounts().catch(()=>{});
+    else if (currentMode === 'gift') showGift().catch(()=>{});
     else if (currentMode === 'reviews') { reviewsLoaded = false; showReviews().then(markReviewsSeen).catch(()=>{}); }
     else if (currentMode === 'taxnews') { taxLoaded = false; showTaxNews().catch(()=>{}); }
     else if (currentMode === 'press') { pressLoaded = false; showPress().catch(()=>{}); }
