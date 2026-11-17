@@ -2,7 +2,7 @@
 // 대부분 증권사 이벤트 페이지가 봇 차단/동적렌더/EUC-KR/앱전용이라 자동 수집이 불가하여
 // 여기 배열을 직접 갱신한다. (매주 월요일 10시 스케줄 갱신 대상)
 const UPDATED_AT = '2026-11-09'; // 데이터가 실제 바뀐 날 (정리 기준)
-const CHECKED_AT = '2026-11-09';
+const CHECKED_AT = '2026-11-17';
 // 친구 초대는 계좌 이벤트와 점검 시점이 다르다. 한 값으로 묶으면 한쪽이 실제보다
 // 최신인 것처럼 보이므로 따로 둔다.
 const REFERRAL_CHECKED_AT = '2026-11-09'; // 마지막으로 재조사·확인한 날 (변경 없어도 갱신)
@@ -66,7 +66,9 @@ const EVENTS = [
     ],
     domesticFee: '',
     usFee: '',
-    link: 'https://toss.im/tossfeed/article/securities-child',
+    // 기간·금액 근거: 헤럴드경제(2026-02-11) "올해 말까지 법정대리인이 미성년자 명의 계좌 개설 시 2만원".
+    // 예전 링크(토스피드 2023 서비스 출시 글)에는 이벤트 내용이 없어 바꿨다 (2026-11-17)
+    link: 'https://www.heraldk.com/article/2026021121581220044',
   },
 ];
 
@@ -95,7 +97,7 @@ const REFERRAL_PENDING = [
 // 절세 3종 계좌(ISA·연금저축·IRP) 이벤트 — 2026-09-11 신설
 // 계좌 이벤트(미성년 자녀)와 성격이 다르다. 여기는 성인 대상 절세계좌 유치 경쟁이고
 // 이전(타사→당사) 혜택이 중심이라, 금액도 자릿수가 다르다(최대 100만~200만원).
-const TAX_CHECKED_AT = '2026-11-09';
+const TAX_CHECKED_AT = '2026-11-17';
 const TAX_ACCOUNTS = [
   {
     broker: '하나증권',
@@ -218,10 +220,10 @@ const TAX_ACCOUNTS = [
 
 // 절세 3종 계좌 — 추가 조사 대상
 const TAX_PENDING = [
-  { broker: '삼성증권', status: '확인필요', note: "'연금저축 점프-업!'(타사 이전 최대 100만원)·중개형 ISA '점프-업!'(이전 최대 60만원) 모두 2026.10.31 종료. 11월 후속 이벤트 미확인 — 이벤트 목록은 비로그인 조회 불가 (2026-11-09)", link: 'https://www.samsungpop.com/customer/event.do' },
+  { broker: '삼성증권', status: '확인필요', note: "'연금저축 점프-업!'(타사 이전 최대 100만원)·중개형 ISA '점프-업!'(이전 최대 60만원) 모두 2026.10.31 종료. 11월 후속 이벤트 미확인(11/17 재검색에도 보도 없음) — 이벤트 목록은 비로그인 조회 불가 (2026-11-17)", link: 'https://www.samsungpop.com/customer/event.do' },
   { broker: 'NH투자증권', status: '확인필요', note: 'DC 퇴직연금 신규 가입 이벤트(~2027.01.31, 순입금 1천만원↑ 네이버페이 3만원)만 확인. IRP 입금·이전 이벤트(2026.05.11~08.31, 최대 3만원)는 종료. ‘ISA 최대 62만원’ 보도는 약 1년 전 건이라 제외 (2026-11-09)', link: 'https://www.nhqv.com' },
   { broker: 'SK증권', status: '확인필요', note: 'IRP·연금저축 이전 캐시백 이벤트(~2026.10.31, IRP 최대 100만원·연금저축 최대 50만원) 종료. 추가 연장 미확인 (2026-11-09)', link: 'https://www.sks.co.kr' },
-  { broker: '한화투자증권', status: '확인필요', note: '중개형 ISA 투자 시작 이벤트(~2026.10.30) 종료. 작년엔 11월 초 연금저축·IRP 연말 이벤트(최대 100만원)를 열었으나 올해 건은 미확인 (2026-11-09)', link: 'https://www.hanwhawm.com' },
+  { broker: '한화투자증권', status: '확인필요', note: '중개형 ISA 투자 시작 이벤트(~2026.10.30) 종료. 작년엔 11월 초 연금저축·IRP 연말 이벤트(최대 100만원)를 열었으나 올해 건은 11/17 재검색에도 미확인 (2026-11-17)', link: 'https://www.hanwhawm.com' },
   { broker: '키움증권', status: '확인필요', note: '절세2종 개설 이벤트(~2026.10.31, 연금저축+중개형 ISA 개설 현금 5만원) 종료. 신규고객 이벤트 안에 절세계좌 2종 개설 5만원 항목이 보이나 별도 확인 필요 — robots 차단 (2026-11-09)', link: 'https://www.kiwoom.com/e/m/common/event/VIngEventView' },
   // 아래 10개사는 계좌 이벤트 탭과 조사 범위를 맞추기 위해 추가했다 (2026-09-11).
   // 조사했는데 확인이 안 되더라는 사실도 결과이므로 목록에 남긴다.
@@ -237,10 +239,10 @@ const TAX_PENDING = [
 
 // 추가 조사 대상 — 현재 진행 여부 미확정 (status: 확인필요 | 미발견 | 해당없음)
 const PENDING = [
-  { broker: '키움증권', status: '확인필요', note: "미성년자계좌개설 이벤트(2026.07.16~09.30) 종료. 공식 이벤트 페이지(VEvent20260095) 검색 요약에 '2026.10.01 이후 생애 최초 개설 미성년자 국내주식 더모으기 쿠폰 5만원, 2026.12.31까지 계좌 유지' 이벤트가 보이나 뉴스 등 두 번째 출처가 없어 미확정 — robots 차단으로 공식 페이지는 크롤링하지 않음 (2026-11-09)", link: 'https://www.kiwoom.com/e/m/home/event/VEvent20260095View' },
-  { broker: '삼성증권', status: '확인필요', note: '자녀자산관리 서비스 출시 이벤트(2026.05.04~10.30, 계좌개설 1만원·투자지원금 2만원·아동수당 계좌 변경 2만원) 종료. 11월 후속 이벤트 미확인 (2026-11-09)', link: 'https://www.samsungpop.com/customer/guide.do?cmd=event_view&menuNo=01010900&MenuSeqNo=3803' },
-  { broker: '한국투자증권', status: '확인필요', note: '「우리아이 첫 투자」(2026.09.01~10.31, KOSPI200 1+1주·매수 쿠폰 2만원) 종료. 11월 후속 이벤트 미확인 (2026-11-09)', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
-  { broker: 'SK증권', status: '확인필요', note: '우리 아이 미래 투자 10월분(2026.10.01~10.31, 순입금 최대 5만원 + 1억 거래 5만원) 종료. 매월 갱신돼 왔으나 11월분은 미확인 — 공식 페이지가 JS 렌더라 브라우저 판독 필요 (2026-11-09)', link: 'https://direct-sks.co.kr/account_underage' },
+  { broker: '키움증권', status: '확인필요', note: "미성년자계좌개설 이벤트(2026.07.16~09.30) 종료. 공식 이벤트 페이지(VEvent20260095) 검색 요약에 '2026.10.01 이후 생애 최초 개설 미성년자 국내주식 더모으기 쿠폰 5만원, 2026.12.31까지 계좌 유지' 이벤트가 보이나 뉴스 등 두 번째 출처가 없어 미확정 — 11/17 재검색에도 보도 없음. robots 차단으로 공식 페이지는 크롤링하지 않음 (2026-11-17)", link: 'https://www.kiwoom.com/e/m/home/event/VEvent20260095View' },
+  { broker: '삼성증권', status: '확인필요', note: '자녀자산관리 서비스 출시 이벤트(2026.05.04~10.30, 계좌개설 1만원·투자지원금 2만원·아동수당 계좌 변경 2만원) 종료. 같은 페이지의 자녀 국내주식 온라인 수수료 1년 우대(별도 신청)만 2026.12.31까지 남아 있음. 11월 후속 이벤트 미확인 (2026-11-17)', link: 'https://www.samsungpop.com/customer/guide.do?cmd=event_view&menuNo=01010900&MenuSeqNo=3803' },
+  { broker: '한국투자증권', status: '확인필요', note: '「우리아이 첫 투자」(2026.09.01~10.31, KOSPI200 1+1주·매수 쿠폰 2만원) 종료. 11월 새로 열린 ‘주식모으기 이벤트 시즌3’(2026.11.03~12.29)는 뱅키스 일반 고객 대상으로 자녀 계좌 혜택이 없음(시즌2와 다름). 자녀 후속 이벤트 미확인 (2026-11-17)', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
+  { broker: 'SK증권', status: '확인필요', note: '우리 아이 미래 투자 10월분(2026.10.01~10.31, 순입금 최대 5만원 + 1억 거래 5만원) 종료. 매월 갱신돼 왔으나 11월분 없음 — 미성년 이벤트 페이지가 404로 내려갔고 다이렉트 사이트에는 성인 대상 배당 이벤트만 있음 (2026-11-17 브라우저 확인)', link: 'https://direct-sks.co.kr/' },
   { broker: '대신증권', status: '확인필요', note: '2024.03 미성년 비대면 계좌 이벤트(종료). 현재는 일반 신규고객 대상만', link: 'https://www.daishin.com/g.ds?m=1109&p=12931&v=12831' },
   { broker: '유안타증권', status: '확인필요', note: '2024.05 ‘가정의 달 자녀계좌개설’(선착순 100명 2만원, 종료)', link: 'https://www.myasset.com' },
   { broker: 'KB증권', status: '확인필요', note: '우리아이계좌개설 상시 운영. 과거 우리아이 부자만들기(최대 3만원)는 종료, 현행 이벤트 기간 미확인 (2026-09-07 재확인)', link: 'https://m.kbsec.com/go.able?linkcd=m06110000' },
