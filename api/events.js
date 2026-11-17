@@ -9,7 +9,7 @@ const REFERRAL_CHECKED_AT = '2026-11-09'; // 마지막으로 재조사·확인�
 
 // 업데이트 메모 — 이벤트 '내용이 실제로 바뀐 것'만 최신순으로 기록 (배치가 변경 시 맨 앞에 추가)
 const CHANGES = [
-  { date: '2026-11-17', text: '자녀 증여 이벤트를 따로 볼 수 있게 탭을 나눴어요. 첫 건으로 삼성증권 미성년 자녀 대상 증여 이벤트(11월 6일~30일)를 올렸어요. 앱에서 자녀에게 100만원 이상 증여하면 1만원, 2천만원 이상이면 3만원을 자녀 계좌로 받아요(선착순 3천명)' },
+  { date: '2026-11-17', text: '삼성증권 미성년 자녀 대상 증여 이벤트(11월 6일~30일)를 추가했어요. 앱에서 자녀에게 100만원 이상 증여하면 1만원, 2천만원 이상이면 3만원을 자녀 계좌로 받아요(선착순 3천명)' },
   { date: '2026-11-09', text: '절세 3종 계좌에 iM증권 연금 자산 이벤트(~내년 1월 31일)를 추가했어요. IRP·연금저축을 옮기거나 새로 넣으면 금액에 따라 상품권 1만~3만원을 받아요' },
   { date: '2026-11-09', text: '절세 3종 계좌에 우리투자증권 IRP 스텝-업 이벤트(~12월 31일)를 추가했어요. IRP를 새로 열고 ETF를 사거나 꾸준히 입금하면 상품권을 최대 3만원까지 받아요' },
   { date: '2026-11-09', text: 'KB증권 절세 이벤트에 연금저축·IRP 순입금 이벤트(~12월 31일)를 함께 적었어요. 연금저축은 최대 150만원 상품권이에요' },
@@ -71,15 +71,9 @@ const EVENTS = [
     // 예전 링크(토스피드 2023 서비스 출시 글)에는 이벤트 내용이 없어 바꿨다 (2026-11-17)
     link: 'https://www.heraldk.com/article/2026021121581220044',
   },
-];
-
-// 자녀 증여 이벤트 (이벤트 탭의 별도 서브탭, 2026-11-17 신설 — 사용자 요청으로 계좌 개설 이벤트와 분리).
-// 계좌를 '여는' 것이 아니라 부모가 자녀에게 '증여'하는 행위에 혜택을 주는 이벤트만 둔다.
-// 증권사 증여 서비스(적립식 증여·증여세 신고 대행 등) 자체는 이벤트가 아니므로 GIFT_PENDING 메모에만 적는다.
-const GIFT_CHECKED_AT = '2026-11-17';
-const GIFT_EVENTS = [
   {
-    // 공식 이벤트 페이지로 확인(사용자 제공 링크, 2026-11-17). 보도는 아직 없어 출처는 공식 페이지 하나다
+    // 자녀 '증여' 이벤트도 이 목록(계좌 이벤트 탭)에 함께 둔다 — 별도 탭으로 나눴다가 사용자 지시로 합쳤다 (2026-11-17).
+    // 공식 이벤트 페이지로 확인(사용자 제공 링크). 보도는 아직 없어 출처는 공식 페이지 하나다
     broker: '삼성증권',
     title: '미성년 자녀 대상 증여 이벤트 (자녀증여서비스)',
     period: '2026.11.06 ~ 2026.11.30',
@@ -88,23 +82,17 @@ const GIFT_EVENTS = [
       "'한번에 증여하기' 또는 '적립식으로 증여하기'로 2,000만원 이상 증여 시 3만원 (적립식은 10년 총 증여금액 기준)",
       '자녀별 최대 3만원, 여러 자녀에게 증여하면 자녀마다 지급 — 전체 선착순 3,000명, 이벤트 신청 필수',
       '대상: 이벤트 시작일 기준 총 잔고 100만원 이하 자녀 또는 기간 중 신규 개설 자녀 · 지급 12월 14일 이내',
+      '별도: 자녀 국내주식 온라인 수수료 1년 우대(자녀자산관리 이벤트, 별도 신청) ~2026.12.31',
     ],
+    domesticFee: '',
+    usFee: '',
     link: 'https://www.samsungpop.com/mbw/customer/noticeEvent.do?cmd=eventView&MenuSeqNo=3955&ContentType=H',
   },
 ];
 
-// 자녀 증여 이벤트 — 조사했으나 진행 중인 증여 이벤트가 확인되지 않은 곳 (2026-11-17 뉴스·검색 기준)
-const GIFT_PENDING = [
-  { broker: '미래에셋증권', status: '미발견', note: '자녀 계좌 개설 이벤트(우리아이 부자만들기)만 진행. 해외주식 증여세 신고 무료 대행 서비스 보도(2024)는 있으나 증여 조건 이벤트는 없음 (2026-11-17)', link: 'https://digital.securities.miraeasset.com/rich/' },
-  { broker: '한국투자증권', status: '미발견', note: '자녀계좌 통합 메뉴에 증여세 신고 안내가 있으나 증여 조건 이벤트는 없음. 11월 진행 이벤트 목록에도 없음 (2026-11-17 공식 목록 확인)', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
-  { broker: 'KB증권', status: '미발견', note: '자녀 증여 관련 이벤트 보도 없음 (2026-11-17)', link: '' },
-  { broker: 'NH투자증권 (나무)', status: '미발견', note: '자녀 증여 관련 이벤트 보도 없음 (2026-11-17)', link: '' },
-  { broker: '키움증권', status: '미발견', note: '자녀 증여 관련 이벤트 보도 없음. robots 차단으로 공식 페이지는 크롤링하지 않음 (2026-11-17)', link: '' },
-  { broker: '신한투자증권', status: '미발견', note: '자녀 증여 관련 이벤트 보도 없음 (2026-11-17)', link: '' },
-  { broker: '토스증권', status: '미발견', note: '미성년 첫 계좌 2만원 이벤트만 있음(계좌 이벤트 탭). 증여 조건 이벤트 없음 (2026-11-17)', link: '' },
-  { broker: '카카오페이증권', status: '미발견', note: "'주식 선물하기'는 상시 기능이고 증여 이벤트는 없음 (2026-11-17)", link: '' },
-  { broker: 'SK증권', status: '미발견', note: '미성년 계좌 이벤트 10월분 종료, 증여 조건 이벤트 없음 (2026-11-17)', link: '' },
-];
+// 자녀 증여 이벤트 타사 조사 기록 (2026-11-17, 뉴스·검색 + 한투 공식 목록) — 삼성 외 증여 조건 이벤트 없음.
+// 미래에셋(증여세 신고 무료 대행은 2024 보도·서비스) · 한국투자(자녀계좌 메뉴에 증여세 신고 안내만) ·
+// KB · NH · 키움 · 신한 · 토스 · 카카오페이('주식 선물하기'는 상시 기능) · SK
 
 // 친구 초대·추천 이벤트 (별도 탭). 증권사는 자본시장법상 재산상 이익 제공 제한이 있어
 // 이 유형 자체가 드물다. 확정 건만 REFERRAL에, 확인 안 된 건 REFERRAL_PENDING에 둔다.
@@ -274,7 +262,8 @@ const TAX_PENDING = [
 // 추가 조사 대상 — 현재 진행 여부 미확정 (status: 확인필요 | 미발견 | 해당없음)
 const PENDING = [
   { broker: '키움증권', status: '확인필요', note: "미성년자계좌개설 이벤트(2026.07.16~09.30) 종료. 공식 이벤트 페이지(VEvent20260095) 검색 요약에 '2026.10.01 이후 생애 최초 개설 미성년자 국내주식 더모으기 쿠폰 5만원, 2026.12.31까지 계좌 유지' 이벤트가 보이나 뉴스 등 두 번째 출처가 없어 미확정 — 11/17 재검색에도 보도 없음. robots 차단으로 공식 페이지는 크롤링하지 않음 (2026-11-17)", link: 'https://www.kiwoom.com/e/m/home/event/VEvent20260095View' },
-  { broker: '삼성증권', status: '확인필요', note: '자녀자산관리 서비스 출시 이벤트(2026.05.04~10.30, 계좌개설 1만원·투자지원금 2만원·아동수당 계좌 변경 2만원) 종료. 자녀 국내주식 온라인 수수료 1년 우대(별도 신청)만 2026.12.31까지 남아 있음. 11월 증여 이벤트는 자녀 증여 이벤트 탭에 있음 (2026-11-17)', link: 'https://www.samsungpop.com/customer/guide.do?cmd=event_view&menuNo=01010900&MenuSeqNo=3803' },
+  // 삼성증권은 '미성년 자녀 대상 증여 이벤트'(2026.11.06~11.30)로 EVENTS에 있다.
+  // 그 전 자녀자산관리 서비스 출시 이벤트(2026.05.04~10.30)는 종료 (2026-11-17)
   { broker: '한국투자증권', status: '확인필요', note: '「우리아이 첫 투자」(2026.09.01~10.31, KOSPI200 1+1주·매수 쿠폰 2만원) 종료. 11월 새로 열린 ‘주식모으기 이벤트 시즌3’(2026.11.03~12.29)는 뱅키스 일반 고객 대상으로 자녀 계좌 혜택이 없음(시즌2와 다름). 자녀 후속 이벤트 미확인 (2026-11-17)', link: 'https://securities.koreainvestment.com/main/customer/notice/Event.jsp?gubun=i' },
   { broker: 'SK증권', status: '확인필요', note: '우리 아이 미래 투자 10월분(2026.10.01~10.31, 순입금 최대 5만원 + 1억 거래 5만원) 종료. 매월 갱신돼 왔으나 11월분 없음 — 미성년 이벤트 페이지가 404로 내려갔고 다이렉트 사이트에는 성인 대상 배당 이벤트만 있음 (2026-11-17 브라우저 확인)', link: 'https://direct-sks.co.kr/' },
   { broker: '대신증권', status: '확인필요', note: '2024.03 미성년 비대면 계좌 이벤트(종료). 현재는 일반 신규고객 대상만', link: 'https://www.daishin.com/g.ds?m=1109&p=12931&v=12831' },
@@ -313,7 +302,5 @@ export default function handler(req, res) {
     updatedAt: UPDATED_AT, checkedAt: CHECKED_AT,
     events: EVENTS, pending: PENDING, changes: recentChanges(),
     referral: REFERRAL, referralPending: REFERRAL_PENDING, referralCheckedAt: REFERRAL_CHECKED_AT,
-    taxAccounts: TAX_ACCOUNTS, taxPending: TAX_PENDING, taxCheckedAt: TAX_CHECKED_AT,
-    gift: GIFT_EVENTS, giftPending: GIFT_PENDING, giftCheckedAt: GIFT_CHECKED_AT,
-  });
+    taxAccounts: TAX_ACCOUNTS, taxPending: TAX_PENDING, taxCheckedAt: TAX_CHECKED_AT,  });
 }
